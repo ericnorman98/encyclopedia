@@ -5,6 +5,8 @@ tmp/
 
 *.html
 
+index.org
+
 *.tex
 *.pdf
 .auctex-auto
