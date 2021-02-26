@@ -1,0 +1,11 @@
+.DS_Store
+.idea
+*.log
+tmp/
+
+*.html
+
+*.tex
+*.pdf
+.auctex-auto
+_minted*
