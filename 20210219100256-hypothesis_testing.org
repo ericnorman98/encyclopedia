@@ -1,0 +1,137 @@
+#+title: Hypothesis testing
+#+roam_tags: statistics hypothesis testing test
+
+* Setup :noexport:
+#+call: init(session="statistics", theme="dark")
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session statistics :results raw :eval no-export :pandoc t :async yes :tangle hypothesis_testing.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+#+name: current-theme
+: dark
+#+name: doc-name
+: hypothesis_testing
+:end:
+
+* Hypothesis testing :ignore:
+#+begin_src jupyter-python
+alpha, mu0 = symbols('alpha mu_0')
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+H0, H1, R = symbols('H_0 H_1 \\mathcal{R}')
+
+LBiOp(':', H0, "\\text{ the effect of interest is zero}")
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}:   H_{0}   \text{the effect of interest is zero}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+LBiOp(':', H1, "\\text{ the effect of interest is not zero}")
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}:   H_{1}   \text{the effect of interest is not zero}\end{equation}
+:END:
+
+1. reject $H_0$ in favor of $H_1$ if $t\in \mathcal{R}$ (positive decision)
+2. do not reject $H_0$ if $t\notin \mathcal{R}$ (negative decision)
+
+| State of nature | Negative decision | Positive decision |
+|-----------------+-------------------+-------------------|
+| $H_0$ is true   | True negative     | Type I error      |
+| $H_1$ is true   | Type II error     | True positive     |
+
+** Example
+#+begin_src jupyter-python
+V = {
+    alpha: 0.05,
+    mu0: 3.5,
+    mu: 3.1,
+    sigma: 1.5,
+    xm: 3.1,
+    s: 1.5,
+    n: 50
+}
+LEq(mu0, V[mu0])
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\mu_{0} = 3.5\end{equation}
+:END:
+
+#+begin_src jupyter-python
+LEq(alpha, V[alpha])
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\alpha = 0.05\end{equation}
+:END:
+
+
+#+begin_src jupyter-python
+V[xm] = 3.1
+T_eq = LEq(T, (xm-mu0)/(s/sqrt(n)))
+T_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}T = \frac{\sqrt{n} \left(\bar{x} - \mu_{0}\right)}{s}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+stat = T_eq.rhs
+statf = stat.subs(V).evalf()
+dist = Normal('\\bar{X}', V[mu0], V[s]/sqrt(V[n]))
+p = Prob(T_eq.rhs.subs({xm: dist})<=stat)
+result = p.subs(V).doit().evalf(3)
+eq1 = LEq(p,
+             LRound(3, p.subs(V)),
+             result)
+eq1
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}P[\frac{\sqrt{n} \left(- \mu_{0} + \bar{X}\right)}{s} \leq \frac{\sqrt{n} \left(\bar{x} - \mu_{0}\right)}{s}] = P[4.714 \bar{X} - 16.5 \leq -1.885] = 0.0297\end{equation}
+:END:
+
+#+begin_src jupyter-python :noweb yes :results output :var name=doc-name
+x_n = np.linspace(-3, 0)
+dens_lm = lambdify(x, density(T_eq.rhs.subs({xm: dist}))(x).subs(V))
+plt.plot(x_n, dens_lm(x_n), zorder=2)
+plt.axvline(statf, color=<<color("red")>>)
+x_stat_n = np.linspace(-3, float(statf))
+plt.fill_between(x_stat_n, 0, dens_lm(x_stat_n), color=<<color("blue")>>)
+plt.xticks([float(statf)])
+plt.yticks([0, 0.5])
+plt.savefig(f"{name}.png")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/b74f11b9a96342ee45b85e311c59336f501ba971.png]]
+
+#+begin_src jupyter-python
+LBiOp(':', "\\text{Reject } H_0", LImply(result<alpha, result<V[alpha]))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}:   \text{Reject } H_0   0.0297 < \alpha \Rightarrow \text{True}\end{equation}
+:END:

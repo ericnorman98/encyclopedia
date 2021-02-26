@@ -1,0 +1,326 @@
+#+title: Kuramoto model
+#+roam_tags: dynamical systems population kuramoto model oscillator synchronisation
+
+* Setup :noexport:
+#+call: init(theme="dark")
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session kuramoto_model :results raw :eval no-export :pandoc t :async yes :tangle kuramoto_model.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+#+name: current-theme
+: dark
+#+name: doc-name
+: kuramoto_model
+:end:
+
+#+begin_src jupyter-python :results silent :noweb yes
+import numpy as np
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+import numba
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.animation import FuncAnimation
+from scipy.integrate import odeint, ode
+import torch
+
+device = torch.device('cuda')
+#+end_src
+
+* Kuramoto model
+The Kuramoto model is a model to describe synchronization of oscillators. The model looks like this,
+
+#+begin_src jupyter-python
+i, j = symbols('i j', integer=True)
+t = symbols('t', real=True, positive=True)
+K = symbols('K', real=True, positive=True)
+N = symbols('N', integer=True)
+theta, omega = symbols('theta omega')
+
+model = LEq(Derivative(Indexed(theta, i), t), Indexed(omega, i)+(K/N)*Sum(sin(Indexed(theta, j)-Indexed(theta, i)), (j, 0, N-1)))
+
+model
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{\partial}{\partial t} {\theta}_{i} = \frac{K \sum_{j=0}^{N - 1} - \sin{\left({\theta}_{i} - {\theta}_{j} \right)}}{N} + {\omega}_{i}\end{equation}
+:END:
+
+where $\omega_i$ is frequencies drawn from a symmetric distribution (see Figure [[fig:freq_dist_pdf]]),
+#+begin_src jupyter-python
+g = symbols('g', cls=Function)
+gamma = symbols('gamma', real=True, positive=True)
+
+omega_pdf = LEq(g(omega), (gamma/pi)/(omega**2+gamma**2))
+omega_dist = ContinuousDistributionHandmade(Lambda(omega, omega_pdf.rhs), set=Interval(-500, 500))
+# omega_rv = ContinuousRV(omega, omega_pdf.rhs).args[1].args[1]
+omega_pdf = LEq(g(omega), omega_dist.pdf(omega))
+
+omega_pdf
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}g{\left(\omega \right)} = \frac{\gamma}{\pi \left(\gamma^{2} + \omega^{2}\right)}\end{equation}
+:END:
+
+#+name: src:fig:freq_dist_pdf
+#+begin_src jupyter-python :results output
+omega_n = np.linspace(-10, 10, 200)
+omega_pdf_n = lambdify(omega, omega_pdf.rhs.subs(gamma, 1))(omega_n)
+plt.plot(omega_n, omega_pdf_n)
+plt.xlabel("$\\omega$")
+plt.ylabel("$g(\\omega)$")
+#+end_src
+
+#+name: fig:freq_dist_pdf
+#+attr_latex: :width 0.5\textwidth
+#+caption: Frequency distribution.
+#+RESULTS: src:fig:freq_dist_pdf
+[[file:./.ob-jupyter/1882120841a5447e27a2a7ca84f84fd2ada0bd45.png]]
+
+** Bifurcation and $C$ coefficient
+We know that $r=C\sqrt{\mu}$, by using the self-consistent equation
+[[eq:self_consistent]] we can calculate $r$ and solve for $C$,
+
+#+name: src:eq:self_consistent
+#+begin_src jupyter-python
+r = symbols('r', real=True, positive=True)
+a, b = symbols('a b', real=True)
+self_integral = Integral(cos(theta)**2*g(K*r*sin(theta)), (theta, -pi/2, pi/2))
+self_consistent = LEq(1, K*self_integral)
+self_consistent
+#+end_src
+
+#+name: eq:self_consistent
+#+RESULTS: src:eq:self_consistent
+:RESULTS:
+\begin{equation}1 = K \int\limits_{- \frac{\pi}{2}}^{\frac{\pi}{2}} g{\left(K r \sin{\left(\theta \right)} \right)} \cos^{2}{\left(\theta \right)}\, d\theta\end{equation}
+:END:
+
+
+We start by calculating the integral by rewriting the trigonometric functions to
+cosines,
+#+begin_src jupyter-python
+phi = symbols('varphi', cls=Function)
+u = symbols('u')
+self_integral_simp = LSteps(self_integral,
+    lambda e: e.replace(g, lambda x: omega_pdf.rhs.subs(omega, x)),
+    lambda e: FU['TR8'](e),
+    lambda e: e.doit().simplify()
+)
+self_integral_simp
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\int\limits_{- \frac{\pi}{2}}^{\frac{\pi}{2}} g{\left(K r \sin{\left(\theta \right)} \right)} \cos^{2}{\left(\theta \right)}\, d\theta\Rightarrow\\
+\quad \Rightarrow \int\limits_{- \frac{\pi}{2}}^{\frac{\pi}{2}} \frac{\gamma \cos^{2}{\left(\theta \right)}}{\pi \left(K^{2} r^{2} \sin^{2}{\left(\theta \right)} + \gamma^{2}\right)}\, d\theta\Rightarrow\\
+\quad \Rightarrow \int\limits_{- \frac{\pi}{2}}^{\frac{\pi}{2}} \frac{\gamma \left(\frac{\cos{\left(2 \theta \right)}}{2} + \frac{1}{2}\right)}{\pi \left(K^{2} r^{2} \left(\frac{1}{2} - \frac{\cos{\left(2 \theta \right)}}{2}\right) + \gamma^{2}\right)}\, d\theta\Rightarrow\\
+\quad \Rightarrow \frac{- \gamma + \sqrt{K^{2} r^{2} + \gamma^{2}}}{K^{2} r^{2}}
+\end{array}\end{equation}
+:END:
+
+we can then substitute into [[eq:self_consistent]] and solving for $r$,
+#+begin_src jupyter-python
+solve_consistent = LSteps(self_consistent.replace(Integral, lambda e, lim: self_integral_simp[-1]),
+    lambda e: LEq(r, solve(Eq(e.lhs, e.rhs), r)[0]),
+)
+solve_consistent
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+1 = \frac{- \gamma + \sqrt{K^{2} r^{2} + \gamma^{2}}}{K r^{2}}\Rightarrow\\
+\quad \Rightarrow r = \frac{\sqrt{K - 2 \gamma}}{\sqrt{K}}
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+Kc = symbols('K_c')
+Kc_solve = LEq(Kc, 2/(pi*g(0)), 2/(pi*omega_pdf.rhs.subs(omega, 0)))
+Kc_solve
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}K_{c} = \frac{2}{\pi g{\left(0 \right)}} = 2 \gamma\end{equation}
+:END:
+
+#+begin_src jupyter-python
+mu = symbols('mu')
+mu_solve = LEq(mu, (K-Kc)/Kc, ((K-Kc)/Kc).subs({Kc: Kc_solve.rhs}))
+mu_solve
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\mu = \frac{K - K_{c}}{K_{c}} = \frac{K - 2 \gamma}{2 \gamma}\end{equation}
+:END:
+
+Now substituting everything into $r=C\sqrt{\mu}$ we can finally solve for $C$.
+See Figure [[fig:bifurcation]] for a bifurcation diagram.
+
+#+begin_src jupyter-python
+C = symbols('C')
+C_solve = LSteps(LEq(r, C*sqrt(mu)),
+    lambda e: e.replace(r, solve_consistent[-1].rhs),
+    lambda e: e.replace(mu, mu_solve.rhs),
+    lambda e: LEq(C, solve(Eq(e.rhs, e.lhs), C)[0]),
+)
+C_solve
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+r = C \sqrt{\mu}\Rightarrow\\
+\quad \Rightarrow \frac{\sqrt{K - 2 \gamma}}{\sqrt{K}} = C \sqrt{\mu}\Rightarrow\\
+\quad \Rightarrow \frac{\sqrt{K - 2 \gamma}}{\sqrt{K}} = \frac{\sqrt{2} C \sqrt{K - 2 \gamma}}{2 \sqrt{\gamma}}\Rightarrow\\
+\quad \Rightarrow C = \frac{\sqrt{2} \sqrt{\gamma}}{\sqrt{K}}
+\end{array}\end{equation}
+:END:
+
+#+name: src:fig:bifurcation
+#+begin_src jupyter-python :results output :noweb yes
+k_n = np.linspace(2, 10)
+plt.plot(k_n, lambdify((K, gamma), solve_consistent[-1].rhs)(k_n, 1))
+k_n = np.linspace(0, 2)
+plt.plot(k_n, k_n*0, color=<<color("green")>>)
+plt.xticks([0, 2, 10], [0, "$K_c=2$", 10])
+plt.xlabel("$K$")
+plt.ylabel("$r$")
+plt.title("$\\gamma=1$")
+plt.xlim([0, 10])
+#+end_src
+
+#+name: fig:bifurcation
+#+attr_latex: :width 0.5\textwidth
+#+caption: Bifurcation diagram.
+#+RESULTS: src:fig:bifurcation
+[[file:./.ob-jupyter/178071abdcfd63048dda26d3c1ed4cc7bfe73014.png]]
+
+#+LATEX: \pagebreak
+** Simulations
+We will now simulate the system, see Figure [[fig:param_grid]] for the results. The
+mean field theory is expected to work better for large $N$ which is what we can
+see in the results, as $N$ grows, we get closer to the expected value of $r$
+that we calculated in the previous section.
+
+#+begin_src jupyter-python :exports none
+V = {
+    N: 300,
+    gamma: 1.0,
+    K: 5.0,
+}
+LValues(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+N = 300\\
+\gamma = 1.0\\
+K = 5.0
+\end{cases}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+@torch.jit.script
+def model_ode(thetas, t, ones, prefactor, omegas):
+    first = torch.outer(ones, thetas)
+    second = torch.outer(thetas, ones)
+
+    return omegas + prefactor * torch.sum(torch.sin(first - second), 1)
+
+def run_model(T, dt, N_n, K_n):
+    theta_n = torch.tensor(np.random.uniform(-np.pi/2, np.pi/2, size=N_n), dtype=torch.float, device=device)
+    omega_n = torch.tensor(omega_dist.subs(V).sample(N_n), dtype=torch.float, device=device)
+    ones = torch.ones(N_n, device=device, dtype=torch.float)
+    steps = int(T/dt)
+    sol = torch.zeros(steps, N_n, device=device, dtype=torch.float)
+    t_n = torch.tensor(0, dtype=torch.float)
+    t_ns = np.zeros(steps)
+    prefac = ones*K_n/N_n
+    for i in range(steps):
+        t_ns[i] = t_n
+        dtheta = model_ode(theta_n, t_n, ones, prefac, omega_n)
+        theta_n += dtheta*dt
+        t_n += dt
+        sol[i] = theta_n
+    return t_ns, sol.cpu().detach().numpy()
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :exports none
+solve_consistent[-1].rhs.subs(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}0.774596669241483\end{equation}
+:END:
+
+#+name: src:fig:param_grid
+#+begin_src jupyter-python :results output :noweb yes
+dt = 0.01
+T = 1000
+K_cn = V[gamma]*2
+Ks = [K_cn*0.8, K_cn*1.005, K_cn*2.0]
+Ns = [20, 100, 1000]
+torch.autograd.set_grad_enabled(False)
+plt.figure(figsize=(8, 8))
+plt.suptitle(f"$K_c={K_cn}$, $\\gamma={V[gamma]}$")
+i = 0
+for K_n in Ks:
+    for N_n in Ns:
+        t_ns, sol = run_model(T, dt, N_n, K_n)
+        r_n = np.abs(np.mean(np.exp(1j*sol), axis=1))
+        plt.subplot(3, 3, i+1)
+        plt.plot(t_ns, r_n)
+        plt.ylim([0, 1])
+        plt.xlabel("$t$")
+        plt.ylabel("$r$")
+        r_expected = solve_consistent[-1].rhs.subs({K: K_n, N: N_n}).subs(V) if K_n > K_cn else 0
+        plt.axhline(r_expected, color=<<color("red")>>)
+        plt.title(f"$N={N_n}$, $K={K_n}$")
+        i += 1
+        print(f"{i}, $N={N_n}$, $K={K_n}$ r={r_expected}")
+plt.savefig('test_large.png')
+#+end_src
+
+#+name: fig:param_grid
+#+caption: Grid of simulations, the red line is the theoretical expected value of $r$.
+#+RESULTS: src:fig:param_grid
+[[file:./.ob-jupyter/e50fd54826797b9abeb1a39554a5b753dd83a800.png]]
+
+#+begin_src jupyter-python :results output :noweb yes :exports none :var name=doc-name
+dt = 0.001
+T = 0.5
+K_cn = V[gamma]*2
+K_n = K_cn*10.0
+N_n = 20
+torch.autograd.set_grad_enabled(False)
+plt.figure(figsize=(4, 4))
+plt.axis('off')
+t_ns, sol = run_model(T, dt, N_n, K_n)
+plt.plot(t_ns, sol, color=<<color("green")>>)
+plt.savefig(f'{name}.png')
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/052248b6b91698e67ae166a38d4f728d2abc9de1.png]]
+

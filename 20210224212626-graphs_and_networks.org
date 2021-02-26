@@ -1,0 +1,131 @@
+#+title: Graphs and networks
+#+roam_tags: graph theory network
+
+* Setup :noexport:
+#+call: init()
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session graphs_and_networks :results raw :eval no-export :pandoc t :async yes :tangle graphs_and_networks.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+#+name: current-theme
+: dark
+#+name: doc-name
+: graphs_and_networks
+:end:
+
+#+begin_src jupyter-python
+import collections
+import numpy as np
+from networkx import nx
+import matplotlib.pyplot as plt
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :noweb yes
+def get_degree_count(degrees):
+    degree_sequence = np.flip(np.sort(degrees))
+    degree_count = collections.Counter(degree_sequence)
+    return np.array(list(zip(*degree_count.items())))
+
+def draw_dense_graph(G, pos, alpha=0.1, width=0.2, node_size=4):
+    nx.draw_networkx_nodes(G, pos=pos, node_size=node_size, node_color=<<color("green")>>)
+    nx.draw_networkx_edges(G, pos=pos, width=width, alpha=alpha, edge_color=<<color("brightblack4")>>)
+
+def draw_graph(G, pos):
+    nx.draw_networkx_nodes(G, pos=pos, node_size=8, node_color=<<color("green")>>)
+    nx.draw_networkx_edges(G, pos=pos, width=0.8, alpha=0.4, edge_color=<<color("brightblack4")>>)
+
+def degree_hist(G):
+    dist = [d for n, d in G.degree()]
+    plt.hist(dist, bins=2000, density=True, rwidth=1, width=1.1)
+#+end_src
+
+#+RESULTS:
+
+* Graphs and networks
+- [[file:20210224212824-small_world_network.org][Small world network]]
+- [[file:20210224212714-erdos_renyi_model.org][Erdos-renyi model]]
+- [[file:20210224212907-preferential_growth_model.org][Preferential growth model]]
+
+
+** COMMENT Average path lengths
+#+begin_src python :tangle graphs.py
+@numba.njit()
+def path_length(A, i):
+    N = len(A)
+    length = np.array([np.inf]*N)
+    length[i] = 0
+    Q = [i]
+
+    while len(Q) > 0:
+        i = Q.pop(0)
+
+        for k in np.nonzero(A[i])[0]:
+            if length[k] > length[i] + 1:
+                length[k] = length[i] + 1
+                Q.append(k)
+
+    return length
+#+end_src
+
+#+begin_src python :tangle graphs.py
+def average_path_length(A):
+    N = len(A)
+    # multiply by N/(N-1) to remove starting node
+    return np.mean([path_length(A, i) for i in range(N)])*N/(N-1)
+#+end_src
+
+#+begin_src python :results verbatim
+from networkx import nx
+import graphs
+import numpy as np
+import time
+
+with open('smallWorldExample.txt') as f:
+    A = graphs.from_string(f.readlines())
+
+graphs.path_length(A, 0)
+start = time.time()
+avglen = graphs.average_path_length(A)
+end = time.time()
+
+return f"Average length: {avglen:.5f}, Time: {int((end-start)*1000)} ms"
+#+end_src
+
+#+RESULTS[4843655d3c205835b4f63ced25471bade2e1730c]:
+: Average length: 2.93232, Time: 2 ms
+
+
+** COMMENT Graph diameter
+#+begin_src python :tangle graphs.py
+def maximum_path_length(A):
+    return np.max([path_length(A, i) for i in range(len(A))])
+#+end_src
+
+#+begin_src python :results verbatim
+from networkx import nx
+import graphs
+import numpy as np
+import time
+
+with open('smallWorldExample.txt') as f:
+    A = graphs.from_string(f.readlines())
+
+graphs.path_length(A, 0)
+start = time.time()
+diam = graphs.maximum_path_length(A)
+end = time.time()
+
+return f"Diameter: {diam:.5f}, Time: {int((end-start)*1000)} ms"
+#+end_src
+
+#+RESULTS[ffea4ff9c09b856ec8cd380b2d207313593b4576]:
+: Diameter: 5.00000, Time: 2 ms

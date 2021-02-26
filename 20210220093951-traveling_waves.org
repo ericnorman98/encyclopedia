@@ -1,0 +1,644 @@
+#+title: Traveling waves
+#+roam_tags: dynamical systems population traveling waves
+
+* Setup :noexport:
+#+call: init(theme="dark")
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session traveling_waves :results raw :eval no-export :pandoc t :async yes :tangle traveling_waves.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+#+name: current-theme
+: dark
+#+name: doc-name
+: traveling_waves
+:end:
+
+
+* Traveling waves
+In more realistic prey population models, we can see /traveling-wave solutions/.
+These solutions travels much faster than diffusion, and with the system we will
+analyze these waves have constant shape and speed.
+
+#+begin_src jupyter-python :results silent :noweb yes
+from sympy.plotting import plot
+import numpy as np
+from pyorg.latex import *
+from sympy import *
+import numba
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.animation import FuncAnimation
+from scipy.integrate import odeint
+#+end_src
+
+#+begin_src jupyter-python
+r, K, A, B, D, t = symbols('r K A B D t', real=True, positive=True)
+x = symbols('x', real=True)
+n = symbols('n', cls=Function)
+
+model = Eq(n(x, t).diff(t), r*n(x, t)*(1-n(x, t)/K)-A*n(x, t)/(1+n(x, t)/B)+D*n(x, t).diff(x, 2))
+model
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{\partial}{\partial t} n{\left(x,t \right)} = - \frac{A n{\left(x,t \right)}}{1 + \frac{n{\left(x,t \right)}}{B}} + D \frac{\partial^{2}}{\partial x^{2}} n{\left(x,t \right)} + r \left(1 - \frac{n{\left(x,t \right)}}{K}\right) n{\left(x,t \right)}\end{equation}
+:END:
+
+** Dimensionless system
+To create a dimensionless system, we will replace the parameters with the ones
+below, left side is the dimensionless variables and the right side shows how we
+will substitute them into the equation,
+#+begin_src jupyter-python
+tau, rho, q = symbols('tau rho q', real=True, positive=True)
+xi = symbols('xi', real=True)
+u = symbols('u', cls=Function)
+dims = {
+    tau: A*t,
+    xi: x*sqrt(A/D),
+    u(xi, tau): n(x, t)/B,
+    rho: r/A,
+    q: K/B
+}
+dimless_subs = {v: solve(Eq(lhs, rhs), v)[0] for (lhs, rhs), v in zip(dims.items(), [t, x, n(x, t), r, K])}
+LImply(LValues(dims), LValues(dimless_subs))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+\tau = A t\\
+\xi = \frac{\sqrt{A} x}{\sqrt{D}}\\
+u{\left(\xi,\tau \right)} = \frac{n{\left(x,t \right)}}{B}\\
+\rho = \frac{r}{A}\\
+q = \frac{K}{B}
+\end{cases} \Rightarrow \begin{cases}
+t = \frac{\tau}{A}\\
+x = \frac{\sqrt{D} \xi}{\sqrt{A}}\\
+n{\left(x,t \right)} = B u{\left(\xi,\tau \right)}\\
+r = A \rho\\
+K = B q
+\end{cases}\end{equation}
+:END:
+
+substituting these gives us,
+#+begin_src jupyter-python
+model_dimless = model.replace(t, tau).replace(x, xi).subs(n(xi, tau), dimless_subs[n(x, t)]).subs(dimless_subs)
+model_dimless = Eq(model_dimless.lhs/dimless_subs[t]*tau, model_dimless.rhs)
+args = model_dimless.rhs.args
+model_dimless = Eq(model_dimless.lhs, args[0]/(dimless_subs[x]/xi)**2+args[1]+args[2])
+model_dimless
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}A \frac{\partial}{\partial \tau} B u{\left(\xi,\tau \right)} = A B \rho \left(1 - \frac{u{\left(\xi,\tau \right)}}{q}\right) u{\left(\xi,\tau \right)} - \frac{A B u{\left(\xi,\tau \right)}}{u{\left(\xi,\tau \right)} + 1} + A \frac{\partial^{2}}{\partial \xi^{2}} B u{\left(\xi,\tau \right)}\end{equation}
+:END:
+
+divide by $A B$ to cancel the remaining parameters with dimension,
+#+begin_src jupyter-python
+model_dimless = Eq(model_dimless.lhs/(A*B), model_dimless.rhs/(A*B))
+model_dimless = Eq(model_dimless.lhs.simplify(), model_dimless.rhs.expand())
+args = model_dimless.rhs.args
+model_dimless = Eq(model_dimless.lhs, args[0]+args[1].simplify()+args[2]+args[3])
+model_dimless
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{\partial}{\partial \tau} u{\left(\xi,\tau \right)} = \rho u{\left(\xi,\tau \right)} + \frac{\partial^{2}}{\partial \xi^{2}} u{\left(\xi,\tau \right)} - \frac{u{\left(\xi,\tau \right)}}{u{\left(\xi,\tau \right)} + 1} - \frac{\rho u^{2}{\left(\xi,\tau \right)}}{q}\end{equation}
+:END:
+
+*** Steady states
+If we ignore diffusion and solve for $\frac{\partial}{\partial \tau} u(\xi,
+\tau)=0$ we get the steady states,
+#+begin_src jupyter-python
+us0, us1, us2 = symbols('u^*_{0:3}')
+sols = solve(model_dimless.rhs.subs(u(xi, tau).diff(xi, 2), 0), u(xi, tau))
+steady_states = {star: sol for star, sol in zip([us0, us1, us2], [sols[0], sols[2], sols[1]])}
+LValues(steady_states)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+u^*_{0} = 0\\
+u^*_{1} = \frac{q - 1}{2} + \frac{\sqrt{q^{2} \rho + 2 q \rho - 4 q + \rho}}{2 \sqrt{\rho}}\\
+u^*_{2} = \frac{q - 1}{2} - \frac{\sqrt{q^{2} \rho + 2 q \rho - 4 q + \rho}}{2 \sqrt{\rho}}
+\end{cases}\end{equation}
+:END:
+
+** Discretising the Laplacian
+We can expand the second derivative in the model by using the second
+symmetric derivative,
+#+begin_src jupyter-python
+h = symbols('h')
+f = symbols('f', cls=Function)
+Eq(f(x).diff(x, 2), Limit(f(x).diff(x, 2).as_finite_difference(h).simplify(), h, 0))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d^{2}}{d x^{2}} f{\left(x \right)} = \lim_{h \to 0^+}\left(\frac{- 2 f{\left(x \right)} + f{\left(- h + x \right)} + f{\left(h + x \right)}}{h^{2}}\right)\end{equation}
+:END:
+
+In this case, we can assume that $h=1$ since that is the smallest positional step,
+#+begin_src jupyter-python
+args = model_dimless.rhs.args
+model_dimless_disc = Eq(model_dimless.lhs, Add(args[3].as_finite_difference(h).subs(h, 1), *args[:3]))
+model_dimless_disc
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{\partial}{\partial \tau} u{\left(\xi,\tau \right)} = \rho u{\left(\xi,\tau \right)} - 2 u{\left(\xi,\tau \right)} + u{\left(\xi - 1,\tau \right)} + u{\left(\xi + 1,\tau \right)} - \frac{u{\left(\xi,\tau \right)}}{u{\left(\xi,\tau \right)} + 1} - \frac{\rho u^{2}{\left(\xi,\tau \right)}}{q}\end{equation}
+:END:
+
+** Domain invasion
+We will now model domain invasion of the prey population and consider the
+parameters,
+#+begin_src jupyter-python
+L, u0, xi0 = symbols('L u_0 xi_0', real=True, positive=True)
+V = {
+    rho: 1/2,
+    q: 8,
+    L: 100,
+}
+LValues(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+\rho = 0.5\\
+q = 8\\
+L = 100
+\end{cases}\end{equation}
+:END:
+where $L$ is the number of discrete locations individuals can occupy, i.e.
+$\xi=1,2,\dots,L$.
+
+We also set the initial population size using a smoothed ramp function as
+follows
+#+begin_src jupyter-python
+init_popsize = Eq(u(xi, 0), u0/(1+exp(xi-xi0)))
+init_popsize
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}u{\left(\xi,0 \right)} = \frac{u_{0}}{e^{\xi - \xi_{0}} + 1}\end{equation}
+:END:
+where $u_0$ is the height of the ramp and $\xi_0$ is the offset from origin.
+
+See Table [[tab:init_cases]] or Figure [[fig:init_populations]] for the three cases of
+parameters that we will consider.
+
+#+begin_src jupyter-python
+def create_cases_table(cases):
+    table = [["", *[latex(v, mode='inline') for v in cases[0].keys()]], None]
+    for i, case in enumerate(cases):
+        table.append([i+1, *case.values()])
+    return table
+#+end_src
+
+#+RESULTS:
+
+#+name: src:tab:init_cases
+#+begin_src jupyter-python :results table
+initial_cases = [
+    { u0: steady_states[us1].subs(V), xi0: 20 },
+    { u0: steady_states[us2].subs(V), xi0: 50 },
+    { u0: steady_states[us2].subs(V)*1.1, xi0: 50 },
+]
+u0_lms = [lambdify(xi, init_popsize.rhs.subs(case)) for case in initial_cases]
+create_cases_table(initial_cases)
+#+end_src
+
+#+name: tab:init_cases
+#+caption: The three cases of $u_0$ and $\xi_0$.
+#+RESULTS: src:tab:init_cases
+|   |          $u_{0}$ | $\xi_{0}$ |
+|---+------------------+-----------|
+| 1 | 5.56155281280883 |        20 |
+| 2 | 1.43844718719117 |        50 |
+| 3 | 1.58229190591029 |        50 |
+
+#+begin_src jupyter-python :results silent
+def plot_initial_population(u_lm, case):
+    u0_n = case[u0]
+    xi0_n = case[xi0]
+    xi_n = np.arange(V[L])
+    u_n = u_lm(xi_n)
+    plt.plot(xi_n, u_n, label=f"$u_0={u0_n.evalf(3)}$, $\\xi_0={xi0_n}$")
+    plt.xlabel("$\\xi$")
+    plt.ylabel("$u(\\xi, 0)$")
+#+end_src
+
+#+name: src:fig:init_populations
+#+begin_src jupyter-python :results output
+plt.figure(figsize=(4, 4))
+for case, u_lm in zip(initial_cases, u0_lms):
+    plot_initial_population(u_lm, case)
+plt.title("Initial population sizes")
+plt.legend()
+#+end_src
+
+#+name: fig:init_populations
+#+attr_latex: :width 0.5\textwidth
+#+caption: A plot of the three initial population sizes used for the simulations.
+#+RESULTS: src:fig:init_populations
+[[file:./.ob-jupyter/d88346f9543b744e56da26a138c2940ba8f0b434.png]]
+
+#+begin_src jupyter-python
+model_lm = numba.njit(lambdify((u(xi, tau), u(xi-1, tau), u(xi+1, tau)), model_dimless_disc.rhs.subs(V)))
+
+@numba.njit()
+def ode(u_n, t):
+    nxt = np.roll(u_n, -1)
+    prv = np.roll(u_n, 1)
+    nxt[-1] = u_n[-1]
+    prv[0] = u_n[0]
+    dudt = model_lm(u_n, prv, nxt)
+    return dudt
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+def integrate_steps(u0_n, t_n):
+    return odeint(ode, u0_n, t_n)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+def run_system(u0_lm, t_n):
+    xi_n = np.arange(V[L])
+    u0_n = u0_lm(xi_n)
+    u_n = integrate_steps(u0_n, t_n)
+    return xi_n, u_n
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+def plot_system(u0_lm, t_n, step=-1, ax=None, **kwargs):
+    if ax is None:
+        ax = plt.gca()
+    xi_n, u_n = run_system(u0_lm, t_n)
+    if type(step) == list:
+        for i in step:
+            ax.plot(xi_n, u_n[i, :], **kwargs)
+    elif type(step) == int:
+        ax.plot(xi_n, u_n[step, :], **kwargs)
+    ax.set_xlabel("$\\xi$")
+    ax.set_ylabel("$u(\\xi, \\tau)$")
+    ax.set_xlim([0, 100])
+    ax.set_ylim([0, 6])
+    return xi_n, u_n
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :results silent :noweb yes
+def plot_velocity(t1, t2, dt=0.001, u0_id=0, **kwargs):
+    case = initial_cases[u0_id]
+    u0_lm = u0_lms[u0_id]
+    t_n1 = np.arange(0, t1, dt)
+    t_n2 = np.arange(0, t2, dt)
+    xi_n1, u_ns1 = plot_system(u0_lm, t_n1, label=f"$\\tau_1={t1}$", alpha=0.5, **kwargs)
+    xi_n2, u_ns2 = plot_system(u0_lm, t_n2, label=f"$\\tau_2={t2}$", **kwargs)
+    u_n1 = u_ns1[-1, :]
+    u_n2 = u_ns2[-1, :]
+
+    get_edge = lambda u_n: np.argmin(np.nan_to_num(np.diff(u_n, prepend=np.nan), 0))-1
+
+    i1 = get_edge(u_n1)
+    i2 = get_edge(u_n2)
+    xi1 = xi_n1[i1]
+    xi2 = xi_n2[i2]
+    plt.axvline(xi1, color=<<color("fg-hc")>>, ls='--', alpha=0.5, zorder=0)
+    plt.axvline(xi2, color=<<color("fg-hc")>>, ls='--', alpha=0.5, zorder=0)
+    plt.xticks([xi1, xi2], [f"$\\xi_1={xi1}$", f"$\\xi_2={xi2}$"])
+
+    c_n = (xi2-xi1)/(t2-t1)
+    plt.title(f"$u_0={case[u0]:.3f}$, $c_{u0_id+1}=\\frac{{\\xi_2-\\xi_1}}{{\\tau_2-\\tau_1}}={c_n}$")
+
+    plt.legend()
+#+end_src
+
+We can calculate the velocity of the traveling-wave solutions by finding the
+edge of the wave and using the $v=s/t$ formula to find the average velocity. See
+Figure [[fig:wave_velocity1]], [[fig:wave_velocity2]] and [[fig:wave_velocity3]] for a
+visualization of the calculations.
+
+#+begin_src jupyter-python :results output :var name=doc-name :exports none
+plt.figure(figsize=(4, 4))
+plot_velocity(50, 200, u0_id=0, lw=3)
+plt.xlabel("")
+plt.ylabel("")
+plt.title("")
+plt.gca().legend().set_visible(False)
+plt.yticks([])
+plt.savefig(f"{name}.png")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/59da31cc3820c6e7d58ac85dc26cf77dac928f62.png]]
+
+#+name: src:fig:wave_velocity1
+#+begin_src jupyter-python :results output :noweb yes
+plt.figure(figsize=(4, 4))
+plot_velocity(50, 200, u0_id=0, color=<<color("green")>>)
+#+end_src
+
+#+name: fig:wave_velocity1
+#+attr_latex: :width 0.5\textwidth
+#+caption: The wave velocity calculations for the first case.
+#+RESULTS: src:fig:wave_velocity1
+[[file:./.ob-jupyter/28a23eb2389a55fac12bb6b838a327cb1f8b847f.png]]
+
+#+name: src:fig:wave_velocity2
+#+begin_src jupyter-python :results output :noweb yes
+plt.figure(figsize=(4, 4))
+plot_velocity(20, 50, u0_id=1, color=<<color("red")>>)
+#+end_src
+
+#+name: fig:wave_velocity2
+#+attr_latex: :width 0.5\textwidth
+#+caption: The wave velocity calculations for the second case.
+#+RESULTS: src:fig:wave_velocity2
+[[file:./.ob-jupyter/7f6ca9faf45fac80c24cbad21f14c830c97b5cbe.png]]
+
+#+name: src:fig:wave_velocity3
+#+begin_src jupyter-python :results output :noweb yes
+plt.figure(figsize=(4, 4))
+plot_velocity(100, 200, u0_id=2, color=<<color("blue")>>)
+#+end_src
+
+#+name: fig:wave_velocity3
+#+attr_latex: :width 0.5\textwidth
+#+caption: The wave velocity calculations for the third case.
+#+RESULTS: src:fig:wave_velocity3
+[[file:./.ob-jupyter/718e60a0725062df020a0277ea5f8b893717a09a.png]]
+
+** Phase plane
+We can analyse the three cases in the phase plane spanned by $u$ and
+$v=du/d\xi$, see Figures [[fig:wave_phase1]], [[fig:wave_phase2]] and [[fig:wave_phase3]].
+
+The trajectories for each case connects two fixed points after the transient.
+For the cases with positive velocity is /stable/ because of the boundary
+conditions and the second case with negative velocity is /unstable/ since it
+will die out when reaching the boundary.
+
+#+begin_src jupyter-python
+def plot_system_phase(u_n, step=-1, ax=None, ylabel=False, **kwargs):
+    if ax is None:
+        ax = plt.gca()
+    v_n = np.diff(u_n[step, :], prepend=u_n[step, 0])
+    ax.plot(v_n, u_n[step, :], **kwargs)
+    ax.set_xlabel("$v(\\xi, \\tau)$")
+    if ylabel:
+        ax.set_ylabel("$u(\\xi, \\tau)$")
+    ax.set_ylim([0, 6])
+    ax.set_xlim([-1, 0])
+    return v_n, u_n
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :results silent :noweb yes
+def plot_time_phase(ax1, ax2, t_max, u0_lm, dt=0.001, **kwargs):
+    t_n = np.arange(0, t_max, dt)
+    xi_n, u_ns = plot_system(u0_lm, t_n, ax=ax1, **kwargs)
+    ax1.set_title("Wave profile")
+
+    v_n, u_n = plot_system_phase(u_ns, ax=ax2, **kwargs)
+    ax2.set_title("Phase plane")
+    plt.suptitle(f"$\\tau={t_max}$")
+
+    return v_n, u_n
+#+end_src
+
+#+name: src:fig:wave_phase1
+#+begin_src jupyter-python :results output :noweb yes
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
+plot_time_phase(ax1, ax2, 50, u0_lms[0], zorder=10)
+states = [steady_states[us1].subs(V), steady_states[us2].subs(V)]
+for i, state in enumerate(states):
+    ax1.axhline(float(state), ls='--', color=<<color("fg-hc")>>, lw=0.8, alpha=0.5, label="fixed point" if i == 0 else "")
+    ax2.axhline(float(state), ls='--', color=<<color("fg-hc")>>, lw=0.8, alpha=0.5)
+ax2.set_yticks([])
+ax1.legend()
+#+end_src
+
+#+name: fig:wave_phase1
+#+caption: The wave profile of the first case (left) and the phase plane spanned by $u$ and $v=du/d\xi$ (right).
+#+RESULTS: src:fig:wave_phase1
+[[file:./.ob-jupyter/3650e3983428e3da1a74eeb7b30637b803b0be3d.png]]
+
+#+name: src:fig:wave_phase2
+#+begin_src jupyter-python :results output :noweb yes
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
+plot_time_phase(ax1, ax2, 20, u0_lms[1], zorder=10, color=<<color("red")>>)
+states = [steady_states[us1].subs(V), steady_states[us2].subs(V)]
+for i, state in enumerate(states):
+    ax1.axhline(float(state), ls='--', color=<<color("fg-hc")>>, lw=0.8, alpha=0.5, label="fixed point" if i == 0 else "")
+    ax2.axhline(float(state), ls='--', color=<<color("fg-hc")>>, lw=0.8, alpha=0.5)
+ax2.set_yticks([])
+ax1.legend()
+#+end_src
+
+#+name: fig:wave_phase2
+#+caption: The wave profile of the second case (left) and the phase plane (right). The phase plane trajectory connects the zero fixed point to the smaller fixed point. It's velocity is negative and travels to the left, this means that it is /unstable/.
+#+RESULTS: src:fig:wave_phase2
+[[file:./.ob-jupyter/9a4c3c1d02cad819702c4031e626096501371388.png]]
+
+#+name: src:fig:wave_phase3
+#+begin_src jupyter-python :results output :noweb yes
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
+plot_time_phase(ax1, ax2, 50, u0_lms[2], zorder=10, color=<<color("blue")>>)
+states = [steady_states[us1].subs(V), steady_states[us2].subs(V)]
+for i, state in enumerate(states):
+    ax1.axhline(float(state), ls='--', color=<<color("fg-hc")>>, lw=0.8, alpha=0.5, label="fixed point" if i == 0 else "")
+    ax2.axhline(float(state), ls='--', color=<<color("fg-hc")>>, lw=0.8, alpha=0.5)
+ax2.set_yticks([])
+ax1.legend()
+#+end_src
+
+#+name: fig:wave_phase3
+#+caption: The wave profile of the third case (left) and the phase plane (right). This is the one that started with a small perturbation from the smaller fixed point and it moved up to the larger one, this means that the lower fixed point is unstable and the larger is stable.
+#+RESULTS: src:fig:wave_phase3
+[[file:./.ob-jupyter/89c18493dad85a157ccc6d1d6ce53dbb10f17dfe.png]]
+
+# ** COMMENT Animation
+# #+begin_src jupyter-python :results output
+# xi_n = np.arange(V[L])
+# dt = 0.05
+# t_n = np.arange(0, 20, dt)
+# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
+# ax1.set_xlim([0, V[L]])
+# ax1.set_ylim([0, 6])
+# ax2.set_ylim([0, 6])
+# ax2.set_xlim([-1.0, 1.1])
+# text = fig.suptitle("$\\tau=0.0$")
+
+# class Animation():
+#     def __init__(self):
+#         self.sols = [run_system(u0_lm, t_n) for u0_lm in u0_lms]
+#         self.phase_lines = ax2.plot([], [], [], [], [], [])
+#         for line, (xi_n, u_n) in zip(self.phase_lines, self.sols):
+#             line.set_ydata(u_n[0, :])
+#             line.set_xdata(np.diff(u_n[0, :], prepend=np.nan))
+#         self.wave_lines = ax1.plot([], [], [], [], [], [])
+#         for line, (xi_n, u_n) in zip(self.wave_lines, self.sols):
+#             line.set_xdata(xi_n)
+#             line.set_ydata(u_n[0, :])
+
+#     def init(self):
+#         return self.wave_lines + self.phase_lines
+
+#     def __call__(self, i):
+#         for line, (xi_n, u_n) in zip(self.phase_lines, self.sols):
+#             line.set_ydata(u_n[i, :])
+#             line.set_xdata(np.diff(u_n[i, :], prepend=np.nan))
+#         for line, (xi_n, u_n) in zip(self.wave_lines, self.sols):
+#             line.set_xdata(xi_n)
+#             line.set_ydata(u_n[i, :])
+#         text.set_text(f"$\\tau={t_n[i]:.3f}$")
+#         return self.wave_lines + self.phase_lines
+
+# anim = Animation()
+# fanim = FuncAnimation(fig, anim, init_func=anim.init, frames=len(t_n), interval=20, blit=True)
+# %timeit -r 1 -n 1 fanim.save('phase_waves.mp4')
+# #+end_src
+
+# #+RESULTS:
+# :RESULTS:
+# : 1min 26s ± 0 ns per loop (mean ± std. dev. of 1 run, 1 loop each)
+# [[file:./.ob-jupyter/d15250954c39cd4e575788556239ca18def6b360.png]]
+# :END:
+
+** Local outbreak
+We will now consider an initial population that models a local outbreak using the function,
+#+begin_src jupyter-python
+init_popsize_2 = Eq(u(xi, 0), u0*exp(-(xi-xi0)**2))
+init_popsize_2
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}u{\left(\xi,0 \right)} = u_{0} e^{- \left(\xi - \xi_{0}\right)^{2}}\end{equation}
+:END:
+
+See Table [[tab:initial_cases_2]] and Figure [[fig:init_popsize_2]] for the two cases of
+initial populations we will investigate. The first case dies out, but the second
+one creates two waves in both directions that propagates outward, see Figure
+[[fig:evolution_plot]].
+
+#+name: src:tab:initial_cases_2
+#+begin_src jupyter-python :results table
+initial_cases_2 = [
+    { u0: steady_states[us1].subs(V), xi0: 50 },
+    { u0: steady_states[us1].subs(V)*3, xi0: 50 },
+]
+u0_lms_2 = [lambdify(xi, init_popsize_2.rhs.subs(case)) for case in initial_cases_2]
+create_cases_table(initial_cases_2)
+#+end_src
+
+#+name: tab:initial_cases_2
+#+caption: The two cases of $u_0$ and $\xi_0$ for the local outbreak.
+#+RESULTS: src:tab:initial_cases_2
+|   |          $u_{0}$ | $\xi_{0}$ |
+|---+------------------+-----------|
+| 1 | 5.56155281280883 |        50 |
+| 2 | 16.6846584384265 |        50 |
+
+#+name: src:fig:init_popsize_2
+#+begin_src jupyter-python :results output
+plt.figure(figsize=(4, 4))
+for case, u_lm in zip(initial_cases_2, u0_lms_2):
+    plot_initial_population(u_lm, case)
+plt.title("Initial population sizes")
+plt.legend()
+#+end_src
+
+#+name: fig:init_popsize_2
+#+attr_latex: :width 0.5\textwidth
+#+caption: A plot of the initial population size used for the local outbreak.
+#+RESULTS: src:fig:init_popsize_2
+[[file:./.ob-jupyter/82ef0067577927bfcff41a053f7d4a93b5504e36.png]]
+
+#+name: src:fig:evolution_plot
+#+begin_src jupyter-python :results output :noweb yes
+steps = 10
+T_ns1 = np.linspace(5, 120, steps)
+T_ns2 = np.linspace(2, 14, steps)
+plt.figure(figsize=(8, 4))
+plt.subplot(1, 2, 1)
+for i, T_n in enumerate(T_ns2):
+    t_n = np.arange(0, T_n, 0.01)
+    plot_system(u0_lms_2[0], t_n, color=<<color("green")>>, alpha=(i+1)/steps, label="$u^*_1$")
+plt.title(f"$u_0=u^*_1$, $\\tau=[{T_ns2[0]},{T_ns2[-1]}]$")
+plt.subplot(1, 2, 2)
+for i, T_n in enumerate(T_ns1):
+    t_n = np.arange(0, T_n, 0.01)
+    plot_system(u0_lms_2[1], t_n, color=<<color("red")>>, alpha=(i+1)/steps, label="$3u^*_1$")
+plt.title(f"$u_0=3u^*_1$, $\\tau=[{T_ns1[0]},{T_ns1[-1]}]$")
+plt.savefig("test.png")
+#+end_src
+
+#+name: fig:evolution_plot
+#+caption: A time evolution plot of the local outbreaks, the brightest color is present time and the darker colors is further into the past.
+#+RESULTS: src:fig:evolution_plot
+[[file:./.ob-jupyter/d426add3dfa5f17b1f783648279120c812725baa.png]]
+
+#+begin_src jupyter-python :results silent :noweb yes
+def plot_system_3d(ax, u0_lm, t_max, vmax=6, zlabel=True, dt=0.5):
+    t_n = np.arange(0, t_max, dt)
+    xi_n, u_n = run_system(u0_lm, t_n)
+    X, Y = np.meshgrid(xi_n, t_n)
+    ax.plot_surface(X.T, Y.T, u_n.T,
+                    linewidth=1.0,
+                    antialiased=True,
+                    cmap=green_cmap,
+                    vmin=0,
+                    vmax=vmax)
+    ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+    ax.xaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+    ax.yaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+    ax.zaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+    ax.set_xlabel("$\\xi$")
+    ax.set_ylabel("$\\tau$")
+    if zlabel:
+        ax.set_zlabel("$u(\\xi, \\tau)$")
+#+end_src
+
+#+name: src:fig:evolution_plot_3d
+#+begin_src jupyter-python :results output :noweb yes
+fig = plt.figure(figsize=(8, 4))
+ax1 = fig.add_subplot(1, 2, 1, projection='3d', proj_type='ortho')
+ax2 = fig.add_subplot(1, 2, 2, projection='3d', proj_type='ortho')
+ax1.set_title("$\\xi_0=50$, $u_0=u^*_1$")
+plot_system_3d(ax1, u0_lms_2[0], 300, vmax=2, zlabel=False)
+ax2.set_title("$\\xi_0=50$, $u_0=3u^*_1$")
+plot_system_3d(ax2, u0_lms_2[1], 300)
+plt.savefig("plot3d.png")
+#+end_src
+
+#+name: fig:evolution_plot_3d
+#+caption: An alternative 3d time evolution plot of the two cases.
+#+RESULTS: src:fig:evolution_plot_3d
+[[file:./.ob-jupyter/8f19b5a12a04906aba50034657f8f0b62e2f1b38.png]]
+

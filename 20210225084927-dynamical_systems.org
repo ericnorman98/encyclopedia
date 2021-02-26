@@ -1,0 +1,7 @@
+#+title: Dynamical systems
+
+* Dynamical systems
+- [[file:20210224180257-ricker_map.org][Ricker map]]
+- [[file:20210220093951-traveling_waves.org][Traveling waves]]
+- [[file:20210222131111-kuramoto_model.org][Kuramoto model]]
+- [[file:20210220094530-diffusion_driven_instability.org][Diffusion driven instability]]

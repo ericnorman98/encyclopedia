@@ -1,0 +1,36 @@
+#+title: Clustering coefficient
+#+roam_tags: graph theory clustering coefficient
+
+* Clustering coefficient
+#+begin_src python :tangle graphs.py
+def clustering_coefficient(A):
+    triangles = np.trace(np.linalg.matrix_power(A, 3)) / 6
+    k = A.sum(axis=0)
+    triples = np.sum(np.multiply(k,(k-1))/2)
+    return triangles*3/triples
+#+end_src
+
+#+begin_src python :results file
+from networkx import nx
+import graphs
+import util
+import numpy as np
+import matplotlib.pyplot as plt
+
+with open('smallWorldExample.txt') as f:
+    A = graphs.from_string(f.readlines())
+
+G = nx.from_numpy_matrix(A)
+C = graphs.clustering_coefficient(A)
+
+pos = nx.spring_layout(G, iterations=1000)
+plt.figure(figsize=(4, 4))
+util.draw_graph(G, pos)
+name = "smallexamplecoef.png"
+plt.title(f"$C={C:.6f}$")
+plt.savefig(name)
+return name
+#+end_src
+
+#+RESULTS[8a3174092ec95424bc3a0c8717e84395eba302b0]:
+[[file:smallexamplecoef.png]]

@@ -1,0 +1,43 @@
+#+title: Spatial SIR simulation
+
+* Setup :noexport:
+#+call: init()
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session spatial_sir_simulation :results raw :eval no-export :pandoc t :async yes :tangle spatial_sir_simulation.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+#+name: current-theme
+: dark
+#+name: doc-name
+: spatial_sir_simulation
+:end:
+
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+from pyorg.latex import *
+#+end_src
+
+#+RESULTS:
+
+* Spatial SIR simulation
+This is an investigation into a model similar to the SIR model. The difference
+is that it takes spatial effects into account by simulating individual
+interacting agents on a lattice. The next section will describe each part of the
+simulation in detail.
+
+** Random walk
+The are multiple ways of doing a random walk on a lattice. In this simulation we
+will use the /von Neumann neighborhood/ for movement, which means the agents can
+only move; up, down, left, right. Each agent can also stay still with
+probability $1-d$, where $d$ is the /diffusion rate/.
+
+#+begin_src jupyter-python
+plt.scatter([2])
+#+end_src

@@ -1,0 +1,88 @@
+#+title: Preferential growth model
+#+roam_tags: graph theory preferential growth
+
+* Preferential growth model
+#+begin_src python :tangle graphs.py
+def preferential(n, m):
+    ends = list(range(m))
+    nodes = []
+    edges = []
+    for start in range(m, n):
+        starts = [start]*m
+        edges.extend(zip(starts, ends))
+        nodes.extend(starts)
+        nodes.extend(ends)
+        ends = np.random.choice(nodes, size=m)
+
+    G = nx.Graph()
+    G.add_edges_from(edges)
+    return G
+#+end_src
+
+#+begin_src python :results file :noweb yes
+import matplotlib.pyplot as plt
+from networkx import nx
+import numpy as np
+import util
+import graphs
+
+n = 64
+m = 4
+G = graphs.preferential(n, m)
+
+plt.figure(figsize=(4, 4))
+pos = nx.spring_layout(G)
+util.draw_graph(G, pos)
+plt.title(f"$n={n}, m={m}$")
+
+name = "preferential_growth.png"
+plt.savefig(name, facecolor=<<color("bg")>>)
+return name
+#+end_src
+
+#+begin_src python :results file :noweb yes
+import matplotlib.pyplot as plt
+from networkx import nx
+import numpy as np
+import util
+from scipy.stats import rankdata
+
+n = 2000
+m = 20
+
+G = nx.barabasi_albert_graph(n, m)
+
+def ccdf(data):
+    data = np.sort(data)
+    ranks = rankdata(data, method='ordinal')
+    ranks = ranks / np.max(ranks)
+    return data, ranks
+
+deg = np.array(G.degree, dtype=np.float32)[:, 1]
+deg, ranks = ccdf(deg)
+
+plt.figure(figsize=(4*2, 4))
+
+plt.subplot(1, 2, 1)
+pos = nx.spring_layout(G)
+util.draw_dense_graph(G, pos, alpha=0.1)
+
+plt.subplot(1, 2, 2)
+plt.scatter(deg, np.flip(ranks))
+k = np.linspace(np.min(deg), np.max(deg))
+F = 2.0*m**2*k**(-3+1)
+plt.plot(k, F/F.max(), color=<<color("blue")>>, label="theoretical")
+
+plt.xscale('log')
+plt.yscale('log')
+
+plt.suptitle(f"$n={n}, n_0=m={m}$")
+plt.legend(loc='upper right')
+name1 = "preferential_large4.png"
+plt.savefig(name1, facecolor=<<color("bg")>>, dpi=400)
+
+return name1
+#+end_src
+
+#+RESULTS[2290ccc17104b35a98f3ebb393dbb692c7575f0f]:
+[[file:preferential_large4.png]]

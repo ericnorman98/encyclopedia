@@ -1,0 +1,112 @@
+#+title: Tree fractal
+#+roam_tags: fractal tree recursion
+
+* Setup :noexport:
+#+call: init(theme="dark")
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session tree_fractal :results raw :eval no-export :pandoc t :async yes :tangle tree_fractal.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+#+name: current-theme
+: dark
+#+name: doc-name
+: tree_fractal
+:end:
+
+* Tree fractal
+Tree fractals are very easy to create, it is made by recursivly drawing shorter
+lines that spread out by an angle. You start drawing the trunk of the tree like
+this:
+
+#+begin_src jupyter-python
+from matplotlib.animation import FuncAnimation
+import matplotlib.pyplot as plt
+from matplotlib import collections as mc
+import numpy as np
+import pyorg.plot as plot
+plot.use_style()
+from PIL import Image, ImageDraw
+from math import pi, cos, sin
+from IPython.display import display
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :exports none :results silent :noweb yes
+w = h = 400
+
+def tree(lines, x, y, r, t, depth=8, angle=pi/4, frac=1.4):
+    if depth == 0:
+        return
+    nx = x - r * cos(t)
+    ny = y - r * sin(t)
+    lines.append([(x, y), (nx, ny)])
+    tree(lines, nx, ny, r/frac, t-angle, depth-1, angle)
+    tree(lines, nx, ny, r/frac, t+angle, depth-1, angle)
+#+end_src
+
+#+begin_src jupyter-python :results output
+plt.figure()
+# image = Image.new('P', (w, h), (33, 36, 43))
+# draw = ImageDraw.Draw(image)
+lines = []
+tree(lines, 0, 0, 100, -pi/2, angle=pi/4, depth=1)
+plt.gca().add_collection(mc.LineCollection(lines))
+plt.xlim([-1, 1])
+plt.axis('off')
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/765e0585029ee55cbc2a47c1b62965fd7722a9c0.png]]
+
+#+begin_src jupyter-python :exports none :results output :noweb yes :var name=doc-name
+plt.figure()
+lines = []
+tree(lines, 0, 0, 1, -pi/2, angle=pi/4, depth=8, frac=2.0)
+plt.gca().add_collection(mc.LineCollection(lines))
+plt.gca().autoscale()
+plt.gca().set_aspect(1)
+plt.axis('off')
+plt.savefig(f"{name}.png")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/5c280b82a290a0a6506c22f131c3f4fb58eb5d62.png]]
+
+
+After drawing the trunk, recursivly add branches mirrored to each other at some
+angle while simultaneously decreasing the length of each branch to some depth.
+
+#+begin_src jupyter-python :results silent
+fig, ax = plt.subplots()
+lines = []
+tree(lines, 0, 0, 1, -pi/2, angle=pi/4, depth=8)
+lc = mc.LineCollection(lines)
+ax.add_collection(lc)
+ax.autoscale()
+ax.set_aspect(1)
+plt.sca(ax)
+plt.axis('off')
+
+def init():
+    return [lc]
+
+def animate(i):
+    # draw.text((10, 10), f"{t} depth", fill=(152, 190, 101))
+
+    lc.set_verts(lines[:i+1])
+    return [lc]
+
+anim = FuncAnimation(fig, animate, init_func=init, frames=len(lines), interval=20, blit=True)
+with open('tree_anim.html', 'w') as f:
+    f.write(anim.to_jshtml())
+#+end_src
+
+#+include: tree_anim.html export html

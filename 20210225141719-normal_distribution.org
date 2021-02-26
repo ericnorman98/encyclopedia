@@ -1,0 +1,77 @@
+#+title: Normal distribution
+#+roam_tags: statistics distribution normal
+
+* Setup :noexport:
+#+call: init(session="statistics")
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session statistics :results raw :eval no-export :pandoc t :async yes :tangle normal_distribution.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+
+#+RESULTS:
+
+#+name: current-theme
+: dark
+#+name: doc-name
+: normal_distribution
+:end:
+
+* Normal distribution
+#+begin_src jupyter-python
+Z = Normal('Z', mu, sigma)
+Zstd = Normal('Z', 0, 1)
+#+end_src
+
+#+RESULTS:
+
+** PDF
+#+begin_src jupyter-python
+phi = symbols('phi', cls=Function)
+phi_f = lambda x: LEq(phi(x), density(Zstd)(x))
+phi_f(x)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\phi{\left(x \right)} = \frac{\sqrt{2} e^{- \frac{x^{2}}{2}}}{2 \sqrt{\pi}}\end{equation}
+:END:
+
+#+begin_src jupyter-python :results output :var name=doc-name
+x_n = np.linspace(-5, 5, 200)
+plt.plot(x_n, lambdify(x, phi_f(x).rhs)(x_n))
+plt.axis('off')
+plt.savefig(f"{name}.png")
+plt.axis('on')
+plt.title("Normal PDF")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/bb81b1f5329d798cee40e5347db773c79d199c8a.png]]
+
+** CDF
+#+begin_src jupyter-python
+Phi = symbols('Phi', cls=Function)
+Phi_f = lambda x: LEq(Phi(x), cdf(Zstd)(x))
+Phi_f(x)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\Phi{\left(x \right)} = \frac{\operatorname{erf}{\left(\frac{\sqrt{2} x}{2} \right)}}{2} + \frac{1}{2}\end{equation}
+:END:
+
+#+begin_src jupyter-python :results output
+x_n = np.linspace(-5, 5, 200)
+plt.plot(x_n, lambdify(x, Phi_f(x).rhs)(x_n))
+plt.title("Normal CDF")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/0c8bec99c2f4c82873188b3bd17adaac6e661290.png]]

@@ -1,0 +1,23 @@
+#+title: Random sampling
+#+roam_tags: statistics random sampling
+
+* Setup :noexport:
+#+call: init(session="statistics")
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session random_sampling :results raw :eval no-export :pandoc t :async yes :tangle random_sampling.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+#+name: current-theme
+: dark
+#+name: doc-name
+: random_sampling
+:end:
+
+* Random sampling

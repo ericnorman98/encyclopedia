@@ -1,0 +1,6 @@
+#+title: Fractals
+
+* Fractals
+- [[file:20210225074303-mandelbrot_set.org][Mandelbrot set]]
+- [[file:20210224170618-tree_fractal.org][Tree fractal]]
+- [[file:20210224180257-ricker_map.org][Ricker map]]

@@ -1,0 +1,320 @@
+#+title: Ricker map
+#+roam_tags: dynamical systems ricker map fractal chaos
+
+* Setup :noexport:
+#+call: init()
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session ricker_map :results raw :eval no-export :pandoc t :async yes :tangle ricker_map.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+#+name: current-theme
+: dark
+#+name: doc-name
+: ricker_map
+:end:
+
+
+* Ricker map
+The Ricker map is a population model that can describe populations of fish in a
+fishery and populations that exhibit cannibalism to offspring. The definition of
+the map is as follows,
+
+#+BEGIN_SRC jupyter-python :results silent
+import sympy as sm
+import matplotlib.pyplot as plt
+import pyorg.plot as plot
+import numpy as np
+import pandas as pd
+from pyorg.latex import *
+plot.use_style()
+from sympy import *
+from ddeint import ddeint
+from scipy.integrate import odeint
+from matplotlib.animation import FuncAnimation
+import numba
+#+END_SRC
+
+#+begin_src jupyter-python
+tau, R, alpha = symbols('tau R alpha')
+eta = IndexedBase('eta')
+rickermap = Eq(eta[tau+1], R*eta[tau]*exp(-alpha*eta[tau]))
+rickermap
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}{\eta}_{\tau + 1} = R e^{- \alpha {\eta}_{\tau}} {\eta}_{\tau}\end{equation}
+:END:
+
+where $\eta_{\tau}$ is the number of adults in generation $\tau$. $R$ is
+modeling the number of children each adult can have and $\alpha$ is the rate of
+cannibalism.
+
+#+begin_src jupyter-python :exports none
+def create_map(eq, *variables):
+    eq_lm = numba.njit(lambdify(variables, eq.rhs))
+    @numba.njit()
+    def map_next(*args):
+        return eq_lm(*args)
+    return map_next
+map_next = create_map(rickermap, eta[tau], R, alpha)
+map_next(2.0, 1.0, 0.01)
+#+end_src
+
+#+RESULTS:
+: 1.9603973466135105
+
+#+begin_src jupyter-python :results silent
+@numba.njit()
+def map_steps(map_next, steps, x0, *params):
+    x = x0
+    tau_n = np.arange(steps)
+    return tau_n, np.array([x0] + [x := map_next(x, *params) for _ in range(steps-1)])
+#+end_src
+
+#+BEGIN_SRC jupyter-python :noweb yes :results output
+plt.figure(figsize=(4, 4))
+N0_n = 900
+alpha_n = 0.01
+R_n = 16.0
+steps = 100
+tau_n, eta_n = map_steps(map_next, steps, N0_n, R_n, alpha_n)
+plt.xlabel("$\\tau$")
+plt.ylabel("$\\eta_{\\tau}$")
+plt.title(f"$R={R_n}$")
+plt.plot(tau_n, eta_n, lw=0.8)
+#+END_SRC
+
+#+RESULTS:
+[[file:./.ob-jupyter/b569b911f062d0ca6654748d6f21b8e1621e1361.png]]
+
+#+attr_latex: :width 0.5\textwidth
+#+RESULTS:
+
+#+attr_latex: :width 0.5\textwidth
+#+RESULTS:
+
+** Bifurcation diagram
+We can make a plot of the bifurcations in this system by plotting the last 100
+values for each $R$ when simulating the model.
+#+BEGIN_SRC jupyter-python :noweb yes :results output
+plt.figure(figsize=(4, 4))
+N0_n = 900
+alpha_n = 0.01
+Rs_n = np.arange(1.0, 30.0, 0.1)
+steps = 300
+bifur_values = []
+for R_n in Rs_n:
+    tau_n, eta_n = map_steps(map_next, steps, N0_n, R_n, alpha_n)
+    bifur_values.extend([(R_n, e) for e in eta_n[-100:]])
+bifur_values = np.array(bifur_values)
+plt.scatter(bifur_values[:, 0], bifur_values[:, 1], s=4.0, lw=0.0)
+plt.xlabel("$R$")
+plt.ylabel("$\\eta_{\\tau}$")
+#+END_SRC
+
+#+RESULTS:
+[[file:./.ob-jupyter/1effa461dce1beb50ffeea92155b6c35037f898a.png]]
+
+#+BEGIN_SRC jupyter-python :noweb yes :var name=doc-name :results output :exports none
+plt.figure(figsize=(4, 4))
+N0_n = 900
+alpha_n = 0.01
+Rs_n = np.arange(1.0, 30.0, 0.1)
+steps = 300
+bifur_values = []
+for R_n in Rs_n:
+    tau_n, eta_n = map_steps(map_next, steps, N0_n, R_n, alpha_n)
+    bifur_values.extend([(R_n, e) for e in eta_n[-100:]])
+bifur_values = np.array(bifur_values)
+plt.scatter(bifur_values[:, 0], bifur_values[:, 1], s=4.0, lw=0.0)
+plt.xticks([])
+plt.yticks([])
+plt.savefig(f"{name}.png")
+#+END_SRC
+
+#+RESULTS:
+[[file:./.ob-jupyter/c6ca1573ba0eaf164897f8144f29025d8537836c.png]]
+
+
+#+BEGIN_SRC jupyter-python :noweb yes
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
+N0_n = 900
+alpha_n = 0.01
+tt = np.linspace(0.0, 1.0, 500)
+Rs_n = 1.0 + tt*29.0
+steps = 300
+ax1.set_xlim([0, 100])
+ax1.set_ylim([0, 1100])
+ax2.set_xlim([0, 30])
+ax2.set_ylim([0, 1100])
+line, = ax1.plot([], [], lw=1.0)
+ax1.set_xlabel("$\\tau$")
+ax1.set_ylabel("$\\eta_{\\tau}$")
+ax2.set_xlabel("$R$")
+ax2.set_ylabel("$\\eta_{\\tau}$")
+title = ax1.set_title(f"$R={Rs_n[0]}$")
+scatter = ax2.scatter([], [], lw=0.0, s=0.9)
+progline = ax2.axvline(0, color=<<color("red")>>, lw=0.6)
+iterations = []
+scatter_points = []
+
+def init():
+    return [line, title, scatter, progline]
+
+def animate(i):
+    tau_n, eta_n = map_steps(map_next, steps, N0_n, Rs_n[i], alpha_n)
+    scatter_points.extend([(Rs_n[i], e) for e in eta_n[-100:]])
+    line.set_data(tau_n, eta_n)
+    scatter.set_offsets(scatter_points)
+    title.set_text(f"$R={Rs_n[i]:.2f}$")
+    progline.set_xdata(Rs_n[i])
+    return [line, title, scatter, progline]
+
+anim = FuncAnimation(fig, animate, frames=len(Rs_n), init_func=init, interval=10, blit=True)
+name = "rickermap_plot.mp4"
+anim.save(name, fps=30)
+plt.close(fig)
+print("DONE")
+#+END_SRC
+
+** n-point cycles
+We can find the number of n-point cycles by running the model beyond the
+transient and taking the last n /unique/ points. See Figure [[fig:npoint_cycles]]
+for examples of 1, 2, 3 and 4-point cycles.
+
+#+srcname: src:fig:npoint_cycles
+#+BEGIN_SRC jupyter-python :noweb yes
+plt.figure(figsize=(4, 4))
+N0_n = 900
+alpha_n = 0.01
+Rs_n = [5, 10, 23, 14]
+steps = 40
+for i, R_n in enumerate(Rs_n):
+    plt.subplot(2, 2, i+1)
+    tau_n, eta_n = map_steps(map_next, steps, N0_n, R_n, alpha_n)
+    vals = eta_n[-(i+1):]
+    for v in vals:
+        plt.axhline(v, color=<<color("red")>>, lw=0.5, zorder=10)
+    plt.plot(tau_n, eta_n, lw=0.5, color=<<color("green")>>)
+    plt.yticks(vals)
+    plt.title(f"$R={R_n}$")
+    if i > 1:
+        plt.xlabel("$\\tau$")
+    if i % 2 == 0:
+        plt.ylabel("$\\eta_{\\tau}$")
+#+END_SRC
+
+#+attr_latex: :width 0.5\textwidth
+#+name: fig:npoint_cycles
+#+caption: Four plots of a 1, 2, 3, and 4-point cycles from the model.
+#+RESULTS: src:fig:npoint_cycles
+[[file:./.ob-jupyter/05279c2c87fde9ab26c58140fbeb7f8a39c09429.png]]
+
+
+** Finding bifurcations numerically
+We can find at which $R$ values n-point cycle bifurcations occur by running the
+model for a range of $R$ and calculating $n$. See Figure [[fig:r1r2]] for a plot of
+the two first values of $R_n$.
+
+#+begin_src jupyter-python :results silent :noweb yes
+def plot_rs(max_n, Rs_n, steps=10000, label=True):
+    N0_n = 900
+    alpha_n = 0.01
+    max_cycles = 100
+    cycles = []
+    for i, R_n in enumerate(Rs_n):
+        tau_n, eta_n = map_steps(map_next, steps, N0_n, R_n, alpha_n)
+        vals = eta_n[-max_cycles:]
+        plt.scatter([R_n for _ in range(len(vals))], vals, color=<<color("green")>>, lw=0.0, s=1.0)
+        vals = np.floor(vals*10000)/10000
+        n_cycles = len(np.unique(vals))
+        cycles.append((R_n, n_cycles))
+    cycles = np.array(cycles)
+    x = cycles[:, 0]
+    y = cycles[:, 1]
+    y = np.maximum.accumulate(y)
+
+    change = np.diff(y, prepend=np.inf)>0
+    change = np.where(change)[0]
+    changex = x[change].reshape([-1, 1])
+    changey = y[change].reshape([-1, 1])
+    features = np.concatenate((changex, changey), axis=1)
+
+    xticks = np.sort(list(features[:2, 0]) + ([features[-1, 0]] if max_n > 2 else []))
+    if label:
+        plt.xticks(list(xticks), [f"$R_{i+1}\\approx {R_n:.3f}$" for i, R_n in enumerate(xticks)])
+    else:
+        plt.xticks(list(xticks))
+
+    for R_n in features[:max_n, 0]:
+        plt.axvline(R_n, color=<<color("red")>>, lw=0.5, zorder=10)
+
+    plt.xlabel("$R$")
+    plt.ylabel("$\\eta_{\\tau}$")
+    return features
+#+end_src
+
+#+name: src:fig:r1r2
+#+BEGIN_SRC jupyter-python :results output :noweb yes
+plt.figure(figsize=(4, 4))
+Rs_n = np.linspace(2.0, 15.0, 5000)
+steps = 80000
+max_n = 2
+rs = plot_rs(max_n, Rs_n, steps)
+#+END_SRC
+
+#+attr_latex: :width 0.5\textwidth
+#+caption: A plot showing $R_1$ and $R_2$ values of the first two bifurcations.
+#+name: fig:r1r2
+#+RESULTS: src:fig:r1r2
+[[file:./.ob-jupyter/0dcb114e2f410d74440f8bab704bb191b4b6520e.png]]
+
+
+
+** Finding the bifurcation limit $R_{\infty}$
+By running the model longer and calculating more values of $R$, we can get an
+approximation of $R_{\infty}$. See Figure [[fig:roo]] for a plot of more $R$ values.
+See Figure [[fig:rs_limit_plot]] for a plot of the $R$ values against $n$, we can see that the limit approaches $R_{\infty}\approx 14.766$.
+
+#+name: src:fig:roo
+#+BEGIN_SRC jupyter-python :results output :noweb yes
+plt.figure(figsize=(4, 4))
+Rs_n = np.linspace(12, 15, 10000)
+steps = 200000
+max_n = 20
+infR = plot_rs(max_n, Rs_n, steps, label=False)
+#+END_SRC
+
+#+caption: A plot of all the $R_n$ values found (the red vertical lines).
+#+name: fig:roo
+#+attr_latex: :width 0.8\textwidth
+#+RESULTS: src:fig:roo
+[[file:./.ob-jupyter/ac584c45117c9a15f54595bb4ea6b63fabd14597.png]]
+
+#+srcname: src:fig:rs_limit_plot
+#+begin_src jupyter-python :results output :noweb yes
+from matplotlib.ticker import FormatStrFormatter
+plt.figure(figsize=(4, 4))
+
+allRs = np.concatenate([[rs[0, 0]], infR[:, 0]])
+plt.plot(np.arange(len(allRs))+1, allRs, zorder=10)
+plt.axhline(allRs[-1], ls='--', color=<<color("fg-hc")>>)
+plt.yticks([allRs[0], allRs[1], allRs[2], allRs[-1]])
+plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%.4f'))
+plt.xlabel("$n$")
+plt.ylabel("$R$")
+#+end_src
+
+#+attr_latex: :width 0.5\textwidth
+#+name: fig:rs_limit_plot
+#+caption: A plot of the $R_n$ values, we can see that the limit $R_{\infty}$ is around $14.766$.
+#+RESULTS: src:fig:rs_limit_plot
+[[file:./.ob-jupyter/8910ffdf1c4c9d7380e37439291d07377947cd91.png]]

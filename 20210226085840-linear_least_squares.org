@@ -1,0 +1,240 @@
+#+title: Linear least squares
+#+roam_tags: statistics linear least squares
+#+options: toc:nil num:nil
+
+
+* Setup :noexport:
+#+call: init()
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session linear_least_squares :results raw :eval no-export :pandoc t :async yes :tangle linear_least_squares.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+
+#+RESULTS:
+
+#+name: current-theme
+: dark
+#+name: doc-name
+: linear_least_squares
+:end:
+
+#+begin_src jupyter-python
+import numpy as np
+from sympy import *
+from sympy.utilities.lambdify import implemented_function
+from sympy.utilities.autowrap import autowrap
+from pyorg.latex import *
+import matplotlib.pyplot as plt
+from matplotlib import collections as mc
+#+end_src
+
+#+RESULTS:
+
+* Linear least squares
+To fit a line to a set of points $(x_i,y_i)$, where $i=1,\dots,n$, we need to
+find the slope and intercept of the line.
+
+#+begin_src jupyter-python
+n = symbols('n', integer=True)
+i = Idx('i', n)
+x = IndexedBase('x')
+y = IndexedBase('y')
+b0, b1 = symbols('beta_0 beta_1')
+
+line = implemented_function('y', lambda x, b0, b1: b0+b1*x)
+line_lam = lambdify((x, b0, b1), line(x, b0, b1), 'numpy')
+LFunc(line(x, b0, b1))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}y{\left(x,\beta_{0},\beta_{1} \right)} = \beta_{0} + \beta_{1} x\end{equation}
+:END:
+
+Lets say we have the points,
+
+#+begin_src jupyter-python
+V = {
+    n: 20,
+    b0: 1.5,
+    b1: -2
+}
+xs = np.linspace(0, 1, V[n])
+ys = np.linspace(0, 1, V[n])+np.random.normal(0, 0.3, size=V[n])
+LValues(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+n = 20\\
+\beta_{0} = 1.5\\
+\beta_{1} = -2
+\end{cases}\end{equation}
+:END:
+
+#+begin_src jupyter-python :noweb yes :results silent
+def plot_system(ax=None, b0_n=V[b0], b1_n=V[b1], **kwargs):
+    if ax is None:
+        ax = plt.gca()
+    ax.scatter(xs, ys)
+    ax.plot(xs, line_lam(xs, b0_n, b1_n), color=<<color("blue")>>)
+#+end_src
+
+#+name: src:fig:points
+#+begin_src jupyter-python :results output :var name=doc-name :noweb yes
+plt.figure(figsize=(2, 2))
+plot_system()
+plt.xticks([])
+plt.yticks([])
+#+end_src
+
+#+RESULTS: src:fig:points
+[[file:./.ob-jupyter/18af9d84d713ad7b95dbcb299a709bbb24f89f95.png]]
+
+
+When applying the method of least squares, we use the slope and intercept of the
+line and minimize
+
+#+begin_src jupyter-python
+S = implemented_function('S', lambda x, y, b0, b1, n: Sum((y[i]-b0-b1*x[i])**2, (i, 0, n-1)))
+S_lam = lambdify((x, y, b0, b1, n), S._imp_(x, y, b0, b1, n), 'numpy')
+LFunc(S(x, y, b0, b1, n))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}S{\left(x,y,\beta_{0},\beta_{1},n \right)} = \sum_{i=0}^{n - 1} \left(- \beta_{0} - \beta_{1} {x}_{i} + {y}_{i}\right)^{2}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+A = IndexedBase('A')
+errors = autowrap(Eq(A[i], S._imp_(x, y, b0, b1, n).args[0].args[0]), backend='cython')
+#+end_src
+
+#+begin_src jupyter-python
+def plot_with_errors(ax=None, b0_n=V[b0], b1_n=V[b1], **kwargs):
+    if ax is None:
+        ax = plt.gca()
+    errors_n = errors(b0_n, b1_n, xs, ys)
+    errors_lines = []
+    for i_n, error in enumerate(errors_n):
+        errors_lines.append([(xs[i_n], ys[i_n]), (xs[i_n], ys[i_n]-error)])
+    lc = mc.LineCollection(errors_lines, lw=0.5)
+    plot_system(ax, b0_n=b0_n, b1_n=b1_n, **kwargs)
+    ax.add_collection(lc)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :results output
+plt.figure(figsize=(2, 2))
+plt.xticks([])
+plt.yticks([])
+plot_with_errors()
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/e15f30fb424a8eaecaa6882a04493fe477b830f5.png]]
+
+
+We can calculate $\beta_0$ and $\beta_1$ using
+
+#+begin_src jupyter-python
+dSdb0 = Eq(S(x, y, b0, b1, n).diff(b0), S._imp_(x, y, b0, b1, n).diff(b0).simplify())
+dSdb1 = Eq(S(x, y, b0, b1, n).diff(b1), S._imp_(x, y, b0, b1, n).diff(b1).simplify())
+
+LArray(dSdb0, dSdb1)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{\partial}{\partial \beta_{0}} S{\left(x,y,\beta_{0},\beta_{1},n \right)} = 2 \sum_{i=0}^{n - 1} \left(\beta_{0} + \beta_{1} {x}_{i} - {y}_{i}\right)\\
+\frac{\partial}{\partial \beta_{1}} S{\left(x,y,\beta_{0},\beta_{1},n \right)} = 2 \sum_{i=0}^{n - 1} \left(\beta_{0} + \beta_{1} {x}_{i} - {y}_{i}\right) {x}_{i}
+\end{array}\end{equation}
+:END:
+
+If we set these partial derivatives to zero we get minimizing functions
+$\hat{\beta_0}$ and $\hat{\beta_1}$.
+#+begin_src jupyter-python
+b0h = symbols('\\hat{\\beta_0}')
+b1h = symbols('\\hat{\\beta_1}')
+Vbh = {
+    b0: b0h,
+    b1: b1h,
+}
+LArray(Eq(0, dSdb0.rhs.expand().subs(Vbh)), Eq(0, dSdb1.rhs.expand().subs(Vbh)))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+0 = 2 \sum_{i=0}^{n - 1} \hat{\beta_0} + 2 \sum_{i=0}^{n - 1} \hat{\beta_1} {x}_{i} + 2 \sum_{i=0}^{n - 1} - {y}_{i}\\
+0 = 2 \sum_{i=0}^{n - 1} \hat{\beta_0} {x}_{i} + 2 \sum_{i=0}^{n - 1} \hat{\beta_1} {x}_{i}^{2} + 2 \sum_{i=0}^{n - 1} - {x}_{i} {y}_{i}
+\end{array}\end{equation}
+:END:
+
+solving for the minimizing functions we get
+#+begin_src jupyter-python
+b0hf_lambda = lambda x, y, n: (Sum(x[i]**2,(i,0,n-1))*Sum(y[i],(i,0,n-1))-Sum(x[i],(i,0,n-1))*Sum(x[i]*y[i],(i,0,n-1)))/(n*Sum(x[i]**2,(i,0,n-1))-Sum(x[i],(i,0,n-1))**2)
+b0hf = implemented_function('\\hat{\\beta_0}', b0hf_lambda)
+b0hf_lam = lambdify((x, y, n), b0hf._imp_(x, y, n))
+LFunc(b0hf(x, y, n))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\hat{\beta_0}{\left(x,y,n \right)} = \frac{- \left(\sum_{i=0}^{n - 1} {x}_{i} {y}_{i}\right) \sum_{i=0}^{n - 1} {x}_{i} + \left(\sum_{i=0}^{n - 1} {x}_{i}^{2}\right) \sum_{i=0}^{n - 1} {y}_{i}}{n \sum_{i=0}^{n - 1} {x}_{i}^{2} - \left(\sum_{i=0}^{n - 1} {x}_{i}\right)^{2}}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+b1hf_lambda = lambda x, y, n: (n*Sum(x[i]*y[i],(i,0,n-1))-Sum(x[i],(i,0,n-1))*Sum(y[i],(i,0,n-1)))/(n*Sum(x[i]**2,(i,0,n-1))-Sum(x[i],(i,0,n-1))**2)
+b1hf = implemented_function('\\hat{\\beta_1}', b1hf_lambda)
+b1hf_lam = lambdify((x, y, n), b1hf._imp_(x, y, n))
+LFunc(b1hf(x, y, n))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\hat{\beta_1}{\left(x,y,n \right)} = \frac{n \sum_{i=0}^{n - 1} {x}_{i} {y}_{i} - \left(\sum_{i=0}^{n - 1} {x}_{i}\right) \sum_{i=0}^{n - 1} {y}_{i}}{n \sum_{i=0}^{n - 1} {x}_{i}^{2} - \left(\sum_{i=0}^{n - 1} {x}_{i}\right)^{2}}\end{equation}
+:END:
+
+We can now use these minimizing functions to fit the line to the data points we
+get the following
+
+#+begin_src jupyter-python
+plt.figure(figsize=(4, 2))
+plt.subplot(1, 2, 1)
+plt.title("Before")
+plt.xticks([])
+plt.yticks([])
+plot_with_errors()
+plt.subplot(1, 2, 2)
+plt.title("After")
+plt.xticks([])
+plt.yticks([])
+plot_with_errors(b0_n=b0hf_lam(xs, ys, V[n]),
+            b1_n=b1hf_lam(xs, ys, V[n]))
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/03282d544f242f3769ea1bca3f518ed61e31bcc0.png]]
+
+#+begin_src jupyter-python :exports none :var name=doc-name
+plt.figure(figsize=(2, 2))
+plt.axis('off')
+plot_with_errors(b0_n=b0hf_lam(xs, ys, V[n]),
+            b1_n=b1hf_lam(xs, ys, V[n]))
+plt.savefig(f'{name}.png')
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/ad1185234df67d5989e70141c815a4d17310c94c.png]]

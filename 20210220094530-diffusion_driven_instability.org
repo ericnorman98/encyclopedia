@@ -1,0 +1,677 @@
+#+title: Diffusion driven instability
+#+roam_tags: dynamical systems population diffusion instability
+
+* Setup :noexport:
+#+call: init(theme="dark")
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session diffusion_driven_instability :results raw :eval no-export :pandoc t :async yes :tangle diffusion_driven_instability.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+
+#+RESULTS:
+
+#+name: current-theme
+: dark
+#+name: doc-name
+: diffusion_driven_instability
+:end:
+
+#+begin_src jupyter-python :results silent :noweb yes
+from sympy.plotting import plot, plot3d
+import numpy as np
+from sympy import *
+from pyorg.latex import *
+import numba
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.animation import FuncAnimation
+from scipy.integrate import odeint, ode
+from sympy.core.compatibility import iterable
+
+class Lap2(Function):
+    def _latex(self, printer):
+        expr = printer._print(self.args[0])
+        vars = ''.join([printer._print(a[0] if iterable(a) else a) for a in self.args[1:]])
+        return f"\\nabla_{{{vars}}}^2({expr})"
+
+    def doit(self, **hints):
+        if self.args[0] is Function or len(self.args) <= 2:
+            return Derivative(*self.args).doit(**hints).replace(Derivative, Lap2)
+        else:
+            return self.args[0].diff(self.args[1], 2)+self.args[0].diff(self.args[2], 2)
+
+#+end_src
+
+* Diffusion driven instability
+This is an investigation into a model that exhibits diffusion driven
+instability. The expanded definition of the model is
+
+#+name: src:eq:model_expanded
+#+begin_src jupyter-python
+u, v, f, n = symbols('u v \\pmb{f} \\pmb{n}', cls=Function)
+a, b, t = symbols('a b t', real=True, positive=True)
+Du, Dv, r, D, x, y = symbols('D_u D_v \\pmb{r} \\mathbb{D} x y', real=True)
+dims = LEq(D, Matrix([
+    [Du, 0],
+    [0, Dv],
+]))
+diffusion = LEq(Lap2(D*n(r, t), r), dims.rhs*Matrix([Lap2(u(x,y,t), x, y), Lap2(v(x,y,t), x, y)]))
+funcs = LEq(f(n(r, t)), Matrix([
+    a-(b+1)*u(x,y,t)+u(x,y,t)**2*v(x,y,t),
+    b*u(x,y,t)-u(x,y,t)**2*v(x,y,t)
+]))
+deps = LEq(n(r, t), Matrix([u(x,y,t), v(x,y,t)]))
+Vmodel = {
+    funcs.lhs: funcs.rhs,
+    diffusion.lhs: diffusion.rhs,
+    deps.lhs: deps.rhs
+}
+model = LEq(n(r, t).diff(t), funcs.lhs+diffusion.lhs)
+
+model.subs(Vmodel)
+#+end_src
+
+#+name: eq:model_expanded
+#+RESULTS: src:eq:model_expanded
+:RESULTS:
+\begin{equation}\frac{\partial}{\partial t} \left[\begin{matrix}u{\left(x,y,t \right)}\\v{\left(x,y,t \right)}\end{matrix}\right] = \left[\begin{matrix}D_{u} \nabla_{xy}^2(u{\left(x,y,t \right)}) + a - \left(b + 1\right) u{\left(x,y,t \right)} + u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\\D_{v} \nabla_{xy}^2(v{\left(x,y,t \right)}) + b u{\left(x,y,t \right)} - u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
+:END:
+
+but we will use vector notation to simplify later calculations,
+#+begin_src jupyter-python
+model
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{\partial}{\partial t} \pmb{n}{\left(\pmb{r},t \right)} = \nabla_{\pmb{r}}^2(\mathbb{D} \pmb{n}{\left(\pmb{r},t \right)}) + \pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+deps
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\pmb{n}{\left(\pmb{r},t \right)} = \left[\begin{matrix}u{\left(x,y,t \right)}\\v{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
+:END:
+
+#+begin_src jupyter-python
+diffusion
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\nabla_{\pmb{r}}^2(\mathbb{D} \pmb{n}{\left(\pmb{r},t \right)}) = \left[\begin{matrix}D_{u} \nabla_{xy}^2(u{\left(x,y,t \right)})\\D_{v} \nabla_{xy}^2(v{\left(x,y,t \right)})\end{matrix}\right]\end{equation}
+:END:
+
+#+begin_src jupyter-python
+LEq(funcs.lhs, funcs.lhs.subs(deps.lhs, deps.rhs), funcs.rhs)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)} = \pmb{f}{\left(\left[\begin{matrix}u{\left(x,y,t \right)}\\v{\left(x,y,t \right)}\end{matrix}\right] \right)} = \left[\begin{matrix}a - \left(b + 1\right) u{\left(x,y,t \right)} + u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\\b u{\left(x,y,t \right)} - u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
+:END:
+
+#+begin_src jupyter-python
+dims
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\mathbb{D} = \left[\begin{matrix}D_{u} & 0\\0 & D_{v}\end{matrix}\right]\end{equation}
+:END:
+
+** Steady states
+If we ignore diffusion we get the steady state,
+#+begin_src jupyter-python
+nstar = symbols('\\pmb{n^*}')
+steady_state = solve(funcs.rhs, deps.rhs)[0]
+steady_state = LEq(nstar, Matrix(steady_state))
+steady_state
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\pmb{n^*} = \left[\begin{matrix}a\\\frac{b}{a}\end{matrix}\right]\end{equation}
+:END:
+
+#+begin_src jupyter-python :exports none
+steady_state_dict = {v: s for v, s in zip(deps.rhs, steady_state.rhs)}
+LValues(steady_state_dict)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+u{\left(x,y,t \right)} = a\\
+v{\left(x,y,t \right)} = \frac{b}{a}
+\end{cases}\end{equation}
+:END:
+
+
+** Diffusion stability analysis
+To analyse the effect diffusion has on the stability, we will first see if it is
+stable when ignoring diffusion.
+
+We will use the following parameters for the analysis,
+#+begin_src jupyter-python
+V = {
+    a: 3,
+    b: 8,
+    Du: 1
+}
+Dv_eq = Dv > 1
+LValues(V, Dv_eq)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+a = 3\\
+b = 8\\
+D_{u} = 1\\
+D_{v} > 1
+\end{cases}\end{equation}
+:END:
+
+Start by calculating the stability matrix,
+#+begin_src jupyter-python
+J = symbols('\\mathbb{J}', cls=Function)
+jacobian = LEq(J(funcs.lhs), funcs.rhs.jacobian(deps.rhs))
+jacobian
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\mathbb{J}{\left(\pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)} \right)} = \left[\begin{matrix}- b + 2 u{\left(x,y,t \right)} v{\left(x,y,t \right)} - 1 & u^{2}{\left(x,y,t \right)}\\b - 2 u{\left(x,y,t \right)} v{\left(x,y,t \right)} & - u^{2}{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
+:END:
+
+substitute in fixed point and parameters,
+#+begin_src jupyter-python
+stabmat = LEq(jacobian.lhs.subs(deps.lhs, nstar), jacobian.rhs.subs(steady_state_dict), jacobian.rhs.subs(steady_state_dict).subs(V))
+stabmat
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} = \left[\begin{matrix}b - 1 & a^{2}\\- b & - a^{2}\end{matrix}\right] = \left[\begin{matrix}7 & 9\\-8 & -9\end{matrix}\right]\end{equation}
+:END:
+
+now calculate the eigenvalues to verify that it is stable before taking
+diffusion into account. We can see that the real part of both eigenvalues is
+negative, which means it is stable,
+#+begin_src jupyter-python
+lams = Matrix(symbols('lambda_1 lambda_2'))
+eig = symbols('\\operatorname{eig}', cls=Function)
+eigenvalues = LEq(eig(stabmat.lhs), lams, Matrix(list(stabmat.rhs.eigenvals().keys())))
+eigenvalues
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\operatorname{eig}{\left(\mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \right)} = \left[\begin{matrix}\lambda_{1}\\\lambda_{2}\end{matrix}\right] = \left[\begin{matrix}-1 - 2 \sqrt{2} i\\-1 + 2 \sqrt{2} i\end{matrix}\right]\end{equation}
+:END:
+
+Now we will consider diffusion, start by applying a perturbation from the fixed
+point,
+#+begin_src jupyter-python
+npt = Function('\\delta \\pmb{n}')
+pturb = LEq(n(r, t), nstar + npt(r, t))
+pturb
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\pmb{n}{\left(\pmb{r},t \right)} = \pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)}\end{equation}
+:END:
+
+substitution with the perturbation gives us,
+#+begin_src jupyter-python
+model_pturb = LSteps(model,
+    lambda e: e.subs(pturb.lhs, pturb.rhs),
+    lambda e: e.doit(),
+    lambda e: e.subs(f(pturb.rhs), stabmat.lhs*npt(r, t)),
+)
+model_pturb
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{\partial}{\partial t} \pmb{n}{\left(\pmb{r},t \right)} = \nabla_{\pmb{r}}^2(\mathbb{D} \pmb{n}{\left(\pmb{r},t \right)}) + \pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)}\Rightarrow\\
+\quad \Rightarrow \frac{\partial}{\partial t} \left(\pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)}\right) = \nabla_{\pmb{r}}^2(\mathbb{D} \left(\pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)}\right)) + \pmb{f}{\left(\pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)} \right)}\Rightarrow\\
+\quad \Rightarrow \frac{\partial}{\partial t} \delta \pmb{n}{\left(\pmb{r},t \right)} = \mathbb{D} \nabla_{\pmb{r}}^2(\delta \pmb{n}{\left(\pmb{r},t \right)}) + \pmb{f}{\left(\pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)} \right)}\Rightarrow\\
+\quad \Rightarrow \frac{\partial}{\partial t} \delta \pmb{n}{\left(\pmb{r},t \right)} = \mathbb{D} \nabla_{\pmb{r}}^2(\delta \pmb{n}{\left(\pmb{r},t \right)}) + \delta \pmb{n}{\left(\pmb{r},t \right)} \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)}
+\end{array}\end{equation}
+:END:
+
+We can now separate variables using the ansatz,
+#+begin_src jupyter-python
+T, R = symbols('T R', cls=Function)
+npt0 = Symbol('\\delta \\pmb{n}_0', commutative=False)
+sep_ansatz = LEq(npt(r, t), T(t)*R(r)*npt0)
+sep_ansatz
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\delta \pmb{n}{\left(\pmb{r},t \right)} = R{\left(\pmb{r} \right)} T{\left(t \right)} \delta \pmb{n}_0\end{equation}
+:END:
+
+substitution gives us,
+#+begin_src jupyter-python
+model_pturb_sep = LSteps(model_pturb[-1],
+    lambda e: e.subs(sep_ansatz.lhs, sep_ansatz.rhs),
+    lambda e: e.doit(),
+    lambda e: LEq(e.lhs/(T(t)*R(r)), e.rhs/(T(t)*R(r))),
+    lambda e: e.simplify(),
+)
+model_pturb_sep
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{\partial}{\partial t} \delta \pmb{n}{\left(\pmb{r},t \right)} = \mathbb{D} \nabla_{\pmb{r}}^2(\delta \pmb{n}{\left(\pmb{r},t \right)}) + \delta \pmb{n}{\left(\pmb{r},t \right)} \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)}\Rightarrow\\
+\quad \Rightarrow \frac{\partial}{\partial t} R{\left(\pmb{r} \right)} T{\left(t \right)} \delta \pmb{n}_0 = \mathbb{D} \nabla_{\pmb{r}}^2(R{\left(\pmb{r} \right)} T{\left(t \right)} \delta \pmb{n}_0) + R{\left(\pmb{r} \right)} T{\left(t \right)} \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0\Rightarrow\\
+\quad \Rightarrow R{\left(\pmb{r} \right)} \frac{d}{d t} T{\left(t \right)} \delta \pmb{n}_0 = \mathbb{D} T{\left(t \right)} \nabla_{\pmb{r}}^2(R{\left(\pmb{r} \right)}) \delta \pmb{n}_0 + R{\left(\pmb{r} \right)} T{\left(t \right)} \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0\Rightarrow\\
+\quad \Rightarrow \frac{\frac{d}{d t} T{\left(t \right)} \delta \pmb{n}_0}{T{\left(t \right)}} = \frac{\mathbb{D} T{\left(t \right)} \nabla_{\pmb{r}}^2(R{\left(\pmb{r} \right)}) \delta \pmb{n}_0 + R{\left(\pmb{r} \right)} T{\left(t \right)} \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0}{R{\left(\pmb{r} \right)} T{\left(t \right)}}\Rightarrow\\
+\quad \Rightarrow \frac{\frac{d}{d t} T{\left(t \right)} \delta \pmb{n}_0}{T{\left(t \right)}} = \frac{\mathbb{D} \nabla_{\pmb{r}}^2(R{\left(\pmb{r} \right)}) \delta \pmb{n}_0}{R{\left(\pmb{r} \right)}} + \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0
+\end{array}\end{equation}
+:END:
+
+Since the right-hand side no longer depends on $t$, we can assume
+$\frac{1}{T(r)}\frac{\partial}{\partial}T(t)=\lambda=\text{const.}$, and
+$\frac{\nabla^2 R(\pmb{r})}{R(\pmb{r})}=-k^2=\text{const.}$, this gives us,
+#+begin_src jupyter-python
+k = symbols('k', real=True)
+lam, lam1, lam2 = symbols('\\lambda \\lambda_1 \\lambda_2')
+det = symbols('det', cls=Function, real=True)
+K = Symbol('\\mathbb{K}', commutative=False)
+Keq = LEq(K, stabmat.lhs-dims.lhs*k**2, stabmat.rhs-dims.rhs*k**2)
+model_pturb_eig = LSteps(model_pturb_sep[-1],
+    lambda e: e.subs(T(t).diff(t), T(t)*lam).replace(Lap2, lambda x, *args: -k**2*x),
+    lambda e: LEq(e.lhs, e.rhs.factor()),
+    lambda e: e.subs(Keq.args[1], Keq.lhs),
+)
+model_pturb_eig
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{\frac{d}{d t} T{\left(t \right)} \delta \pmb{n}_0}{T{\left(t \right)}} = \frac{\mathbb{D} \nabla_{\pmb{r}}^2(R{\left(\pmb{r} \right)}) \delta \pmb{n}_0}{R{\left(\pmb{r} \right)}} + \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0\Rightarrow\\
+\quad \Rightarrow \lambda \delta \pmb{n}_0 = - \mathbb{D} k^{2} \delta \pmb{n}_0 + \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0\Rightarrow\\
+\quad \Rightarrow \lambda \delta \pmb{n}_0 = - \left(\mathbb{D} k^{2} - \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)}\right) \delta \pmb{n}_0\Rightarrow\\
+\quad \Rightarrow \lambda \delta \pmb{n}_0 = \mathbb{K} \delta \pmb{n}_0
+\end{array}\end{equation}
+:END:
+
+This gives us an equation for eigenvalues end eigenvectors for our new stability matrix $\mathbb{K}$.
+
+Since the trace is negative,
+#+begin_src jupyter-python
+tr = symbols('tr', cls=Function)
+LEq(tr(K), Keq.rhs.trace().subs(V)<0)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\operatorname{tr}{\left(\mathbb{K} \right)} = - D_{v} k^{2} - k^{2} - 2 < 0\end{equation}
+:END:
+
+we only need to find $\operatorname{det}(\mathbb{K})<0$
+#+begin_src jupyter-python
+k2s = Matrix(symbols('k^2_1 k^2_2'))
+model_pturb_detK = LSteps(Eq(det(K), 0),
+    lambda e: e.subs(K, stabmat.lhs-dims.lhs*k**2),
+    lambda e: e.subs(stabmat.lhs-dims.lhs*k**2, stabmat.rhs-dims.rhs*k**2),
+    lambda e: e.replace(det, Determinant).doit(),
+    lambda e: LEq(k2s, Matrix(solve(e, k**2)))
+)
+model_pturb_k2s = model_pturb_detK[-1]
+model_pturb_detK
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\operatorname{det}{\left(\mathbb{K} \right)} = 0\Rightarrow\\
+\quad \Rightarrow \operatorname{det}{\left(- \mathbb{D} k^{2} + \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \right)} = 0\Rightarrow\\
+\quad \Rightarrow \operatorname{det}{\left(\left[\begin{matrix}- D_{u} k^{2} + 7 & 9\\-8 & - D_{v} k^{2} - 9\end{matrix}\right] \right)} = 0\Rightarrow\\
+\quad \Rightarrow D_{u} D_{v} k^{4} + 9 D_{u} k^{2} - 7 D_{v} k^{2} + 9 = 0\Rightarrow\\
+\quad \Rightarrow \left[\begin{matrix}k^{2}_{1}\\k^{2}_{2}\end{matrix}\right] = \left[\begin{matrix}\frac{- 9 D_{u} + 7 D_{v} - \sqrt{81 D_{u}^{2} - 162 D_{u} D_{v} + 49 D_{v}^{2}}}{2 D_{u} D_{v}}\\\frac{- 9 D_{u} + 7 D_{v} + \sqrt{81 D_{u}^{2} - 162 D_{u} D_{v} + 49 D_{v}^{2}}}{2 D_{u} D_{v}}\end{matrix}\right]
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+def find_sqrt(expr):
+    return list(map(lambda e: e.args[0], expr.find(lambda i: i.is_Pow and i.exp is S.Half)))
+#+end_src
+
+#+RESULTS:
+
+Solve for when $k_{\pm}^2$ is real by finding where the square root is real,
+#+begin_src jupyter-python
+Dvc = symbols('D_vc')
+k2_sqrt = find_sqrt(model_pturb_k2s.rhs[0])[0]
+k2_sqrt_eq = k2_sqrt>=0
+Dv_range_sol = LSteps(k2_sqrt_eq,
+    lambda e: LBiOp(Dv, solveset(e.subs(V), Dv, domain=Interval(1, oo)), separator='\\in'),
+    lambda e: LBiOp(Dvc, e.rhs.args[0].evalf(), separator='\\approx'),
+)
+Dv_range = Dv_range_sol[1]
+Dv_c = Dv_range.rhs.args[0]
+Dv_range_sol
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+81 D_{u}^{2} - 162 D_{u} D_{v} + 49 D_{v}^{2} \geq 0\Rightarrow\\
+\quad \Rightarrow D_{v} \in \left[\frac{36 \sqrt{2}}{49} + \frac{81}{49}, \infty\right)\Rightarrow\\
+\quad \Rightarrow D_{vc} \approx 2.69207527031493
+\end{array}\end{equation}
+:END:
+
+We can now calculate $k_c$ if we substitute the solution to $D_{vc}$ into
+$\operatorname{det}(\mathbb{K})=0$,
+#+begin_src jupyter-python
+kc = symbols('k_c')
+k_c_steps = LSteps(LEq(det(K), 0),
+    lambda e: e.subs(K, Keq.rhs.subs(V)),
+    lambda e: e.subs(Dv, Dv_c),
+    lambda e: e.replace(det, lambda x: x.det()),
+    lambda e: LEq(kc, solve(e.lhs, k)[1]),
+)
+k_c = k_c_steps[-1].rhs
+k_c_steps
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\operatorname{det}{\left(\mathbb{K} \right)} = 0\Rightarrow\\
+\quad \Rightarrow \operatorname{det}{\left(\left[\begin{matrix}7 - k^{2} & 9\\-8 & - D_{v} k^{2} - 9\end{matrix}\right] \right)} = 0\Rightarrow\\
+\quad \Rightarrow \operatorname{det}{\left(\left[\begin{matrix}7 - k^{2} & 9\\-8 & - k^{2} \left(\frac{36 \sqrt{2}}{49} + \frac{81}{49}\right) - 9\end{matrix}\right] \right)} = 0\Rightarrow\\
+\quad \Rightarrow \frac{36 \sqrt{2} k^{4}}{49} + \frac{81 k^{4}}{49} - \frac{36 \sqrt{2} k^{2}}{7} - \frac{18 k^{2}}{7} + 9 = 0\Rightarrow\\
+\quad \Rightarrow k_{c} = \frac{\sqrt{7 + 14 \sqrt{2}}}{\sqrt{4 \sqrt{2} + 9}}
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python :noweb yes :results output
+detK_lm = lambdify((Dv, k), Keq.rhs.det().subs(V))
+k_n = np.linspace(0, 2)
+Dv_ns = [Dv_c+dx for dx in [-1, 0, 1]]
+detK_ns = [detK_lm(Dv_n, k_n) for Dv_n in Dv_ns]
+
+for i, (detK_n, Dv_n) in enumerate(zip(detK_ns, Dv_ns)):
+    plt.plot(k_n, detK_n, label=f"$D_v={Dv_n.evalf(4)}$" if i != 1 else f"$D_v=D_{{vc}}\\approx{Dv_n.evalf(4)}$")
+plt.axhline(0, color=<<color("fg-hc")>>, lw=0.8, ls='--', zorder=1, alpha=0.5)
+plt.axvline(float(k_c), color=<<color("fg-hc")>>, ls='--', lw=0.8, zorder=1, alpha=0.5)
+plt.xticks([0, float(k_c), 2], [0, f"$k_c={k_c.evalf(4)}$", 2])
+plt.xlabel("$k$")
+plt.ylabel("$\\operatorname{det}(\\mathbb{K})$")
+plt.legend()
+plt.savefig("detk.png")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/c825db59709345cf2f97f7fbf18184037a68d4bb.png]]
+
+** Simulation
+We will now simulate this system for some values of $D_v$ to see what effect it
+has. See Figure [[fig:simulations]] and [[fig:simulations_transient]] for the results.
+We can see that the system starts to form spot-patterns after $D_{vc}$ which is
+the effect of the diffusion driven instability.
+
+#+begin_src jupyter-python
+def apply_fd(expr, *variables):
+    derivs = expr.atoms(Derivative)
+    for deriv in derivs:
+        if deriv.args[1][0] in variables:
+            expr = expr.subs(deriv, deriv.as_finite_difference())
+    return expr.simplify()
+#+end_src
+
+#+RESULTS:
+
+The discretized Laplacian looks like the following,
+#+begin_src jupyter-python
+h = symbols('h')
+model_expanded = model.subs(Vmodel).doit()
+model_expanded = apply_fd(model_expanded, x, y)
+LSteps(Lap2(u(x, y), x, y),
+    lambda e: e.doit(),
+    lambda e: apply_fd(e, x, y),
+)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\nabla_{xy}^2(u{\left(x,y \right)})\Rightarrow\\
+\quad \Rightarrow \frac{\partial^{2}}{\partial x^{2}} u{\left(x,y \right)} + \frac{\partial^{2}}{\partial y^{2}} u{\left(x,y \right)}\Rightarrow\\
+\quad \Rightarrow - 4 u{\left(x,y \right)} + u{\left(x,y - 1 \right)} + u{\left(x,y + 1 \right)} + u{\left(x - 1,y \right)} + u{\left(x + 1,y \right)}
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python :exports none
+inputs = [
+    v(x,y,t),
+    v(x-1,y,t),
+    u(x,y-1,t),
+    u(x-1,y,t),
+    v(x,y+1,t),
+    u(x,y+1,t),
+    u(x+1,y,t),
+    u(x,y,t),
+    v(x,y-1,t),
+    v(x+1,y,t),
+]
+model_u_lm = numba.njit(lambdify(inputs+[Dv], model_expanded.rhs[0].subs(V)))
+model_v_lm = numba.njit(lambdify(inputs+[Dv], model_expanded.rhs[1].subs(V)))
+LArray(*inputs)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+v{\left(x,y,t \right)}\\
+v{\left(x - 1,y,t \right)}\\
+u{\left(x,y - 1,t \right)}\\
+u{\left(x - 1,y,t \right)}\\
+v{\left(x,y + 1,t \right)}\\
+u{\left(x,y + 1,t \right)}\\
+u{\left(x + 1,y,t \right)}\\
+u{\left(x,y,t \right)}\\
+v{\left(x,y - 1,t \right)}\\
+v{\left(x + 1,y,t \right)}
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+def model_ode(t, UV, Dv_n, L):
+    UV = UV.reshape([L, L, 2])
+    U = UV[:, :, 0]
+    V = UV[:, :, 1]
+    U_up = np.roll(U, 1, axis=1)
+    U_down = np.roll(U, -1, axis=1)
+    U_left = np.roll(U, 1, axis=0)
+    U_right = np.roll(U, -1, axis=0)
+    V_up = np.roll(V, 1, axis=1)
+    V_down = np.roll(V, -1, axis=1)
+    V_left = np.roll(V, 1, axis=0)
+    V_right = np.roll(V, -1, axis=0)
+    args = [V, V_left, U_up, U_left, V_down, U_down, U_right, U, V_up, V_right]
+    dU = model_u_lm(*args, Dv_n)
+    dV = model_v_lm(*args, Dv_n)
+    return np.stack([dU, dV], axis=-1).flatten()
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :exports none
+steady_state.rhs.subs(V).evalf()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\left[\begin{matrix}3.0\\2.66666666666667\end{matrix}\right]\end{equation}
+:END:
+
+#+begin_src jupyter-python
+def get_initial_state(L):
+    UV = np.zeros([L, L, 2])
+    UV += np.random.uniform(-0.05, 0.05, [L, L, 2])
+    UV[:, :, 0] += float(steady_state.rhs[0].subs(V))
+    UV[:, :, 1] += float(steady_state.rhs[1].subs(V))
+    return UV
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+def run_system(T_n, dt, UV0, Dv_n):
+    t_n = np.arange(0, T_n, dt)
+    r = ode(model_ode).set_integrator('vode')
+    r.set_initial_value(UV0.flatten(), 0).set_f_params(Dv_n, UV0.shape[0])
+    steps = int(T_n/dt)
+    for i in range(steps):
+        sol = r.integrate(r.t+dt)
+    return sol.reshape(UV0.shape)
+    # return odeint(model_ode, UV0.flatten(), t_n, args=(Dv_n, UV0.shape[0]), mxstep=100, tfirst=True).reshape([-1, *UV0.shape])
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :results output :var name=doc-name :exports none
+plt.figure(figsize=(4, 4))
+Dv_n = 5
+min = 0.5
+max = 12
+dt = 0.01
+T_n = 10
+UV0 = get_initial_state(128)
+UV = run_system(T_n, dt, UV0.copy(), Dv_n)
+plt.imshow((UV[:, :, 0]-min)/(max-min))
+plt.axis('off')
+plt.savefig(f"{name}.png")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/649f0855c1c1bcf5411ecade85ab624a4964f65d.png]]
+
+#+name: src:fig:simulations_transient
+#+begin_src jupyter-python :results output
+plt.figure(figsize=(8, 8))
+Dv_ns = [2.3, 3, 5, 9]
+min = 0.5
+max = 5
+dt = 0.01
+T_n = 2
+for i, Dv_n in enumerate(Dv_ns):
+    plt.subplot(2, 2, i+1)
+    UV0 = get_initial_state(128)
+    UV = run_system(T_n, dt, UV0.copy(), Dv_n)
+    plt.imshow(UV[:, :, 0], vmin=min, vmax=max)
+    plt.title(f"$D_v={Dv_n}$")
+plt.suptitle(f"$t={T_n}$, $\Delta t={dt}$")
+#+end_src
+
+#+name: fig:simulations_transient
+#+caption: Simulations of four values of $D_v$ during transient.
+#+RESULTS: src:fig:simulations_transient
+[[file:./.ob-jupyter/61217705257e6ea9cc4a57b0014ff805634ca9c3.png]]
+
+#+name: src:fig:simulations_after
+#+begin_src jupyter-python :results output :noweb yes
+plt.figure(figsize=(8, 8))
+Dv_ns = [2.3, 3, 5, 9]
+min = 0.5
+max = 12
+dt = 0.01
+T_n = 10
+for i, Dv_n in enumerate(Dv_ns):
+    plt.subplot(2, 2, i+1)
+    UV0 = get_initial_state(128)
+    UV = run_system(T_n, dt, UV0.copy(), Dv_n)
+    plt.imshow(UV[:, :, 0], vmin=min, vmax=max)
+    plt.title(f"$D_v={Dv_n}$")
+plt.suptitle(f"$t={T_n}$, $\Delta t={dt}$")
+#+end_src
+
+#+name: fig:simulations
+#+caption: Simulations of four values of $D_v$ after transient.
+#+RESULTS: src:fig:simulations_after
+[[file:./.ob-jupyter/a82142ec106c2e3e0d061409f4ccbd370f1342be.png]]
+
+
+# #+begin_src jupyter-python
+# UV = get_initial_state()
+# t_n = np.arange(0, 10, 0.01)
+# dt = 0.1
+# T = 50
+# r = ode(model_ode).set_integrator('vode')
+# r.set_initial_value(UV.flatten(), 0).set_f_params(9)
+# steps = int(T/dt)
+# norm = lambda x: (x-x.min())/(x.max()-x.min())
+# plt.imshow(norm(sol[:, :, 0]))
+# #+end_src
+
+# #+RESULTS:
+# :RESULTS:
+# : <matplotlib.image.AxesImage at 0x7f1000803970>
+# [[file:./.ob-jupyter/32300d1a09555e51b2e567b2d7ac96acfd287f44.png]]
+# :END:
+
+
+# #+begin_src jupyter-python
+# fig, ax1 = plt.subplots(figsize=(4, 4))
+# ax1.set_xlim([0, 256])
+# ax1.set_ylim([0, 256])
+# img1 = ax1.imshow(norm(sol[:, :, 0]))
+# # img2 = ax2.imshow(norm(sol[:, :, 1]))
+
+# def init():
+#     return [img1]
+
+# def animate(i):
+#     if i % 10 == 0:
+#         print(f"{i} t={r.t}", end='\r')
+#     sol = r.integrate(r.t+dt).reshape([256, 256, 2])
+#     img1.set_data(norm(sol[:, :, 0]))
+#     # img2.set_data(norm(sol[:, :, 1]))
+#     return [img1]
+
+# anim = FuncAnimation(fig, animate, init_func=init, frames=steps, interval=20, blit=True)
+# anim.save('diffusion_simulation_Dv9.mkv')
+# #+end_src
+
+# #+RESULTS:
+
+
+# #+begin_src jupyter-python
+# sol.max()
+# #+end_src
+
+# #+RESULTS:
+# : 3.1827652896915306
+
+# #+latex: \pagebreak
+# #+latex: \appendix
+# * Code
+# :PROPERTIES:
+# :header-args: :exports code
+# :END:
+# #+include: diffusion_driven_instability.py src python

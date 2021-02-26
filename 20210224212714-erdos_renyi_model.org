@@ -1,0 +1,96 @@
+#+title: Erdos-renyi model
+#+roam_tags: graph theory erdos renyi model
+
+* Setup :noexport:
+#+call: init(session="graphs_and_networks", theme="dark")
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session graphs_and_networks :results raw :eval no-export :pandoc t :async yes :tangle erdos_renyi_model.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+#+name: current-theme
+: dark
+#+name: doc-name
+: erdos_renyi_model
+:end:
+
+* Erdõs-Rényi model
+The Erdõs-Rényi $G\{n, p\}$ model is a way of generating a random graph with
+parameters $n$ and $p$. The graph starts with $n$ nodes and then the possible
+$n(n-1)/2$ edges is each added with probability $p$. Which means the expected
+number of edges is ${n \choose 2} p$, since you have $n$ nodes and choose $2$
+with probability $p$. See Figure [[fig:erdos-small-graph]] for an example of such
+a graph.
+
+#+begin_src jupyter-python
+def erdos(n, p):
+    A = np.random.random([n, n]) < p
+    A = np.tril(A) + np.tril(A, -1).T
+    np.fill_diagonal(A, 0)
+    return nx.from_numpy_matrix(A)
+#+end_src
+
+
+#+name: src:fig:erdos-small-graph
+#+begin_src jupyter-python :results output :noweb yes :var name=doc-name
+n = 100
+p = 0.1
+
+G = erdos(n, p)
+
+plt.figure(figsize=(4, 4))
+
+pos = nx.spring_layout(G, iterations=100)
+draw_graph(G, pos)
+plt.title(f"$n={n}, p={p}$")
+plt.savefig(f"{name}.png")
+#+end_src
+
+#+name: fig:erdos-small-graph
+#+RESULTS: src:fig:erdos-small-graph
+[[file:./.ob-jupyter/14d11b1e605f0cc5c55c23a2b52337830eaa2d5b.png]]
+
+The vertex degree distribution is a binomial distribution defined as
+\begin{equation}
+P(\deg(v_i)=k)={n-1\choose k}p^k(1-p)^{n-1-k}
+\end{equation}
+where $v_i$ is any given vertex in the graph and $n$ is the number of vertices.
+We can test this claim by comparing the degree distribution of a large graph
+with an actual binomial distribution. We generate a graph $G\{1000, 0.1\}$ and
+the compare the two distributions in Figure [[fig:erdos-large-graph]].
+
+#+name: src:fig:erdos-large-graph
+#+begin_src jupyter-python :results output :noweb yes
+from scipy.stats import binom
+n = 500
+p = 0.1
+bins = 1000
+
+G = erdos(n, p)
+
+dist = np.array(sorted([d for n, d in G.degree()], reverse=True))
+
+plt.figure(figsize=(4*2, 4))
+plt.suptitle(f"$n={n}, p={p}$")
+plt.subplot(1, 2, 1)
+pos = nx.spring_layout(G, iterations=100)
+draw_dense_graph(G, pos, alpha=0.1)
+
+plt.subplot(1, 2, 2)
+plt.hist(dist, density=True, bins=bins, rwidth=1, width=1.1)
+
+x_n = np.arange(80)
+plt.plot(x_n, binom.pmf(x_n, n, p)*20, color=<<color("blue")>>, label="theoretical")
+plt.legend()
+#+end_src
+
+#+name: fig:erdos-large-graph
+#+CAPTION: Comparing the large Erdõs-Rényi graph's degree distribution with the theoretical binomial distribution.
+#+RESULTS: src:fig:erdos-large-graph
+[[file:./.ob-jupyter/cbc94e8d6c7edc66e1eb2a06e5e1c815de3c535c.png]]

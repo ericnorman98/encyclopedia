@@ -1,0 +1,51 @@
+#+title: Statistics
+
+* Setup :noexport:
+#+call: init()
+
+#+RESULTS:
+:results:
+#+SETUPFILE: setup.org
+#+PROPERTY: header-args:jupyter-python :exports results :session statistics :results raw :eval no-export :pandoc t :async yes :tangle statistics.py
+#+LATEX_HEADER: \usepackage{pagecolor}
+#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
+#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
+#+LATEX_HEADER: \pagecolor{bg}
+#+LATEX_HEADER: \color{white}
+#+call: init-plot-style()
+#+name: current-theme
+: dark
+#+name: doc-name
+: statistics
+:end:
+
+#+begin_src jupyter-python :results silent
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+import numpy as np
+import matplotlib.pyplot as plt
+#+end_src
+
+#+begin_src jupyter-python :results silent
+class Prob(Probability):
+    def _latex(self, printer):
+        if len(self.args) > 1:
+            return f"P[{printer._print(self.args[0])}|{printer._print(self.args[1])}]"
+        else:
+            return f"P[{printer._print(self.args[0])}]"
+class Expected(Expectation):
+    def _latex(self, printer):
+        return f"E[{printer._print(self.args[0])}]"
+#+end_src
+
+* Statistics
+#+begin_src jupyter-python :results silent
+mu, sigma, n, xm, s, x, z, T = symbols('mu sigma n \\bar{x} s x z T')
+#+end_src
+
+- [[file:20210219100101-random_sampling.org][Random sampling]]
+- [[file:20210219103418-distributions.org][Distributions]]
+- [[file:20210219100256-hypothesis_testing.org][Hypothesis testing]]
+- [[file:20210219100345-bayesian_inference.org][Bayesian inference]]
+- [[file:20210226085840-linear_least_squares.org][Linear least squares]]
