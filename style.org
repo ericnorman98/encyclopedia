@@ -1,19 +1,18 @@
 # -*- eval: (add-hook 'after-save-hook (lambda nil (org-babel-tangle)) nil t); -*-
 #+title: Blog Style
+#+PROPERTY: header-args :eval never-export :tangle css/main.css :results silent :exports none
 
-* Config
+* Setup :noexport:
 #+name: style-content-width
 #+begin_src config
 800px
 #+end_src
 
 * Style
-:PROPERTIES:
-:header-args: :eval never-export :tangle css/main.css :results silent
-:END:
 
+This is just for testing the website styles.
 
-** Overrides
+** Overrides :noexport:
 #+begin_src css :noweb yes
 #org-div-home-and-up {
     white-space: normal;
@@ -85,7 +84,7 @@ a {
     color: #<<color-blue>>;
 }
 a:hover {
-    color: #<<color-red>>;
+    color: #<<color-cyan>>;
     text-decoration: underline;
 }
 pre {
@@ -124,7 +123,7 @@ img {
 }
 #+end_src
 
-** Helper classes
+** Helper classes :noexport:
 #+begin_src css :noweb yes
 img.no-border {
     border: none;
@@ -181,7 +180,7 @@ span.tag {
 }
 #+end_src
 
-** Content
+** Content :noexport:
 #+begin_src css :noweb yes
 .intro {
     padding-top: 20px;
@@ -204,9 +203,9 @@ span.tag {
     text-align: left;
     font-size: 16px;
 }
-#content a {
-    color: #<<color-fg>>;
-}
+/* #content a { */
+/*     color: #<<color-fg-hc>>; */
+/* } */
 #postamble {
     font-size: 0.8em;
     line-height: 1.8em;
@@ -232,7 +231,7 @@ span.tag {
 }
 #+end_src
 
-** Sitemap
+** Sitemap :noexport:
 #+begin_src css :noweb yes
 .sitemap {
     display: flex;
@@ -258,6 +257,7 @@ span.tag {
 
 .sitemap .sitemap-item a {
     font-size: 20px;
+    color: #<<color-fg>>;
 }
 .sitemap .sitemap-item p {
     font-size: 16px;
@@ -294,6 +294,9 @@ figure img, figure video, figure .org-svg {
 }
 .figure p img {
     margin: 0 auto;
+}
+.animation {
+    display: block !important;
 }
 details summary {
     color: #a9a1e1;
@@ -424,6 +427,11 @@ input[type=range]:focus::-ms-fill-upper {
 }
 #+end_src
 
+#+begin_export html
+<input type="range">
+#+end_export
+
+
 ** Tables
 #+begin_src css :noweb yes
 table {
@@ -432,10 +440,10 @@ table {
   transform: translateX(-50%);
 }
 thead {
-    border-top: 2px solid;
+    border-top: 2px solid #<<color-fg-hc>>;
 }
 tbody {
-    border-bottom: 2px solid;
+    border-bottom: 2px solid #<<color-fg-hc>>;
 }
 td, th {
   padding: 3px 12px;
@@ -443,3 +451,7 @@ td, th {
 }
 #+end_src
 
+| Lorem     | Ipsum | Dolor       |
+|-----------+-------+-------------|
+| sit       | amet  | consectetur |
+| adipicing | elit  | quisque     |
