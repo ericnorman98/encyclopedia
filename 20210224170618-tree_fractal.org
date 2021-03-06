@@ -2,23 +2,28 @@
 #+roam_tags: fractal tree recursion
 
 * Setup :noexport:
-#+call: init(theme="dark")
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session tree_fractal :results raw :eval no-export :pandoc t :async yes :tangle tree_fractal.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
+#+call: init()
 #+call: init-plot-style()
-#+name: current-theme
-: dark
-#+name: doc-name
-: tree_fractal
-:end:
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/tree_fractal.py :results silent
+:END:
+
+#+begin_src jupyter-python
+from math import pi, cos, sin
+#+end_src
+
+#+begin_src jupyter-python
+def tree(lines, x, y, r, t, depth=8, angle=pi/4, frac=1.4):
+    if depth == 0:
+        return
+    nx = x - r * cos(t)
+    ny = y - r * sin(t)
+    lines.append([(x, y), (nx, ny)])
+    tree(lines, nx, ny, r/frac, t-angle, depth-1, angle)
+    tree(lines, nx, ny, r/frac, t+angle, depth-1, angle)
+#+end_src
 
 * Tree fractal
 Tree fractals are very easy to create, it is made by recursivly drawing shorter
@@ -30,26 +35,8 @@ from matplotlib.animation import FuncAnimation
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 import numpy as np
-import pyorg.plot as plot
-plot.use_style()
 from PIL import Image, ImageDraw
-from math import pi, cos, sin
 from IPython.display import display
-#+end_src
-
-#+RESULTS:
-
-#+begin_src jupyter-python :exports none :results silent :noweb yes
-w = h = 400
-
-def tree(lines, x, y, r, t, depth=8, angle=pi/4, frac=1.4):
-    if depth == 0:
-        return
-    nx = x - r * cos(t)
-    ny = y - r * sin(t)
-    lines.append([(x, y), (nx, ny)])
-    tree(lines, nx, ny, r/frac, t-angle, depth-1, angle)
-    tree(lines, nx, ny, r/frac, t+angle, depth-1, angle)
 #+end_src
 
 #+begin_src jupyter-python :results output
@@ -66,7 +53,8 @@ plt.axis('off')
 #+RESULTS:
 [[file:./.ob-jupyter/765e0585029ee55cbc2a47c1b62965fd7722a9c0.png]]
 
-#+begin_src jupyter-python :exports none :results output :noweb yes :var name=doc-name
+#+thumb:
+#+begin_src jupyter-python :exports none :results output :noweb yes
 plt.figure()
 lines = []
 tree(lines, 0, 0, 1, -pi/2, angle=pi/4, depth=8, frac=2.0)
@@ -74,7 +62,6 @@ plt.gca().add_collection(mc.LineCollection(lines))
 plt.gca().autoscale()
 plt.gca().set_aspect(1)
 plt.axis('off')
-plt.savefig(f"{name}.png")
 #+end_src
 
 #+RESULTS:

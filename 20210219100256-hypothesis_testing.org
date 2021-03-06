@@ -2,53 +2,131 @@
 #+roam_tags: statistics hypothesis testing test
 
 * Setup :noexport:
-#+call: init(session="statistics", theme="dark")
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session statistics :results raw :eval no-export :pandoc t :async yes :tangle hypothesis_testing.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
+#+call: init()
 #+call: init-plot-style()
-#+name: current-theme
-: dark
-#+name: doc-name
-: hypothesis_testing
-:end:
 
-* Hypothesis testing :ignore:
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/hypothesis_testing.py :results silent
+:END:
+
 #+begin_src jupyter-python
-alpha, mu0 = symbols('alpha mu_0')
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+from statistics import *
+from p_value import *
 #+end_src
 
-#+RESULTS:
+#+begin_src jupyter-python
+alpha, mu0, H0, H1 = symbols('alpha mu_0 H_0 H_1')
+#+end_src
 
 #+begin_src jupyter-python
-H0, H1, R = symbols('H_0 H_1 \\mathcal{R}')
+class HypothesisTestResult(Expr):
+    def __new__(cls, h0, h1, p_value, V):
+        ex = Expr.__new__(cls, h0, h1, p_value)
+        ex._h0 = h0
+        ex._h1 = h1
+        ex._p_value = p_value
+        ex._V = V
+        return ex
 
-LBiOp(':', H0, "\\text{ the effect of interest is zero}")
+    @property
+    def p_value(self):
+        return self._p_value
+
+    def reject_null(self):
+        return (self._p_value < alpha).subs(self._V).doit()
+
+    def state(self):
+        return self._h1 if self.reject_null() else LText("failed to reject", H0)
+
+    def _latex(self, printer):
+        evaluated = [LessThan(self._p_value.subs(self._V).doit().evalf(),
+                              alpha.subs(self._V),
+                              evaluate=False),
+                     self.state()] if self._V is not None else [self._p_value < alpha]
+        return printer._print(LImply(self.p_value._sym < alpha, *evaluated))
+#+end_src
+
+#+begin_src jupyter-python
+class HypothesisTest(Expr):
+    def __new__(cls, h0, h1, p_value):
+        ex = Expr.__new__(cls, h0, h1, p_value)
+        ex._h0 = h0
+        ex._h1 = h1
+        ex._p_value = p_value
+        return ex
+
+    @property
+    def p_value(self):
+        return self._p_value
+
+    def doit(self, V=None):
+        return HypothesisTestResult(self._h0, self._h1, self._p_value, V)
+
+    def _latex(self, printer):
+        return printer._print(LValues({
+            H0: self._h0,
+            H1: self._h1
+        }, separator=':'))
+#+end_src
+
+
+* Hypothesis testing
+#+begin_src jupyter-python
+p_value = PValue(t, T, TestSide.LEFT)
+hypothesis = HypothesisTest(LText("the effect of interest is zero"),
+                            LText("the effect of interest is not zero"),
+                            p_value)
+hypothesis
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}:   H_{0}   \text{the effect of interest is zero}\end{equation}
+\begin{equation}\begin{cases}
+H_{0} : \text{the effect of interest is zero}\\
+H_{1} : \text{the effect of interest is not zero}
+\end{cases}\end{equation}
 :END:
 
+We reject the null hypothesis if the [[file:20210302194452-p_value.org][p-value]] is less than the /significance
+level/ $\alpha$. To compute the p-value, use the observed test-statistic $t$ and
+compare it to the unknown distribution $T$. There are three types of p-values
+
 #+begin_src jupyter-python
-LBiOp(':', H1, "\\text{ the effect of interest is not zero}")
+LArray(
+    LJoin(PValue(t, T, TestSide.LEFT).show(), "\\quad", LText("one-sided left-tailed test")),
+    LJoin(PValue(t, T, TestSide.RIGHT).show(), "\\quad", LText("one-sided right-tailed test")),
+    LJoin(PValue(t, T, TestSide.BOTH).show(), "\\quad", LText("two-sided test")),
+)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}:   H_{1}   \text{the effect of interest is not zero}\end{equation}
+\begin{equation}\begin{array}{l}
+\begin{array}{l}
+p = P[T \leq t]
+\end{array} \quad \text{one-sided left-tailed test}\\
+\begin{array}{l}
+p = P[T \geq t]
+\end{array} \quad \text{one-sided right-tailed test}\\
+\begin{array}{l}
+p = P[\left|{T}\right| \geq \left|{t}\right|]
+\end{array} \quad \text{two-sided test}
+\end{array}\end{equation}
 :END:
 
-1. reject $H_0$ in favor of $H_1$ if $t\in \mathcal{R}$ (positive decision)
-2. do not reject $H_0$ if $t\notin \mathcal{R}$ (negative decision)
+If we have a one-sided left-tailed test, rejection of $H_0$ would look like this
+#+begin_src jupyter-python
+hypothesis.doit()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}p < \alpha \Rightarrow P[T \leq t] < \alpha\end{equation}
+:END:
 
 | State of nature | Negative decision | Positive decision |
 |-----------------+-------------------+-------------------|
@@ -59,79 +137,110 @@ LBiOp(':', H1, "\\text{ the effect of interest is not zero}")
 #+begin_src jupyter-python
 V = {
     alpha: 0.05,
-    mu0: 3.5,
-    mu: 3.1,
-    sigma: 1.5,
-    xm: 3.1,
-    s: 1.5,
+    mu0: 3 + Rational(1,2),
+    mu: 3 + Rational(1,10),
+    sigma: 1 + Rational(1,2),
+    xm: 3+Rational(1,10),
+    s: 1 + Rational(1,2),
     n: 50
 }
-LEq(mu0, V[mu0])
+#+end_src
+
+#+RESULTS:
+
+Consider an experiment with a sample drawn from a [[file:20210225141719-normal_distribution.org][normal distribution]] with the
+following results
+#+begin_src jupyter-python
+LValues({k: Float(v) for k,v in V.items() if k not in [mu, sigma, alpha, mu0]})
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\mu_{0} = 3.5\end{equation}
+\begin{equation}\begin{cases}
+\bar{x} = 3.1\\
+s = 1.5\\
+n = 50.0
+\end{cases}\end{equation}
 :END:
 
+We use the test statistic
 #+begin_src jupyter-python
-LEq(alpha, V[alpha])
+V[xm] = 3 + Rational(1, 10)
+t_eq = LEq(t, (xm-mu0)/(s/sqrt(n)))
+t_eq
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\alpha = 0.05\end{equation}
+\begin{equation}t = \frac{\sqrt{n} \left(\bar{x} - \mu_{0}\right)}{s}\end{equation}
 :END:
 
-
+We want to test the hypothesis
 #+begin_src jupyter-python
-V[xm] = 3.1
-T_eq = LEq(T, (xm-mu0)/(s/sqrt(n)))
+T_eq = LEq(T, t_eq.rhs.subs({xm: Normal('\\bar{X}', V[mu0], V[s]/sqrt(V[n]))}))
+p_value = PValue(t_eq.rhs, T_eq.rhs, TestSide.LEFT)
+hypothesis_ex = HypothesisTest(Eq(mu0, V[mu0]), Not(Eq(mu0, V[mu0])), p_value)
+hypothesis_ex
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+H_{0} : \mu_{0} = \frac{7}{2}\\
+H_{1} : \mu_{0} \neq \frac{7}{2}
+\end{cases}\end{equation}
+:END:
+
+If $\bar{X}$ is the sample distribution, the test distribution becomes,
+#+begin_src jupyter-python
 T_eq
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}T = \frac{\sqrt{n} \left(\bar{x} - \mu_{0}\right)}{s}\end{equation}
+\begin{equation}T = \frac{\sqrt{n} \left(- \mu_{0} + \bar{X}\right)}{s}\end{equation}
 :END:
 
+We can now calculate the p-value
 #+begin_src jupyter-python
-stat = T_eq.rhs
-statf = stat.subs(V).evalf()
-dist = Normal('\\bar{X}', V[mu0], V[s]/sqrt(V[n]))
-p = Prob(T_eq.rhs.subs({xm: dist})<=stat)
-result = p.subs(V).doit().evalf(3)
-eq1 = LEq(p,
-             LRound(3, p.subs(V)),
-             result)
-eq1
+p_value.show(V)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}P[\frac{\sqrt{n} \left(- \mu_{0} + \bar{X}\right)}{s} \leq \frac{\sqrt{n} \left(\bar{x} - \mu_{0}\right)}{s}] = P[4.714 \bar{X} - 16.5 \leq -1.885] = 0.0297\end{equation}
+\begin{equation}\begin{array}{l}
+p = P[\frac{\sqrt{n} \left(- \mu_{0} + \bar{X}\right)}{s} \leq \frac{\sqrt{n} \left(\bar{x} - \mu_{0}\right)}{s}]=\\
+\quad =P[\frac{10 \sqrt{2} \left(\bar{X} - \frac{7}{2}\right)}{3} \leq - \frac{4 \sqrt{2}}{3}]=\\
+\quad =0.0296732193959599
+\end{array}\end{equation}
 :END:
 
-#+begin_src jupyter-python :noweb yes :results output :var name=doc-name
+Checking the p-value against our significance level leads us to
+#+begin_src jupyter-python
+hypothesis_ex.doit(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}p < \alpha \Rightarrow 0.0296732193959599 \leq 0.05 \Rightarrow \mu_{0} \neq \frac{7}{2}\end{equation}
+:END:
+
+#+thumb:
+#+begin_src jupyter-python :noweb yes :results output
 x_n = np.linspace(-3, 0)
-dens_lm = lambdify(x, density(T_eq.rhs.subs({xm: dist}))(x).subs(V))
+dens_lm = lambdify(x, density(p_value.distribution)(x).subs(V))
 plt.plot(x_n, dens_lm(x_n), zorder=2)
+statf = p_value.statistic.subs(V).evalf()
 plt.axvline(statf, color=<<color("red")>>)
 x_stat_n = np.linspace(-3, float(statf))
 plt.fill_between(x_stat_n, 0, dens_lm(x_stat_n), color=<<color("blue")>>)
 plt.xticks([float(statf)])
 plt.yticks([0, 0.5])
-plt.savefig(f"{name}.png")
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/b74f11b9a96342ee45b85e311c59336f501ba971.png]]
+[[file:./.ob-jupyter/fd36746a9d54aaf30253a06076965cc98b33eca4.png]]
 
-#+begin_src jupyter-python
-LBiOp(':', "\\text{Reject } H_0", LImply(result<alpha, result<V[alpha]))
-#+end_src
-
-#+RESULTS:
-:RESULTS:
-\begin{equation}:   \text{Reject } H_0   0.0297 < \alpha \Rightarrow \text{True}\end{equation}
-:END:
+** Tests
+- [[file:20210302115455-kruskal_wallis_test.org][Kruskal-Wallis test]]
+- [[file:20210306091732-friedman_s_test.org][Friedman's test]]

@@ -2,23 +2,13 @@
 #+roam_tags: fractal mandelbrot set recursion
 
 * Setup :noexport:
-#+call: init(theme="dark")
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session mandelbrot_set :results raw :eval no-export :pandoc t :async yes :tangle mandelbrot_set.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
+#+call: init()
 #+call: init-plot-style()
-#+name: current-theme
-: dark
-#+name: doc-name
-: mandelbrot_set
-:end:
+
+* TODO Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/mandelbrot_set.py :results silent
+:END:
 
 #+begin_src jupyter-python
 import matplotlib.pyplot as plt
@@ -84,14 +74,15 @@ def mandelbrot(w, h, cx, cy, s, max_iter=50):
 
 #+RESULTS:
 
-#+BEGIN_SRC jupyter-python :results output :var name=doc-name
+#+thumb:
+#+BEGIN_SRC jupyter-python :results output
 cx = -0.8
 cy = 0.0
 s = 3
 z = mandelbrot(400, 400, cx, cy, s, max_iter=100)
 plt.imshow(z, cmap=green_cmap)
 plt.axis('off')
-plt.savefig(f"{name}.png")
+plt.savefig(thumb)
 #+END_SRC
 
 #+RESULTS:

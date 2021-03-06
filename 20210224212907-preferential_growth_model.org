@@ -1,8 +1,22 @@
 #+title: Preferential growth model
 #+roam_tags: graph theory preferential growth
 
-* Preferential growth model
-#+begin_src python :tangle graphs.py
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/preferential_growth_model.py :results silent
+:END:
+
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+from networkx import nx
+import numpy as np
+#+end_src
+
+#+begin_src jupyter-python
 def preferential(n, m):
     ends = list(range(m))
     nodes = []
@@ -19,26 +33,45 @@ def preferential(n, m):
     return G
 #+end_src
 
-#+begin_src python :results file :noweb yes
-import matplotlib.pyplot as plt
-from networkx import nx
-import numpy as np
-import util
-import graphs
+* Preferential growth model
+#+begin_src jupyter-python
+from encyclopedia.graphs_and_networks import *
+#+end_src
 
+#+begin_src jupyter-python :noweb yes
 n = 64
 m = 4
-G = graphs.preferential(n, m)
+G = preferential(n, m)
 
 plt.figure(figsize=(4, 4))
 pos = nx.spring_layout(G)
-util.draw_graph(G, pos)
+draw_graph(G, pos)
 plt.title(f"$n={n}, m={m}$")
-
-name = "preferential_growth.png"
-plt.savefig(name, facecolor=<<color("bg")>>)
-return name
 #+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+#+begin_example
+
+NameErrorTraceback (most recent call last)
+<ipython-input-6-e0de8cb05eb0> in <module>
+      5 plt.figure(figsize=(4, 4))
+      6 pos = nx.spring_layout(G)
+----> 7 draw_graph(G, pos)
+      8 plt.title(f"$n={n}, m={m}$")
+
+~/encyclopedia/encyclopedia/graphs_and_networks.py in draw_graph(G, pos)
+     15
+     16 def draw_graph(G, pos):
+---> 17     nx.draw_networkx_nodes(G, pos=pos, node_size=8, node_color=nil)
+     18     nx.draw_networkx_edges(G, pos=pos, width=0.8, alpha=0.4, edge_color=nil)
+     19
+
+NameError: name 'nil' is not defined
+#+end_example
+: <Figure size 800x800 with 0 Axes>
+:END:
 
 #+begin_src python :results file :noweb yes
 import matplotlib.pyplot as plt

@@ -1,7 +1,72 @@
 #+title: Dynamical systems
 
+* Setup :noexport:
+#+call: init()
+
+#+call: init-plot-style()
+
+* Lib :noexport:
+#+begin_src jupyter-python
+from sympy import *
+from pyorg.latex import *
+import matplotlib.pyplot as plt
+import numpy as np
+from stability_analysis import SteadyStates, StabilityAnalysis
+#+end_src
+
+#+begin_src jupyter-python
+class DynamicalSystem(Expr):
+    def __new__(cls, model_rhs, variables, t):
+        model_lhs = Matrix([var.diff(t) for var in variables])
+        if type(model_rhs) == list:
+            model_rhs = Matrix(model_rhs)
+            
+        ex = Expr.__new__(cls, model_lhs, model_rhs)
+        ex._model_lhs = model_lhs
+        ex._model_rhs = model_rhs
+        ex._variables = variables
+        return ex
+
+    @property
+    def rhs(self):
+        return self._model_rhs
+    @property
+    def lhs(self):
+        return self._model_lhs
+    
+    @property
+    def variables(self):
+        return self._variables
+
+    def steady_states(self):
+        return SteadyStates(self)
+    
+    def stability_analysis(self):
+        return StabilityAnalysis(SteadyStates(self))
+
+    def _latex(self, printer):
+        return printer._print(LMatEq(self._model_lhs, self._model_rhs))
+#+end_src
+
 * Dynamical systems
 - [[file:20210224180257-ricker_map.org][Ricker map]]
 - [[file:20210220093951-traveling_waves.org][Traveling waves]]
 - [[file:20210222131111-kuramoto_model.org][Kuramoto model]]
 - [[file:20210220094530-diffusion_driven_instability.org][Diffusion driven instability]]
+
+#+begin_src jupyter-python
+x, y = symbols('x y', cls=Function)
+t = symbols('t')
+DynamicalSystem([
+    x(t)+2*y(t),
+    4*x(t)+y(t)/2,
+], [x(t), y(t)], t)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{d}{d t} x{\left(t \right)} = x{\left(t \right)} + 2 y{\left(t \right)}\\
+\frac{d}{d t} y{\left(t \right)} = 4 x{\left(t \right)} + \frac{y{\left(t \right)}}{2}
+\end{array}\end{equation}
+:END:

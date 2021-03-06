@@ -2,24 +2,13 @@
 #+roam_tags: dynamical systems population traveling waves
 
 * Setup :noexport:
-#+call: init(theme="dark")
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session traveling_waves :results raw :eval no-export :pandoc t :async yes :tangle traveling_waves.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
+#+call: init()
 #+call: init-plot-style()
-#+name: current-theme
-: dark
-#+name: doc-name
-: traveling_waves
-:end:
 
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/traveling_waves.py :results silent
+:END:
 
 * Traveling waves
 In more realistic prey population models, we can see /traveling-wave solutions/.
@@ -256,7 +245,7 @@ plt.legend()
 #+attr_latex: :width 0.5\textwidth
 #+caption: A plot of the three initial population sizes used for the simulations.
 #+RESULTS: src:fig:init_populations
-[[file:./.ob-jupyter/d88346f9543b744e56da26a138c2940ba8f0b434.png]]
+[[file:./.ob-jupyter/3aeba45a69d5bb62391e589b95a21c4230e802fd.png]]
 
 #+begin_src jupyter-python
 model_lm = numba.njit(lambdify((u(xi, tau), u(xi-1, tau), u(xi+1, tau)), model_dimless_disc.rhs.subs(V)))
@@ -341,7 +330,8 @@ edge of the wave and using the $v=s/t$ formula to find the average velocity. See
 Figure [[fig:wave_velocity1]], [[fig:wave_velocity2]] and [[fig:wave_velocity3]] for a
 visualization of the calculations.
 
-#+begin_src jupyter-python :results output :var name=doc-name :exports none
+#+thumb:
+#+begin_src jupyter-python :results output :exports none
 plt.figure(figsize=(4, 4))
 plot_velocity(50, 200, u0_id=0, lw=3)
 plt.xlabel("")
@@ -349,11 +339,10 @@ plt.ylabel("")
 plt.title("")
 plt.gca().legend().set_visible(False)
 plt.yticks([])
-plt.savefig(f"{name}.png")
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/59da31cc3820c6e7d58ac85dc26cf77dac928f62.png]]
+[[file:./.ob-jupyter/3846a435bc28e0bb5a26266914ae69095fc371e6.png]]
 
 #+name: src:fig:wave_velocity1
 #+begin_src jupyter-python :results output :noweb yes
@@ -365,7 +354,7 @@ plot_velocity(50, 200, u0_id=0, color=<<color("green")>>)
 #+attr_latex: :width 0.5\textwidth
 #+caption: The wave velocity calculations for the first case.
 #+RESULTS: src:fig:wave_velocity1
-[[file:./.ob-jupyter/28a23eb2389a55fac12bb6b838a327cb1f8b847f.png]]
+[[file:./.ob-jupyter/cb504c476e1023c8d75cb1c8dffbef55c5c51376.png]]
 
 #+name: src:fig:wave_velocity2
 #+begin_src jupyter-python :results output :noweb yes
@@ -377,7 +366,7 @@ plot_velocity(20, 50, u0_id=1, color=<<color("red")>>)
 #+attr_latex: :width 0.5\textwidth
 #+caption: The wave velocity calculations for the second case.
 #+RESULTS: src:fig:wave_velocity2
-[[file:./.ob-jupyter/7f6ca9faf45fac80c24cbad21f14c830c97b5cbe.png]]
+[[file:./.ob-jupyter/de8538b77f97f259a16e1c72e5155608d3cbf012.png]]
 
 #+name: src:fig:wave_velocity3
 #+begin_src jupyter-python :results output :noweb yes
@@ -389,7 +378,7 @@ plot_velocity(100, 200, u0_id=2, color=<<color("blue")>>)
 #+attr_latex: :width 0.5\textwidth
 #+caption: The wave velocity calculations for the third case.
 #+RESULTS: src:fig:wave_velocity3
-[[file:./.ob-jupyter/718e60a0725062df020a0277ea5f8b893717a09a.png]]
+[[file:./.ob-jupyter/49546a926a8d3ce13ee259087ad5f4606f884714.png]]
 
 ** Phase plane
 We can analyse the three cases in the phase plane spanned by $u$ and
@@ -444,7 +433,7 @@ ax1.legend()
 #+name: fig:wave_phase1
 #+caption: The wave profile of the first case (left) and the phase plane spanned by $u$ and $v=du/d\xi$ (right).
 #+RESULTS: src:fig:wave_phase1
-[[file:./.ob-jupyter/3650e3983428e3da1a74eeb7b30637b803b0be3d.png]]
+[[file:./.ob-jupyter/7975e33394640251ac8dba6253328a4d0273e272.png]]
 
 #+name: src:fig:wave_phase2
 #+begin_src jupyter-python :results output :noweb yes
@@ -461,7 +450,7 @@ ax1.legend()
 #+name: fig:wave_phase2
 #+caption: The wave profile of the second case (left) and the phase plane (right). The phase plane trajectory connects the zero fixed point to the smaller fixed point. It's velocity is negative and travels to the left, this means that it is /unstable/.
 #+RESULTS: src:fig:wave_phase2
-[[file:./.ob-jupyter/9a4c3c1d02cad819702c4031e626096501371388.png]]
+[[file:./.ob-jupyter/4be370bf2e23efa6378d96c709d9b64cae1fba62.png]]
 
 #+name: src:fig:wave_phase3
 #+begin_src jupyter-python :results output :noweb yes
@@ -478,55 +467,56 @@ ax1.legend()
 #+name: fig:wave_phase3
 #+caption: The wave profile of the third case (left) and the phase plane (right). This is the one that started with a small perturbation from the smaller fixed point and it moved up to the larger one, this means that the lower fixed point is unstable and the larger is stable.
 #+RESULTS: src:fig:wave_phase3
-[[file:./.ob-jupyter/89c18493dad85a157ccc6d1d6ce53dbb10f17dfe.png]]
+[[file:./.ob-jupyter/e6633437f4c38158136155df7cf37a5d7b2ddd1b.png]]
 
-# ** COMMENT Animation
-# #+begin_src jupyter-python :results output
-# xi_n = np.arange(V[L])
-# dt = 0.05
-# t_n = np.arange(0, 20, dt)
-# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
-# ax1.set_xlim([0, V[L]])
-# ax1.set_ylim([0, 6])
-# ax2.set_ylim([0, 6])
-# ax2.set_xlim([-1.0, 1.1])
-# text = fig.suptitle("$\\tau=0.0$")
+#+begin_src jupyter-python :results output :exports none
+xi_n = np.arange(V[L])
+dt = 0.1
+t_n = np.arange(0, 100, dt)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
+ax1.set_xlim([0, V[L]])
+ax1.set_ylim([0, 6])
+ax2.set_ylim([0, 6])
+ax2.set_xlim([0, -1.0])
+text = fig.suptitle("$\\tau=0.0$")
 
-# class Animation():
-#     def __init__(self):
-#         self.sols = [run_system(u0_lm, t_n) for u0_lm in u0_lms]
-#         self.phase_lines = ax2.plot([], [], [], [], [], [])
-#         for line, (xi_n, u_n) in zip(self.phase_lines, self.sols):
-#             line.set_ydata(u_n[0, :])
-#             line.set_xdata(np.diff(u_n[0, :], prepend=np.nan))
-#         self.wave_lines = ax1.plot([], [], [], [], [], [])
-#         for line, (xi_n, u_n) in zip(self.wave_lines, self.sols):
-#             line.set_xdata(xi_n)
-#             line.set_ydata(u_n[0, :])
+class Animation():
+    def __init__(self):
+        self.sols = [run_system(u0_lm, t_n) for u0_lm in u0_lms]
+        self.phase_lines = ax2.plot([], [], [], [], [], [])
+        for line, (xi_n, u_n) in zip(self.phase_lines, self.sols):
+            line.set_ydata(u_n[0, :])
+            line.set_xdata(np.diff(u_n[0, :], prepend=np.nan))
+        self.wave_lines = ax1.plot([], [], [], [], [], [])
+        for line, (xi_n, u_n) in zip(self.wave_lines, self.sols):
+            line.set_xdata(xi_n)
+            line.set_ydata(u_n[0, :])
 
-#     def init(self):
-#         return self.wave_lines + self.phase_lines
+    def init(self):
+        return self.wave_lines + self.phase_lines
 
-#     def __call__(self, i):
-#         for line, (xi_n, u_n) in zip(self.phase_lines, self.sols):
-#             line.set_ydata(u_n[i, :])
-#             line.set_xdata(np.diff(u_n[i, :], prepend=np.nan))
-#         for line, (xi_n, u_n) in zip(self.wave_lines, self.sols):
-#             line.set_xdata(xi_n)
-#             line.set_ydata(u_n[i, :])
-#         text.set_text(f"$\\tau={t_n[i]:.3f}$")
-#         return self.wave_lines + self.phase_lines
+    def __call__(self, i):
+        for line, (xi_n, u_n) in zip(self.phase_lines, self.sols):
+            line.set_ydata(u_n[i, :])
+            line.set_xdata(np.diff(u_n[i, :], prepend=np.nan))
+        for line, (xi_n, u_n) in zip(self.wave_lines, self.sols):
+            line.set_xdata(xi_n)
+            line.set_ydata(u_n[i, :])
+        text.set_text(f"$\\tau={t_n[i]:.3f}$")
+        return self.wave_lines + self.phase_lines
 
-# anim = Animation()
-# fanim = FuncAnimation(fig, anim, init_func=anim.init, frames=len(t_n), interval=20, blit=True)
-# %timeit -r 1 -n 1 fanim.save('phase_waves.mp4')
-# #+end_src
+anim = Animation()
+fanim = FuncAnimation(fig, anim, init_func=anim.init, frames=len(t_n), interval=20, blit=True)
+%timeit -r 1 -n 1 fanim.save('phase_waves.mp4')
+#+end_src
 
-# #+RESULTS:
-# :RESULTS:
-# : 1min 26s ± 0 ns per loop (mean ± std. dev. of 1 run, 1 loop each)
-# [[file:./.ob-jupyter/d15250954c39cd4e575788556239ca18def6b360.png]]
-# :END:
+#+RESULTS:
+:RESULTS:
+: 2min 26s ± 0 ns per loop (mean ± std. dev. of 1 run, 1 loop each)
+[[file:./.ob-jupyter/f6fef83b6212078f90406192fd4dfecf7088a4bf.png]]
+:END:
+
+[[video:phase_waves.mp4]]
 
 ** Local outbreak
 We will now consider an initial population that models a local outbreak using the function,

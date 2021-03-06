@@ -1,8 +1,16 @@
 #+title: Clustering coefficient
 #+roam_tags: graph theory clustering coefficient
 
-* Clustering coefficient
-#+begin_src python :tangle graphs.py
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/clustering_coefficient.py :results silent
+:END:
+
+#+begin_src jupyter-python
 def clustering_coefficient(A):
     triangles = np.trace(np.linalg.matrix_power(A, 3)) / 6
     k = A.sum(axis=0)
@@ -10,27 +18,27 @@ def clustering_coefficient(A):
     return triangles*3/triples
 #+end_src
 
-#+begin_src python :results file
-from networkx import nx
-import graphs
-import util
-import numpy as np
-import matplotlib.pyplot as plt
+* Clustering coefficient
+The clustering coefficient measures the degree to which nodes in a graph tend to
+cluster. See Figure ref:fig:clust_small_world for a [[file:20210224212824-small_world_network.org][small world network]] with a
+clustering coefficient of $C\approx 0.34$.
 
-with open('smallWorldExample.txt') as f:
-    A = graphs.from_string(f.readlines())
-
-G = nx.from_numpy_matrix(A)
-C = graphs.clustering_coefficient(A)
+#+name: src:fig:clust_small_world
+#+begin_src jupyter-python :results output
+n = 64
+c = 8
+p = 0.9
+G = small_world(n, c, p)
+A = nx.to_numpy_matrix(G)
+C = clustering_coefficient(A)
 
 pos = nx.spring_layout(G, iterations=1000)
 plt.figure(figsize=(4, 4))
-util.draw_graph(G, pos)
-name = "smallexamplecoef.png"
+draw_graph(G, pos)
 plt.title(f"$C={C:.6f}$")
-plt.savefig(name)
-return name
 #+end_src
 
-#+RESULTS[8a3174092ec95424bc3a0c8717e84395eba302b0]:
-[[file:smallexamplecoef.png]]
+#+caption: A small world network with $n=64$, $c=16$ and $p=0.1$. These parameters gives a clustering coefficient of $C\approx 0.34$.
+#+label: fig:clust_small_world
+#+RESULTS: src:fig:clust_small_world
+[[file:./.ob-jupyter/a33a51c10af84ba2e2c97c273aa85c36d1a45cdd.png]]

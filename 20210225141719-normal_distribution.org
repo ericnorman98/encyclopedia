@@ -2,26 +2,8 @@
 #+roam_tags: statistics distribution normal
 
 * Setup :noexport:
-#+call: init(session="statistics")
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session statistics :results raw :eval no-export :pandoc t :async yes :tangle normal_distribution.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
+#+call: init()
 #+call: init-plot-style()
-
-#+RESULTS:
-
-#+name: current-theme
-: dark
-#+name: doc-name
-: normal_distribution
-:end:
 
 * Normal distribution
 #+begin_src jupyter-python
@@ -43,7 +25,8 @@ phi_f(x)
 \begin{equation}\phi{\left(x \right)} = \frac{\sqrt{2} e^{- \frac{x^{2}}{2}}}{2 \sqrt{\pi}}\end{equation}
 :END:
 
-#+begin_src jupyter-python :results output :var name=doc-name
+#+thumb:
+#+begin_src jupyter-python :results output
 x_n = np.linspace(-5, 5, 200)
 plt.plot(x_n, lambdify(x, phi_f(x).rhs)(x_n))
 plt.axis('off')
@@ -56,6 +39,7 @@ plt.title("Normal PDF")
 [[file:./.ob-jupyter/bb81b1f5329d798cee40e5347db773c79d199c8a.png]]
 
 ** CDF
+The definition of the cumulative distribution is using the [[file:20210301091142-error_function.org][error function]].
 #+begin_src jupyter-python
 Phi = symbols('Phi', cls=Function)
 Phi_f = lambda x: LEq(Phi(x), cdf(Zstd)(x))

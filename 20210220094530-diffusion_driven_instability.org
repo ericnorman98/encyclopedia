@@ -2,26 +2,13 @@
 #+roam_tags: dynamical systems population diffusion instability
 
 * Setup :noexport:
-#+call: init(theme="dark")
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session diffusion_driven_instability :results raw :eval no-export :pandoc t :async yes :tangle diffusion_driven_instability.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
+#+call: init()
 #+call: init-plot-style()
 
-#+RESULTS:
-
-#+name: current-theme
-: dark
-#+name: doc-name
-: diffusion_driven_instability
-:end:
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/diffusion_driven_instability.py :results silent
+:END:
 
 #+begin_src jupyter-python :results silent :noweb yes
 from sympy.plotting import plot, plot3d
@@ -555,7 +542,8 @@ def run_system(T_n, dt, UV0, Dv_n):
 
 #+RESULTS:
 
-#+begin_src jupyter-python :results output :var name=doc-name :exports none
+#+thumb:
+#+begin_src jupyter-python :results output :exports none
 plt.figure(figsize=(4, 4))
 Dv_n = 5
 min = 0.5
@@ -566,11 +554,10 @@ UV0 = get_initial_state(128)
 UV = run_system(T_n, dt, UV0.copy(), Dv_n)
 plt.imshow((UV[:, :, 0]-min)/(max-min))
 plt.axis('off')
-plt.savefig(f"{name}.png")
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/649f0855c1c1bcf5411ecade85ab624a4964f65d.png]]
+[[file:./.ob-jupyter/c35761a8f985dd279bd4e894703c738354919ba9.png]]
 
 #+name: src:fig:simulations_transient
 #+begin_src jupyter-python :results output
@@ -592,7 +579,7 @@ plt.suptitle(f"$t={T_n}$, $\Delta t={dt}$")
 #+name: fig:simulations_transient
 #+caption: Simulations of four values of $D_v$ during transient.
 #+RESULTS: src:fig:simulations_transient
-[[file:./.ob-jupyter/61217705257e6ea9cc4a57b0014ff805634ca9c3.png]]
+[[file:./.ob-jupyter/efa68b63a7626a4953804921f7d03af85a357c3f.png]]
 
 #+name: src:fig:simulations_after
 #+begin_src jupyter-python :results output :noweb yes
@@ -617,48 +604,46 @@ plt.suptitle(f"$t={T_n}$, $\Delta t={dt}$")
 [[file:./.ob-jupyter/a82142ec106c2e3e0d061409f4ccbd370f1342be.png]]
 
 
-# #+begin_src jupyter-python
-# UV = get_initial_state()
-# t_n = np.arange(0, 10, 0.01)
-# dt = 0.1
-# T = 50
-# r = ode(model_ode).set_integrator('vode')
-# r.set_initial_value(UV.flatten(), 0).set_f_params(9)
-# steps = int(T/dt)
-# norm = lambda x: (x-x.min())/(x.max()-x.min())
-# plt.imshow(norm(sol[:, :, 0]))
-# #+end_src
+#+begin_src jupyter-python :exports none
+fig, ax1 = plt.subplots(figsize=(4, 4))
+ax1.set_xlim([0, 128])
+ax1.set_ylim([0, 128])
+min = 0.5
+max = 12
+Dv_n = 5
+dt = 0.01
+# img2 = ax2.imshow(norm(sol[:, :, 1]))
+UV0 = get_initial_state(128)
+r = ode(model_ode).set_integrator('vode')
+r.set_initial_value(UV0.flatten(), 0).set_f_params(Dv_n, UV0.shape[0])
+sol = r.integrate(r.t+dt).reshape(UV0.shape)
+ax1.set_xticks([])
+ax1.set_yticks([])
+img1 = ax1.imshow(sol[:, :, 0], vmin=min, vmax=max)
+steps = 1000
 
-# #+RESULTS:
-# :RESULTS:
-# : <matplotlib.image.AxesImage at 0x7f1000803970>
-# [[file:./.ob-jupyter/32300d1a09555e51b2e567b2d7ac96acfd287f44.png]]
-# :END:
+def init():
+    return [img1]
 
+def animate(i):
+    if i % 10 == 0:
+        print(f"{i} t={r.t}", end='\r')
+    sol = r.integrate(r.t+dt).reshape(UV0.shape)
+    img1.set_data(sol[:, :, 0])
+    # img2.set_data(norm(sol[:, :, 1]))
+    return [img1]
 
-# #+begin_src jupyter-python
-# fig, ax1 = plt.subplots(figsize=(4, 4))
-# ax1.set_xlim([0, 256])
-# ax1.set_ylim([0, 256])
-# img1 = ax1.imshow(norm(sol[:, :, 0]))
-# # img2 = ax2.imshow(norm(sol[:, :, 1]))
+anim = FuncAnimation(fig, animate, init_func=init, frames=steps, interval=20, blit=True)
+anim.save('diffusion_simulation2.mp4')
+#+end_src
 
-# def init():
-#     return [img1]
+#+RESULTS:
+:RESULTS:
+: 990 t=9.909999999999833
+[[file:./.ob-jupyter/4f4a649e6c31f03175788e073e3c9e3662c8adf2.png]]
+:END:
 
-# def animate(i):
-#     if i % 10 == 0:
-#         print(f"{i} t={r.t}", end='\r')
-#     sol = r.integrate(r.t+dt).reshape([256, 256, 2])
-#     img1.set_data(norm(sol[:, :, 0]))
-#     # img2.set_data(norm(sol[:, :, 1]))
-#     return [img1]
-
-# anim = FuncAnimation(fig, animate, init_func=init, frames=steps, interval=20, blit=True)
-# anim.save('diffusion_simulation_Dv9.mkv')
-# #+end_src
-
-# #+RESULTS:
+[[video:diffusion_simulation.mp4]]
 
 
 # #+begin_src jupyter-python

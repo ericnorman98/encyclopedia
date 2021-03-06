@@ -2,26 +2,19 @@
 #+roam_tags: graph theory small world network
 
 * Setup :noexport:
-#+call: init(session="graphs_and_networks", theme="dark")
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session graphs_and_networks :results raw :eval no-export :pandoc t :async yes :tangle small_world_network.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
+#+call: init()
 #+call: init-plot-style()
-#+name: current-theme
-: dark
-#+name: doc-name
-: small_world_network
-:end:
 
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/small_world_network.py :results silent
+:END:
 
-* Small world network
+#+begin_src jupyter-python
+import numpy as np
+import networkx as nx
+#+end_src
+
 #+begin_src jupyter-python
 def small_world(n, c, p):
     A = np.zeros([n, n])
@@ -38,7 +31,9 @@ def small_world(n, c, p):
     return nx.from_numpy_matrix(A)
 #+end_src
 
-#+RESULTS:
+* Small world network
+The small world network is a graph that has a small [[file:20210228010349-average_path_length.org][average path length]] and a
+small [[file:20210224212955-clustering_coefficient.org][clustering coefficient]].
 
 #+begin_src jupyter-python :results file :noweb yes
 n = 64
@@ -68,7 +63,8 @@ plt.gca().set_aspect(1)
 #+RESULTS:
 [[file:./.ob-jupyter/8b8b03fa3f44f605d6001a937b05c2402555519d.png]]
 
-#+begin_src jupyter-python :results output :noweb yes :exports none :var name=doc-name
+#+thumb:
+#+begin_src jupyter-python :results output :noweb yes :exports none
 n = 64
 c1 = 16
 p1 = 0
@@ -82,7 +78,6 @@ plt.figure(figsize=(4, 4))
 pos = nx.circular_layout(G_after)
 draw_graph(G_after, pos)
 plt.gca().set_aspect(1)
-plt.savefig(f"{name}.png")
 #+end_src
 
 #+RESULTS:

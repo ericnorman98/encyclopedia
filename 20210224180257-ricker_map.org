@@ -3,23 +3,12 @@
 
 * Setup :noexport:
 #+call: init()
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session ricker_map :results raw :eval no-export :pandoc t :async yes :tangle ricker_map.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
 #+call: init-plot-style()
-#+name: current-theme
-: dark
-#+name: doc-name
-: ricker_map
-:end:
 
+* TODO Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/ricker_map.py :results silent
+:END:
 
 * Ricker map
 The Ricker map is a population model that can describe populations of fish in a
@@ -27,13 +16,11 @@ fishery and populations that exhibit cannibalism to offspring. The definition of
 the map is as follows,
 
 #+BEGIN_SRC jupyter-python :results silent
-import sympy as sm
 import matplotlib.pyplot as plt
 import pyorg.plot as plot
 import numpy as np
 import pandas as pd
 from pyorg.latex import *
-plot.use_style()
 from sympy import *
 from ddeint import ddeint
 from scipy.integrate import odeint
@@ -123,7 +110,8 @@ plt.ylabel("$\\eta_{\\tau}$")
 #+RESULTS:
 [[file:./.ob-jupyter/1effa461dce1beb50ffeea92155b6c35037f898a.png]]
 
-#+BEGIN_SRC jupyter-python :noweb yes :var name=doc-name :results output :exports none
+#+thumb:
+#+BEGIN_SRC jupyter-python :noweb yes :results output :exports none
 plt.figure(figsize=(4, 4))
 N0_n = 900
 alpha_n = 0.01
@@ -137,7 +125,6 @@ bifur_values = np.array(bifur_values)
 plt.scatter(bifur_values[:, 0], bifur_values[:, 1], s=4.0, lw=0.0)
 plt.xticks([])
 plt.yticks([])
-plt.savefig(f"{name}.png")
 #+END_SRC
 
 #+RESULTS:

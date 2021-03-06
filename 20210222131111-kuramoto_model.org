@@ -3,22 +3,16 @@
 
 * Setup :noexport:
 #+call: init(theme="dark")
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session kuramoto_model :results raw :eval no-export :pandoc t :async yes :tangle kuramoto_model.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
 #+call: init-plot-style()
-#+name: current-theme
-: dark
-#+name: doc-name
-: kuramoto_model
-:end:
+
+* TODO Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/kuramoto_model.py :results silent
+:END:
+
+
+* Kuramoto model
+The Kuramoto model is a model to describe synchronization of oscillators. The model looks like this,
 
 #+begin_src jupyter-python :results silent :noweb yes
 import numpy as np
@@ -35,9 +29,6 @@ import torch
 
 device = torch.device('cuda')
 #+end_src
-
-* Kuramoto model
-The Kuramoto model is a model to describe synchronization of oscillators. The model looks like this,
 
 #+begin_src jupyter-python
 i, j = symbols('i j', integer=True)
@@ -307,7 +298,8 @@ plt.savefig('test_large.png')
 #+RESULTS: src:fig:param_grid
 [[file:./.ob-jupyter/e50fd54826797b9abeb1a39554a5b753dd83a800.png]]
 
-#+begin_src jupyter-python :results output :noweb yes :exports none :var name=doc-name
+#+thumb:
+#+begin_src jupyter-python :results output :noweb yes :exports none
 dt = 0.001
 T = 0.5
 K_cn = V[gamma]*2
@@ -318,7 +310,7 @@ plt.figure(figsize=(4, 4))
 plt.axis('off')
 t_ns, sol = run_model(T, dt, N_n, K_n)
 plt.plot(t_ns, sol, color=<<color("green")>>)
-plt.savefig(f'{name}.png')
+plt.savefig(thumb)
 #+end_src
 
 #+RESULTS:

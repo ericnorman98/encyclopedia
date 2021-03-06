@@ -3,25 +3,12 @@
 
 * Setup :noexport:
 #+call: init()
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session henon_map :results raw :eval no-export :pandoc t :async yes :tangle henon_map.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
 #+call: init-plot-style()
 
-#+RESULTS:
-
-#+name: current-theme
-: dark
-#+name: doc-name
-: henon_map
-:end:
+* TODO Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/henon_map.py :results silent
+:END:
 
 #+begin_src jupyter-python :results silent
 import sympy as sm
@@ -119,16 +106,15 @@ def plot_henon_map():
 #+end_src
 
 
-#+begin_src jupyter-python :results output :var name=doc-name
+#+thumb:
+#+begin_src jupyter-python :results output
 plot_henon_map()
-plt.axis('off')
-plt.savefig(f"{name}.png")
-plt.axis('on')
 plt.title("Hénon map")
 #+end_src
 
 #+RESULTS:
 [[file:./.ob-jupyter/b33ce406aba24b2dbf9a4c7e563272df09b38851.png]]
+
 ** Fractal dimension
 #+begin_src jupyter-python
 @numba.njit()

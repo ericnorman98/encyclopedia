@@ -2,23 +2,23 @@
 #+roam_tags: graph theory erdos renyi model
 
 * Setup :noexport:
-#+call: init(session="graphs_and_networks", theme="dark")
-
-#+RESULTS:
-:results:
-#+SETUPFILE: setup.org
-#+PROPERTY: header-args:jupyter-python :exports results :session graphs_and_networks :results raw :eval no-export :pandoc t :async yes :tangle erdos_renyi_model.py
-#+LATEX_HEADER: \usepackage{pagecolor}
-#+LATEX_HEADER: \definecolor{bg}{HTML}{282c34}
-#+LATEX_HEADER: \definecolor{white}{HTML}{f0f0f0}
-#+LATEX_HEADER: \pagecolor{bg}
-#+LATEX_HEADER: \color{white}
+#+call: init()
 #+call: init-plot-style()
-#+name: current-theme
-: dark
-#+name: doc-name
-: erdos_renyi_model
-:end:
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/erdos_renyi_model.py :results silent
+:END:
+
+#+begin_src jupyter-python
+from sympy import *
+import numba
+from sympy.utilities.lambdify import implemented_function
+from sympy.utilities.autowrap import autowrap
+import numpy as np
+from pyorg.latex import *
+import matplotlib.pyplot as plt
+#+end_src
 
 * Erdõs-Rényi model
 The Erdõs-Rényi $G\{n, p\}$ model is a way of generating a random graph with
@@ -37,8 +37,9 @@ def erdos(n, p):
 #+end_src
 
 
+#+thumb:
 #+name: src:fig:erdos-small-graph
-#+begin_src jupyter-python :results output :noweb yes :var name=doc-name
+#+begin_src jupyter-python :results output :noweb yes
 n = 100
 p = 0.1
 
@@ -49,7 +50,6 @@ plt.figure(figsize=(4, 4))
 pos = nx.spring_layout(G, iterations=100)
 draw_graph(G, pos)
 plt.title(f"$n={n}, p={p}$")
-plt.savefig(f"{name}.png")
 #+end_src
 
 #+name: fig:erdos-small-graph
