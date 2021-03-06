@@ -1,0 +1,442 @@
+# -*- eval: (add-hook 'after-save-hook (lambda nil (org-babel-tangle)) nil t); -*-
+#+TITLE: Encyclopedia
+#+PROPERTY: header-args:elisp :tangle encyclopedia.el :results silent
+#+STARTUP: overview
+
+* Lexical Binding
+#+begin_src elisp
+;;; encyclopedia.el --- -*- lexical-binding: t -*-
+#+end_src
+
+* Paths
+#+begin_src elisp
+
+(defvar encyclopedia-root-path (expand-file-name "~/encyclopedia"))
+
+#+end_src
+
+#+RESULTS:
+: encyclopedia-root-path
+
+* Misc Vars
+#+begin_src elisp
+
+(defvar encyclopedia-match-file-regexp "^[0-9]+\\-.*\\.org$")
+
+#+end_src
+
+#+RESULTS:
+: encyclopedia-match-file-regexp
+
+* Themes
+** Vars
+#+begin_src elisp
+(defvar encyclopedia-theme-default 'dark)
+#+end_src
+
+#+RESULTS:
+: dark
+
+#+begin_src elisp
+(setq encyclopedia-theme--current encyclopedia-theme-default)
+#+end_src
+
+#+RESULTS:
+: dark
+
+#+begin_src elisp
+(defvar encyclopedia-theme-color-names
+      '("bg" "bg-alt" "white" "brightblack0"
+        "brightblack1" "brightblack2"
+        "brightblack3" "brightblack4"
+        "brightblack5" "brightblack6"
+        "black" "fg" "fg-alt" "fg-hc"
+        "red" "orange" "green" "teal"
+        "yellow" "blue" "dark-blue" "magenta"
+        "violet" "cyan" "dark-cyan"))
+#+end_src
+
+** Dark
+#+begin_src elisp
+(defvar encyclopedia-theme-theme-dark
+      '((bg           . "#282c34")
+        (bg-alt       . "#21242b")
+        (white        . "#1B2229")
+        (brightblack0 . "#1c1f24")
+        (brightblack1 . "#202328")
+        (brightblack2 . "#23272e")
+        (brightblack3 . "#3f444a")
+        (brightblack4 . "#5B6268")
+        (brightblack5 . "#73797e")
+        (brightblack6 . "#9ca0a4")
+        (black        . "#DFDFDF")
+        (fg           . "#bbc2cf")
+        (fg-alt       . "#5B6268")
+        (fg-hc        . "#f0f0f0")
+        (red          . "#ff6c6b")
+        (orange       . "#da8548")
+        (green        . "#98be65")
+        (teal         . "#4db5bd")
+        (yellow       . "#ECBE7B")
+        (blue         . "#51afef")
+        (dark-blue    . "#2257A0")
+        (magenta      . "#c678dd")
+        (violet       . "#a9a1e1")
+        (cyan         . "#46D9FF")
+        (dark-cyan    . "#5699AF")))
+#+end_src
+
+#+RESULTS:
+: encyclopedia-theme-theme-dark
+
+** Light
+#+begin_src elisp
+(defvar encyclopedia-theme-theme-light
+      '((bg           . "#fafafa")
+        (bg-alt       . "#f0f0f0")
+        (white        . "#f0f0f0")
+        (brightblack0 . "#e7e7e7")
+        (brightblack1 . "#dfdfdf")
+        (brightblack2 . "#c6c7c7")
+        (brightblack3 . "#9ca0a4")
+        (brightblack4 . "#383a42")
+        (brightblack5 . "#202328")
+        (brightblack6 . "#1c1f24")
+        (black        . "#1b2229")
+        (fg           . "#383a42")
+        (fg-alt       . "#c6c7c7")
+        (fg-hc        . "#0f0f0f")
+        (red          . "#e45649")
+        (orange       . "#da8548")
+        (green        . "#50a14f")
+        (teal         . "#4db5bd")
+        (yellow       . "#986801")
+        (blue         . "#4078f2")
+        (dark-blue    . "#a0bcf8")
+        (magenta      . "#a626a4")
+        (violet       . "#b751b6")
+        (cyan         . "#0184bc")
+        (dark-cyan    . "#005478")))
+#+end_src
+
+#+RESULTS:
+: encyclopedia-theme-theme-light
+
+** Getters
+
+#+begin_src elisp
+(defvar encyclopedia-theme-themes
+      (list (cons 'dark encyclopedia-theme-theme-dark)
+            (cons 'light encyclopedia-theme-theme-light)))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-theme-get-theme (theme)
+  (assoc theme encyclopedia-theme-themes))
+#+end_src
+
+#+RESULTS:
+: encyclopedia-theme-get-theme
+
+#+begin_src elisp
+(defun encyclopedia-theme-get-color (theme color)
+  (cdr (assoc color (encyclopedia-theme-get-theme theme))))
+#+end_src
+
+#+RESULTS:
+: encyclopedia-theme-get-color
+
+#+begin_src elisp :tangle no
+(encyclopedia-theme-get-color 'dark 'bg)
+#+end_src
+
+#+RESULTS:
+: #282c34
+
+* Babel
+#+begin_src elisp
+(org-babel-lob-ingest (concat encyclopedia-root-path "/lob.org"))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-babel-get-header-args:jupyter-python (slug)
+  (list (cons :exports "results")
+        (cons :session slug)
+        (cons :results "raw")
+        (cons :eval "always")
+        (cons :pandoc t)
+        (cons :async "yes")
+        (cons :kernel "python")))
+#+end_src
+
+#+RESULTS:
+: encyclopedia-babel-get-header-args:jupyter-python
+
+* Document
+** Slug
+#+begin_src elisp
+(defun encyclopedia-document-title-to-slug (title)
+  (org-roam--title-to-slug title))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-document-slug-extract ()
+  (encyclopedia-document-title-to-slug (car (org-roam--extract-titles-title))))
+#+end_src
+
+** Tags
+#+begin_src elisp
+(defun encyclopedia-document-get-tags ()
+  (interactive)
+  (org-roam--extract-tags))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-document-get-tags-file (file)
+  (with-temp-buffer
+    (insert-file-contents file)
+    (encyclopedia-document-get-tags)))
+#+end_src
+
+** Backlinks
+#+begin_src elisp
+(defun encyclopedia-document-backlinks-file (file)
+  (if (org-roam--org-roam-file-p file)
+      (--reduce-from
+       (concat acc (format "- [[file:%s][%s]]\n"
+                           (file-relative-name (car it) org-roam-directory)
+                           (org-roam-db--get-title (car it))))
+       "" (org-roam-db-query [:select [source] :from links :where (= dest $s1)] file))
+    ""))
+#+end_src
+
+** Thumbnail
+#+begin_src elisp
+(setq encyclopedia-document--thumb-search "#+thumb:")
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-document--goto-thumb ()
+  (goto-char (point-min))
+  (if (search-forward encyclopedia-document--thumb-search nil t)
+      (progn
+        (while (not (equal 'keyword (car (org-element-at-point))))
+          (search-forward encyclopedia-document--thumb-search nil t))
+        (org-babel-next-src-block)
+        (let ((respos (org-babel-where-is-src-block-result)))
+          (if respos
+              (progn
+                (goto-char respos)
+                (beginning-of-line 2))))
+        )
+    nil))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-document-thumb-extract ()
+  (interactive)
+  (save-excursion
+    (encyclopedia-document--goto-thumb)
+    (org-element-property :path (org-element-context))))
+#+end_src
+
+* Export
+** Preprocess
+#+begin_src elisp
+(defun encyclopedia-export-org-export-preprocessor (backend)
+  (let ((links (encyclopedia-document-backlinks-file (buffer-file-name))))
+    (save-excursion
+      (goto-char (point-min))
+      (insert (encyclopedia-export-latex-generate-headers encyclopedia-theme-current))
+      (if (eq backend 'html)
+          (progn
+            (goto-char (point-max))
+            (unless (string= links "")
+              (insert (concat "\n* Backlinks\n") links)))))))
+#+end_src
+
+#+begin_src elisp
+(add-hook 'org-export-before-processing-hook 'encyclopedia-export-org-export-preprocessor)
+#+end_src
+
+** Latex
+#+begin_src elisp
+(defun encyclopedia-export-latex-generate-headers (theme)
+  (let-alist (encyclopedia-theme-get-theme theme)
+    (concat "#+LATEX_HEADER: \\usepackage{pagecolor}\n"
+            "#+LATEX_HEADER: \\usepackage[parfill]{parskip}\n"
+            "#+LATEX_HEADER: \\usepackage[margin=2cm]{geometry}\n"
+            "#+LATEX_HEADER: \\usepackage{xcolor}\n"
+            (concat "#+LATEX_HEADER: \\definecolor{bg}{HTML}{"(substring .bg 1)"}\n"
+                    "#+LATEX_HEADER: \\definecolor{white}{HTML}{"(substring .fg-hc 1)"}\n")
+            "#+LATEX_HEADER: \\pagecolor{bg}\n"
+            "#+LATEX_HEADER: \\color{white}\n")))
+#+end_src
+
+** Html
+#+begin_src elisp
+(defun encyclopedia-export-org-video-link-export (path desc backend)
+  (let ((ext (file-name-extension path)))
+    (cond
+     ((eq 'html backend)
+      (concat "<div class=\"figure\">"
+              "<video autoplay loop>"
+              "<source type=\"video/"ext"\" src=\""path"\" />"
+              "</video>"
+              "</div>"))
+     ;; fall-through case for everything else
+     (t
+      path))))
+#+end_src
+
+#+begin_src elisp
+(org-link-set-parameters
+ "video"
+ :export 'encyclopedia-export-org-video-link-export)
+#+end_src
+
+* Publish
+** Vars
+#+begin_src elisp
+(defvar encyclopedia-publish-url nil)
+#+end_src
+
+#+begin_src elisp
+(defvar encyclopedia-publish-preamble "
+<div id=\"org-div-home-and-up\">
+<div class=\"intro\">
+<a href=\"/\">
+  <img class=\"profile\" src=\"/images/profile.jpg\" alt=\"Me\"/>
+</a>
+<div>
+</div>
+")
+#+end_src
+
+#+begin_src elisp
+(defvar encyclopedia-publish-postamble-format "<p class=\"postamble\">Last Updated %C.</p>")
+#+end_src
+
+#+begin_src elisp
+(defvar encyclopedia-publish-head-extra "
+<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/main.css\">
+<link rel=\"icon\" type=\"image/png\" href=\"/images/icon.png\" />")
+#+end_src
+
+#+begin_src elisp
+(defvar encyclopedia-publish-sitemap-title "Encyclopedia")
+#+end_src
+
+#+begin_src elisp
+(defvar encyclopedia-publish-tag-format "@@html:<span class=\"tag badge\">@@%s@@html:</span>@@")
+#+end_src
+
+** Sitemap
+#+begin_src elisp
+(defun encyclopedia-publish-sitemap-format-entry (entry _style project)
+  "Return string for each ENTRY in PROJECT."
+  (with-temp-buffer
+    (insert-file-contents entry)
+    (let* ((title (org-publish-find-title entry project))
+           (slug (encyclopedia-document-title-to-slug title))
+           (thumb (encyclopedia-document-thumb-extract))
+           (tags (encyclopedia-document-get-tags)))
+      (if (and thumb (file-exists-p thumb))
+          (concat "@@html:<div class=\"sitemap-item\">@@\n"
+                  "@@html:<div class=\"sitemap-item-thumb\">@@\n"
+                  "[[file:"thumb"]]\n"
+                  "@@html:</div>@@\n"
+                  "@@html:<div class=\"sitemap-item-content\">@@\n"
+                  "[[file:"entry"]["title"]]\n"
+                  "@@html:<div class=\"sitemap-date\">@@\n"
+                  (format-time-string "%d %h %Y"
+                                      (org-publish-find-date entry project))
+                  "@@html:</div>@@\n"
+                  (mapconcat (lambda (tag)
+                               (format encyclopedia-publish-tag-format tag)) tags "")
+                  "@@html:</div>@@\n"
+                  "@@html:</div>@@\n")
+        ""))))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-publish-sitemap-function (title list)
+  (concat "#+title: " title "\n\n"
+          "\n#+begin_sitemap\n\n"
+          (mapconcat (lambda (li)
+                       (format "%s" (car li)))
+                     (seq-filter #'car (cdr list))
+                     "")
+          "\n#+end_sitemap\n"))
+#+end_src
+
+** Configure
+#+begin_src elisp
+(defun encyclopedia-publish-configure (publish-dir)
+  (setq org-export-with-toc nil
+        org-export-with-author t
+        org-export-with-email nil
+        org-export-with-creator nil
+        org-export-with-section-numbers nil
+
+        org-html-scripts (concat org-html-scripts)
+        org-html-head encyclopedia-publish-head-extra
+
+        org-html-postamble encyclopedia-publish-postamble-format
+
+        org-publish-project-alist
+        `(("encyclopedia"
+           :components ("encyclopedia-notes" "encyclopedia-static"))
+          ("encyclopedia-notes"
+           :base-directory ,encyclopedia-root-path
+           :base-extension "org"
+           :exclude "index.org\\|setup.org"
+           :publishing-directory ,publish-dir
+           :publishing-function org-html-publish-to-html
+           :recursive t
+           :headline-levels 4
+           :with-toc nil
+           :html-doctype "html5"
+           :html-html5-fancy t
+           :html-preamble ,encyclopedia-publish-preamble
+           :html-head-include-scripts nil
+           :html-head-include-default-style nil
+           :html-head-extra ,encyclopedia-publish-head-extra
+           :html-container "section"
+           :htmlized-source nil
+           :auto-sitemap t
+           :exclude "node_modules"
+           :sitemap-title ,encyclopedia-publish-sitemap-title
+           :sitemap-sort-files anti-chronologically
+           :sitemap-format-entry encyclopedia-publish-sitemap-format-entry
+           :sitemap-filename "index.org"
+           :sitemap-function encyclopedia-publish-sitemap-function
+           )
+          ("encyclopedia-static"
+           :base-directory ,encyclopedia-root-path
+           :base-extension "css\\|js\\|png\\|jpg\\|gif\\|svg\\|svg\\|json\\|pdf\\|mp4"
+           :publishing-directory ,publish-dir
+           :exclude "node_modules"
+           :recursive t
+           :publishing-function org-publish-attachment))))
+#+end_src
+* Tangle
+
+#+begin_src elisp
+(defun encyclopedia-tangle-file (file)
+  (org-babel-tangle-file file))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-tangle-files ()
+  (interactive)
+  (let ((files (directory-files encyclopedia-root-path nil encyclopedia-match-file-regexp)))
+    (cl-loop for file in files
+             do (message (concat "Tangling " file "..."))
+             do (encyclopedia-tangle-file file))))
+#+end_src
+
+* Provide
+#+begin_src elisp
+(provide 'encyclopedia)
+#+end_src
