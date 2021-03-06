@@ -1,0 +1,229 @@
+#+title: Stability analysis
+#+theme: dark
+#+roam_tags: stability analysis dynamic system
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/stability_analysis.py :results silent
+:END:
+#+begin_src jupyter-python
+from sympy import *
+from pyorg.latex import *
+import matplotlib.pyplot as plt
+import numpy as np
+#+end_src
+
+#+begin_src jupyter-python
+class SteadyStatesEvaluated(Expr):
+    def __new__(cls, states, deps):
+        ex = Expr.__new__(cls, *[val for sol in states for val in sol.values()])
+        ex._steady_states = states
+        ex._deps = deps
+        return ex
+
+    def __getitem__(self, idx):
+        return self._steady_states[idx]
+
+    def __len__(self):
+        return len(self._steady_states)
+
+    def __iter__(self):
+        yield from self._steady_states
+
+    @property
+    def states(self):
+        return self._steady_states
+
+    @property
+    def vars(self):
+        return self._deps
+
+    def _latex(self, printer):
+        return printer._print(LValues(*self._steady_states))
+#+end_src
+
+#+begin_src jupyter-python
+class SteadyStates(Expr):
+    def __new__(cls, system):
+        ex = Expr.__new__(cls, system.rhs)
+        ex._model_zero = system.rhs.applyfunc(lambda e: Eq(e, 0))
+        ex._model_rhs = system.rhs
+        ex._deps = system.variables
+        return ex
+
+    def _latex(self, printer):
+        return printer._print(LCases(*self._model_zero))
+
+    def doit(self, **kwargs):
+        return SteadyStatesEvaluated(solve(self._model_rhs, self._deps, dict=True), self._deps)
+#+end_src
+
+#+begin_src jupyter-python
+class StabilityAnalysis(Expr):
+    def __new__(cls, *args):
+        if len(args) == 1:
+            system = args[0]
+            jac = system.rhs.jacobian(system.variables)
+            trace = Trace(jac)
+            det = Determinant(jac)
+            ex = Expr.__new__(cls, jac, trace, det)
+            ex._jac = jac
+            ex._trace = trace
+            ex._det = det
+            return ex
+        elif len(args) == 3:
+            jac, trace, det = args
+            ex = Expr.__new__(cls, jac, trace, det)
+            ex._jac = jac
+            ex._trace = trace
+            ex._det = det
+            return ex
+
+    @property
+    def stability_matrix(self):
+        return self._jac
+    
+    @property
+    def determinant(self):
+        return self._det
+    
+    @property
+    def trace(self):
+        return self._trace
+
+    def doit(self):
+        return StabilityAnalysis(self._jac, self._trace.doit(), self._det.doit())
+
+    def subs(self, *args):
+        return StabilityAnalysis(self._jac.subs(*args),
+                                 self._trace.subs(*args),
+                                 self._det.subs(*args))
+
+    def at(self, steady_states):
+        return Matrix([self.doit().subs(state) for state in steady_states])
+#+end_src
+
+#+begin_src jupyter-python :noweb yes
+def plot_stability_diagram(xmin=-0.1, xmax=0.5):
+    delta = np.linspace(0.0, xmax, 500)
+    parab = np.sqrt(4*delta)
+    plt.xticks([0], [0])
+    plt.yticks([0], [0])
+    ymin = -xmax*3
+    ymax = xmax*3
+    plt.xlim([xmin, xmax])
+    plt.ylim([ymin, ymax])
+    plt.plot(delta, delta*0, color=<<color("green")>>, ls=':', label="centers")
+    plt.plot(delta, parab, color=<<color("green")>>, ls='--', label="stars, degenerate nodes")
+    plt.plot(delta, -parab, color=<<color("green")>>, ls='--')
+    plt.axvline(0, color=<<color("green")>>, label="non-isolated fixed points")
+    plt.fill_between(delta, parab, ymax, color=<<color("magenta")>>, label="unstable nodes")
+    plt.fill_between(delta, 0, parab, color=<<color("red")>>, label="unstable spirals")
+    plt.fill_between(delta, -parab, 0, color=<<color("orange")>>, label="stable spirals")
+    plt.fill_between(delta, -parab, ymin, color=<<color("yellow")>>, label="stable nodes")
+    plt.fill_between(np.linspace(xmin, 0), ymin, ymax, color=<<color("brightblack3")>>, label="saddle points")
+    plt.legend()
+    plt.xlabel("$\\Delta$")
+    plt.ylabel("$\\tau$")
+plot_stability_diagram()
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/f00d4b9515c6e6111ec40cbfd289625458f40afc.png]]
+
+* Stability analysis
+#+begin_src jupyter-python
+from dynamical_systems import DynamicalSystem
+#+end_src
+
+#+RESULTS:
+
+#+BEGIN_SRC jupyter-python
+x, y = symbols('x y', cls=Function, real=True)
+t, mu = symbols('t mu', real=True)
+
+system = DynamicalSystem([
+    -mu*y(t)+x(t)-x(t)*y(t),
+    mu*x(t)-x(t)**2+x(t)
+], [x(t), y(t)], t)
+
+system
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{d}{d t} x{\left(t \right)} = - \mu y{\left(t \right)} - x{\left(t \right)} y{\left(t \right)} + x{\left(t \right)}\\
+\frac{d}{d t} y{\left(t \right)} = \mu x{\left(t \right)} - x^{2}{\left(t \right)} + x{\left(t \right)}
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+steady_states = system.steady_states()
+steady_states
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+- \mu y{\left(t \right)} - x{\left(t \right)} y{\left(t \right)} + x{\left(t \right)} = 0\\
+\mu x{\left(t \right)} - x^{2}{\left(t \right)} + x{\left(t \right)} = 0
+\end{cases}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+steady_states_eval = steady_states.doit()
+steady_states_eval
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+x{\left(t \right)} = 0\\
+y{\left(t \right)} = 0\\
+x{\left(t \right)} = \mu + 1\\
+y{\left(t \right)} = \frac{\mu + 1}{2 \mu + 1}
+\end{cases}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+stability_analysis = StabilityAnalysis(system)
+stability_analysis.stability_matrix
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\left[\begin{matrix}1 - y{\left(t \right)} & - \mu - x{\left(t \right)}\\\mu - 2 x{\left(t \right)} + 1 & 0\end{matrix}\right]\end{equation}
+:END:
+
+#+begin_src jupyter-python
+stability_analysis.trace.doit()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}1 - y{\left(t \right)}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+stability_analysis.determinant.doit()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\mu^{2} - \mu x{\left(t \right)} + \mu - 2 x^{2}{\left(t \right)} + x{\left(t \right)}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+stability_analysis_at = stability_analysis.at(steady_states_eval)
+plot_stability_diagram()
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/b700488140715b47cd7b3548740dd0fb1465fb1c.png]]
+
+

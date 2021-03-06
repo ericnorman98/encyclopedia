@@ -1,0 +1,65 @@
+#+title: p-value
+#+roam_tags: statistics p-value
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/p_value.py :results silent
+:END:
+
+#+begin_src jupyter-python
+from enum import Enum
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+from statistics import *
+#+end_src
+
+#+begin_src jupyter-python
+class TestSide(Enum):
+    RIGHT = 0
+    LEFT = 1
+    BOTH = 2
+#+end_src
+
+#+begin_src jupyter-python
+class PValue(Expr):
+    def __new__(cls, statistic, distribution, side):
+        if side == TestSide.RIGHT:
+            p_value = Prob(distribution >= statistic)
+        elif side == TestSide.LEFT:
+            p_value = Prob(distribution <= statistic)
+        elif side == TestSide.BOTH:
+            p_value = Prob(abs(distribution) >= abs(statistic))
+
+        ex = Expr.__new__(cls, statistic, distribution, side)
+        ex._statistic = statistic
+        ex._distribution = distribution
+        ex._side = side
+        ex._p_value = p_value
+        ex._sym = Symbol('p')
+        return ex
+
+    @property
+    def distribution(self):
+        return self._distribution
+
+    @property
+    def statistic(self):
+        return self._statistic
+
+    def doit(self, **kwargs):
+        return self._p_value.doit(**kwargs)
+
+    def _latex(self, printer):
+        return printer._print(self._p_value)
+
+    def show(self, V=None):
+        return LArray(LEq(self._sym, self._p_value),
+                      ,*([self._p_value.subs(V).evalf(), self._p_value.subs(V).doit().evalf()] if V is not None else []), separator='=\\\\\n\\quad =')
+#+end_src
+
+* p-value

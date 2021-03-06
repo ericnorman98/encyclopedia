@@ -1,0 +1,64 @@
+#+title: Empirical distribution function
+#+roam_tags:
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/empirical_distribution_function.py :results silent
+:END:
+
+#+begin_src jupyter-python :results silent
+from sympy import *
+import numba
+from sympy.utilities.lambdify import implemented_function
+from sympy.utilities.autowrap import autowrap
+import numpy as np
+from pyorg.latex import *
+import matplotlib.pyplot as plt
+#+end_src
+
+* Empirical distribution function
+#+begin_src jupyter-python
+n = symbols('n', integer=True)
+i, j = symbols('i j', cls=Idx)
+x = IndexedBase('x')
+
+I = implemented_function('I', lambda xi, xj: Piecewise((1, xj<=xi), (0, True)))
+F = implemented_function('F', lambda x, n, i: Sum(I(x[i], x[j]), (j, 0, n-1))/n)
+F_lam = lambdify((x, n, i), F._imp_(x, n, i), 'numpy')
+LJoin(LFunc(F(x, n, i)), LFunc(I(x[i], x[j])), separator='\\quad\\text{where}\\quad ')
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}F{\left(x,n,i \right)} = \frac{\sum_{j=0}^{n - 1} I{\left({x}_{i},{x}_{j} \right)}}{n}\quad\text{where}\quad I{\left({x}_{i},{x}_{j} \right)} = \begin{cases} 1 & \text{for}\: {x}_{i} \geq {x}_{j} \\0 & \text{otherwise} \end{cases}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+data = np.random.binomial(100, 0.5, size=8*4)
+data.reshape([8, 4]).tolist()
+#+end_src
+
+#+name: tab:data
+#+RESULTS:
+| 46 | 61 | 52 | 50 |
+| 53 | 37 | 56 | 51 |
+| 57 | 57 | 48 | 48 |
+| 48 | 50 | 48 | 48 |
+| 47 | 49 | 50 | 44 |
+| 50 | 51 | 49 | 48 |
+| 52 | 39 | 55 | 44 |
+| 50 | 52 | 49 | 52 |
+
+#+begin_src jupyter-python :results output
+V = {
+    n: len(data)
+}
+plt.step(np.sort(data), np.linspace(0, 1, len(data)))
+#+end_src
+
+#+name: fig:emp_dist
+[[file:./.ob-jupyter/6f895f8eb16e9de3b82bcbe03f103eca12413542.png]]

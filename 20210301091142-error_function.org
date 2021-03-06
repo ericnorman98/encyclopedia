@@ -1,0 +1,41 @@
+#+title: Error function
+#+roam_tags: statistics error function
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/error_function.py :results silent
+:END:
+
+#+begin_src jupyter-python
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+import matplotlib.pyplot as plt
+#+end_src
+
+* Error function
+#+begin_src jupyter-python
+z, t = symbols('z t')
+erf_eq = LEq(erf(z), (2/sqrt(pi))*Integral(exp(-t**2), (t, 0, z)))
+erf_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\operatorname{erf}{\left(z \right)} = \frac{2 \int\limits_{0}^{z} e^{- t^{2}}\, dt}{\sqrt{\pi}}\end{equation}
+:END:
+
+#+begin_src jupyter-python :results output
+z_n = np.linspace(-3, 3)
+plt.plot(z_n, lambdify(z, erf(z))(z_n))
+plt.yticks([-1, 0, 1])
+plt.xlabel("$z$")
+plt.ylabel(f"{latex(erf(z), mode='inline')}")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/fb56535ca46704f3f09ce49a6221eb84c527c24f.png]]

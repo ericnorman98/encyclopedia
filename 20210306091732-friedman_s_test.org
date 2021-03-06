@@ -1,0 +1,167 @@
+#+title: Friedman's test
+#+roam_tags: statistics friedman hypothesis test
+
+* Setup :noexport:
+#+call: init()
+
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :results silent
+:END:
+
+#+begin_src jupyter-python
+from scipy.stats import rankdata
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+import numpy as np
+from statistics import *
+from hypothesis_testing import *
+#+end_src
+
+* Friedman's test
+The Friedman's test is a non-parametric, two-way analysis of variance on ranks,
+[[file:20210219100256-hypothesis_testing.org][hypothesis test]]. It does not make any assumptions about the distribution.
+
+In this test you rank each column,
+
+#+begin_src jupyter-python
+N, I, J = symbols('N I J', integer=True, positive=True)
+Q = symbols('Q')
+i, j, idot, A = symbols('i j . A', cls=Idx)
+R, Y, SS = symbols('R Y SS', cls=IndexedBase)
+
+SSA_eq = LEq(SS[A], J*Sum((LMean(R[i,idot])-LMean(R[idot,idot]))**2, (i, 0, I-1)))
+SSA_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}{SS}_{A} = J \sum_{i=0}^{I - 1} \left(- \overline {R}_{..} + \overline {R}_{i.}\right)^{2}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+Rid_eq = LEq(LMean(R[i, idot]), (1/J)*Sum(R[i, j], (j, 0, J-1)))
+Rid_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\overline {R}_{i.} = \frac{\sum_{j=0}^{J - 1} {R}_{ij}}{J}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+Rdd_eq = LEq(LMean(R[idot, idot]), (1/N)*Sum(Sum(R[i, j], (j, 0, J-1)), (i, 0, I-1)))
+Rdd_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\overline {R}_{..} = \frac{\sum_{\substack{0 \leq j \leq J - 1\\0 \leq i \leq I - 1}} {R}_{ij}}{N}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+norm = (12/(I*(I+1)))
+Q_eq = LEq(Q, norm*SSA_eq.lhs)
+Q_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}Q = \frac{12 {SS}_{A}}{I \left(I + 1\right)}\end{equation}
+:END:
+
+** Example
+#+begin_src jupyter-python :exports none
+Q_expanded = Q_eq.rhs.subs(SS[A], SSA_eq.rhs).subs(Rdd_eq.lhs, Rdd_eq.rhs).replace(Rid_eq.lhs, Rid_eq.rhs)
+Q_lam = lambdify((N, I, J, R), Q_expanded, 'numpy')
+
+Q_lam(6, 3, 2, np.array([[1, 2], [4, 5], [6, 7]]))
+#+end_src
+
+#+RESULTS:
+: 25.333333333333332
+
+#+begin_src jupyter-python
+data = np.array([[5, 6, 7, 6, 3, 7, 7, 1, 5, 4],
+                 [7, 5, 6, 7, 4, 3, 5, 2, 3, 7],
+                 [1, 1, 4, 1, 2, 1, 1, 5, 2, 5],
+                 [6, 2, 2, 4, 5, 5, 2, 3, 4, 2],
+                 [3.5, 3, 1, 3, 1, 2, 3, 7, 6, 1],
+                 [2, 7, 5, 2, 7, 4, 6, 6, 7, 3],
+                 [3.5, 4, 3, 5, 6, 6, 4, 4, 1, 6]])
+I_n = 7
+J_n = 10
+dof = I_n-1
+N_n = I_n*J_n
+data.T.tolist()
+#+end_src
+
+#+RESULTS:
+| 5.0 | 7.0 | 1.0 | 6.0 | 3.5 | 2.0 | 3.5 |
+| 6.0 | 5.0 | 1.0 | 2.0 | 3.0 | 7.0 | 4.0 |
+| 7.0 | 6.0 | 4.0 | 2.0 | 1.0 | 5.0 | 3.0 |
+| 6.0 | 7.0 | 1.0 | 4.0 | 3.0 | 2.0 | 5.0 |
+| 3.0 | 4.0 | 2.0 | 5.0 | 1.0 | 7.0 | 6.0 |
+| 7.0 | 3.0 | 1.0 | 5.0 | 2.0 | 4.0 | 6.0 |
+| 7.0 | 5.0 | 1.0 | 2.0 | 3.0 | 6.0 | 4.0 |
+| 1.0 | 2.0 | 5.0 | 3.0 | 7.0 | 6.0 | 4.0 |
+| 5.0 | 3.0 | 2.0 | 4.0 | 6.0 | 7.0 | 1.0 |
+| 4.0 | 7.0 | 5.0 | 2.0 | 1.0 | 3.0 | 6.0 |
+
+#+begin_src jupyter-python
+R_n = rankdata(data, axis=0).reshape([I_n, J_n])
+Q_n = Q_lam(N_n, I_n, J_n, R_n)
+LEq(Q, Q_n)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}Q = 14.8607142857143\end{equation}
+:END:
+
+#+begin_src jupyter-python
+V = {
+    Q: Q_n,
+    alpha: 0.05
+}
+X = ChiSquared(f'\\chi^2_{dof}', dof)
+p, x = symbols('p x')
+p_value = PValue(Q, X, TestSide.RIGHT)
+hypothesis = HypothesisTest(LText("there no effect"),
+                            LText("there is an effect"),
+                            p_value)
+hypothesis
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+H_{0} : \text{there no effect}\\
+H_{1} : \text{there is an effect}
+\end{cases}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+p_value.show(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+p = P[\chi^{2}_{6} \geq Q]=\\
+\quad =P[\chi^{2}_{6} \geq 14.8607142857143]=\\
+\quad =0.0213681524734211
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+hypothesis.doit(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}p < \alpha \Rightarrow 0.0213681524734211 \leq 0.05 \Rightarrow \text{there is an effect}\end{equation}
+:END:

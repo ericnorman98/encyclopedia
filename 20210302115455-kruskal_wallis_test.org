@@ -1,0 +1,181 @@
+#+title: Kruskal-Wallis test
+#+roam_tags: statistics kruskal wallis test nonparametric
+
+* Setup :noexport:
+#+call: init()
+
+#+call: init-plot-style()
+
+* TODO Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/kruskal_wallis_test.py :results silent
+:END:
+
+#+begin_src jupyter-python
+from scipy.stats import rankdata
+import numpy as np
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+from statistics import *
+from hypothesis_testing import *
+#+end_src
+
+* Kruskal-Wallis test
+The Kruskal-Wallis test is a non-parametric, one-way analysis of variance on
+ranks, [[file:20210219100256-hypothesis_testing.org][hypothesis test]] with the assumption of independent observations. It does
+not make any assumptions about the distribution.
+
+To perform this test, we rank the pooled sample
+#+begin_src jupyter-python
+N, I = symbols('N I', integer=True, positive=True)
+K = symbols('K')
+i, j, idot, B = symbols('i j . B', cls=Idx)
+R, Y, J, SS = symbols('R Y J SS', cls=IndexedBase)
+LEq(LMean(R[i, j]), LText("the rank of", Y[i, j], "in the combined sample"))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\overline {R}_{ij} = \text{the rank of}\;{Y}_{ij}\;\text{in the combined sample}\end{equation}
+:END:
+
+We use the following notation
+#+begin_src jupyter-python
+Rid_eq = LEq(LMean(R[i, idot]), (1/J[i])*Sum(R[i, j], (j, 0, J[i]-1)))
+Rid_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\overline {R}_{i.} = \frac{\sum_{j=0}^{{J}_{i} - 1} {R}_{ij}}{{J}_{i}}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+Rdd_eq = LEq(LMean(R[idot, idot]), (1/N)*Sum(Sum(R[i, j], (j, 0, J[i]-1)), (i, 0, I-1)), (N+1)/2)
+Rdd_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\overline {R}_{..} = \frac{\sum_{\substack{0 \leq j \leq {J}_{i} - 1\\0 \leq i \leq I - 1}} {R}_{ij}}{N} = \frac{N}{2} + \frac{1}{2}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+SSB_eq = LEq(SS[B], Sum(J[i]*(LMean(R[i,idot])-LMean(R[idot,idot]))**2, (i, 0, I-1)))
+SSB_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}{SS}_{B} = \sum_{i=0}^{I - 1} {J}_{i} \left(- \overline {R}_{..} + \overline {R}_{i.}\right)^{2}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+K_eq = LEq(K, SS[B]*12/(N*(N+1)))
+K_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}K = \frac{12 {SS}_{B}}{N \left(N + 1\right)}\end{equation}
+:END:
+
+#+begin_src jupyter-python :exports none
+K_expanded = K_eq.rhs.subs(SS[B], SSB_eq.rhs).subs(Rdd_eq.lhs, Rdd_eq.rhs).replace(Rid_eq.lhs, Rid_eq.rhs)
+K_lam = lambdify((N, I, J, R), K_expanded, 'numpy')
+
+K_lam(6, 3, np.array([2, 2, 2]), np.array([[1, 2], [4, 5], [6, 7]]))
+#+end_src
+
+#+RESULTS:
+: 8.0
+
+** Example
+#+begin_src jupyter-python
+labs = 7
+samples = 10
+dof = labs-1
+data = np.array([[4.13, 4.07, 4.04, 4.07, 4.05, 4.04, 4.02, 4.06, 4.10, 4.04],
+                 [3.86, 3.85, 4.08, 4.11, 4.08, 4.01, 4.02, 4.04, 3.97, 3.95],
+                 [4.00, 4.02, 4.01, 4.01, 4.04, 3.99, 4.03, 3.97, 3.98, 3.98],
+                 [3.88, 3.88, 3.91, 3.95, 3.92, 3.97, 3.92, 3.90, 3.97, 3.90],
+                 [4.02, 3.95, 4.02, 3.89, 3.91, 4.01, 3.89, 3.89, 3.99, 4.00],
+                 [4.02, 3.86, 3.96, 3.97, 4.00, 3.82, 3.98, 3.99, 4.02, 3.93],
+                 [4.00, 4.02, 4.03, 4.04, 4.10, 3.81, 3.91, 3.96, 4.05, 4.06]])
+data += np.random.normal(0, 0.01, size=data.shape)
+data = data.round(3)
+def to_table(data):
+    return [[f"Lab {i+1}" for i in range(labs)], None]+data.T.tolist()
+to_table(data)
+#+end_src
+
+#+RESULTS:
+| Lab 1 | Lab 2 | Lab 3 | Lab 4 | Lab 5 | Lab 6 | Lab 7 |
+|-------+-------+-------+-------+-------+-------+-------|
+| 4.143 | 3.861 | 3.998 | 3.884 | 4.023 | 4.018 | 4.009 |
+|  4.07 |  3.87 | 4.034 |  3.89 | 3.957 | 3.852 | 4.013 |
+| 4.022 | 4.076 | 3.997 | 3.909 | 4.023 | 3.953 | 4.019 |
+| 4.071 | 4.124 | 4.012 | 3.952 | 3.886 |  3.98 | 4.023 |
+| 4.041 | 4.092 | 4.048 | 3.926 | 3.896 | 4.006 | 4.097 |
+| 4.038 | 4.003 | 3.992 | 3.968 | 4.027 | 3.829 | 3.815 |
+| 4.002 | 4.016 | 4.038 | 3.917 | 3.905 | 3.978 | 3.913 |
+|  4.06 | 4.036 | 3.978 | 3.893 |  3.89 | 4.007 | 3.968 |
+| 4.104 |  3.96 | 3.982 | 3.963 | 3.981 | 4.018 | 4.059 |
+| 4.027 | 3.961 | 3.979 | 3.908 | 4.007 |  3.91 | 4.079 |
+
+#+begin_src jupyter-python
+R_n = rankdata(data).reshape([labs, samples])
+K_n = K_lam(labs*samples, labs, np.ones([labs], dtype=int)*samples, R_n)
+LEq(K, K_n)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}K = 26.2219315895372\end{equation}
+:END:
+
+#+begin_src jupyter-python
+V = {
+    K: K_n,
+    alpha: 0.005
+}
+X = ChiSquared(f'\\chi^2_{dof}', dof)
+p, x = symbols('p x')
+p_value = PValue(K, X, TestSide.RIGHT)
+hypothesis = HypothesisTest(LText("there is no difference between labs"),
+                            LText("there is a difference between labs"),
+                            p_value)
+hypothesis
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+H_{0} : \text{there is no difference between labs}\\
+H_{1} : \text{there is a difference between labs}
+\end{cases}\end{equation}
+:END:
+
+
+#+begin_src jupyter-python
+p_value.show(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+p = P[\chi^{2}_{6} \geq K]=\\
+\quad =P[\chi^{2}_{6} \geq 26.2219315895372]=\\
+\quad =0.000202413280319596
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+hypothesis.doit(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}p < \alpha \Rightarrow 0.000202413280319596 \leq 0.005 \Rightarrow \text{there is a difference between labs}\end{equation}
+:END:

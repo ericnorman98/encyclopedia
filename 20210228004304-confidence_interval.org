@@ -1,0 +1,112 @@
+#+title: Confidence interval
+#+roam_tags: statistics confidence interval
+
+* Setup :noexport:
+#+call: init()
+
+#+call: init-plot-style()
+
+* TODO Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/confidence_interval.py :results silent
+:END:
+
+#+begin_src jupyter-python
+from sympy import *
+from sympy.stats import *
+import matplotlib.pyplot as plt
+import numpy as np
+from pyorg.latex import *
+from matplotlib.animation import FuncAnimation
+#+end_src
+
+
+* Confidence interval
+A confidence interval is a random interval from some population parameter
+$\theta$, the interval will contain this parameter with $1-\alpha$ probability.
+This is commonly used to state the uncertainty of an estimate.
+
+To define the confidence interval we first need a function $z(\alpha)$ such that
+the area to the right and under standard normal density function is equal to
+$\alpha$.
+
+We will start with the density function for the standard [[file:20210225141719-normal_distribution.org][normal distribution]]
+#+begin_src jupyter-python
+mu, sigma, z = symbols('mu sigma z')
+alpha = symbols('alpha', real=True, positive=True)
+z_f = symbols('z', cls=Function)
+pdf = symbols('\\operatorname{pdf}', cls=Function)
+
+Z = Normal('Z', 0, 1)
+
+Z_pdf = Eq(pdf(Z), density(Z)(z))
+Z_pdf
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\operatorname{pdf}{\left(Z \right)} = \frac{\sqrt{2} e^{- \frac{z^{2}}{2}}}{2 \sqrt{\pi}}\end{equation}
+:END:
+
+then to get the area to the right we integrate from $z(\alpha)$ to infinity,
+here $\operatorname{erf}$ is the [[file:20210301091142-error_function.org][error function]]
+#+begin_src jupyter-python
+z_integral = Integral(Z_pdf.rhs, (z, z_f(alpha), oo))
+z_alpha_int = Eq(z_integral, z_integral.doit())
+z_alpha_int
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\int\limits_{z{\left(\alpha \right)}}^{\infty} \frac{\sqrt{2} e^{- \frac{z^{2}}{2}}}{2 \sqrt{\pi}}\, dz = \frac{1}{2} - \frac{\operatorname{erf}{\left(\frac{\sqrt{2} z{\left(\alpha \right)}}{2} \right)}}{2}\end{equation}
+:END:
+
+finally, we set the integral equal to $\alpha$ and solve for the function
+#+begin_src jupyter-python
+z_alpha_eq = Eq(z_alpha_int.rhs, alpha)
+z_alpha = Eq(z_f(alpha), solve(z_alpha_eq, z_f(alpha))[0])
+Implies(z_alpha_eq, z_alpha)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{1}{2} - \frac{\operatorname{erf}{\left(\frac{\sqrt{2} z{\left(\alpha \right)}}{2} \right)}}{2} = \alpha \Rightarrow z{\left(\alpha \right)} = \sqrt{2} \operatorname{erfinv}{\left(1 - 2 \alpha \right)}\end{equation}
+:END:
+
+#+begin_src jupyter-python :results output :noweb yes :exports none
+alpha_n = np.linspace(0.01, 0.99, 20)[::-1]
+V = {
+    alpha: alpha_n[0]
+}
+fig, ax = plt.subplots(figsize=(2, 2))
+Z_pdf_lam = lambdify(z, Z_pdf.rhs)
+z_n = np.linspace(-3, 3, 200)
+Z_pdf_n = Z_pdf_lam(z_n)
+Z_pdf_line, = ax.plot(z_n, Z_pdf_n)
+z_alpha_n = float(z_alpha.rhs.subs(V).evalf())
+z_n_alpha = np.linspace(z_alpha_n, 3)
+vline = ax.axvline(z_alpha_n, color=<<color("red")>>, lw=1.0)
+fill = ax.fill_between(z_n_alpha, 0, Z_pdf_lam(z_n_alpha), color=<<color("blue")>>)
+ax.set_title(f"$\\alpha={V[alpha]}$")
+
+def animate(a):
+    global fill
+    z_alpha_n = float(z_alpha.rhs.subs(alpha, a).evalf())
+    vline.set_xdata(z_alpha_n)
+    z_n_alpha = np.linspace(z_alpha_n, 3)
+    fill.remove()
+    fill = ax.fill_between(z_n_alpha, 0, Z_pdf_lam(z_n_alpha), color=<<color("blue")>>)
+    ax.set_xticks([z_alpha_n])
+    ax.set_xticklabels([f"${latex(z_f(alpha), mode='plain')}\\approx{z_alpha_n:.2f}$"])
+    ax.set_title(f"$\\alpha={a:.2f}$")
+    return [Z_pdf_line, vline, fill]
+
+anim = FuncAnimation(fig, animate, frames=alpha_n)
+with open('confidence_z_alpha.html', 'w') as f:
+    f.write(anim.to_jshtml())
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/a5d543d08a0c55e6bd79bac51e9e5cf53d795dcf.png]]
+
+#+include: confidence_z_alpha.html export html

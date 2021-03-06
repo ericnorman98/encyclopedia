@@ -1,0 +1,62 @@
+#+title: Average path length
+#+roam_tags:
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/average_path_length.py :results silent
+:END:
+
+#+begin_src jupyter-python
+@numba.njit()
+def path_length(A, i):
+    N = len(A)
+    length = np.array([np.inf]*N)
+    length[i] = 0
+    Q = [i]
+
+    while len(Q) > 0:
+        i = Q.pop(0)
+
+        for k in np.nonzero(A[i])[0]:
+            if length[k] > length[i] + 1:
+                length[k] = length[i] + 1
+                Q.append(k)
+
+    return length
+#+end_src
+
+#+begin_src jupyter-python
+def average_path_length(A):
+    N = len(A)
+    return np.mean([path_length(A, i) for i in range(N)])*N/(N-1)
+#+end_src
+
+* Average path length
+The average path length is the mean of shortest path between every node in a
+graph.
+
+#+name: src:fig:avglen_small_world
+#+begin_src jupyter-python :results output
+n = 64
+c = 8
+p = 0.9
+G = small_world(n, c, p)
+A = nx.to_numpy_matrix(G)
+
+path_length(A, 0)
+avglen = average_path_length(A)
+
+pos = nx.spring_layout(G, iterations=1000)
+plt.figure(figsize=(4, 4))
+draw_graph(G, pos)
+plt.title(f"$l_G={avglen:.6f}$")
+#+end_src
+
+#+caption: A small world network with $n=64$, $c=16$ and $p=0.1$.
+#+label: fig:avglen_small_world
+#+RESULTS: src:fig:avglen_small_world
+[[file:./.ob-jupyter/96928126e2c5a7b5dea2be51d86248060b058888.png]]
