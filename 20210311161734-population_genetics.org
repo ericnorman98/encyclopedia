@@ -1,0 +1,90 @@
+#+title: Population genetics
+#+roam_tags:
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/population_genetics.py :results silent
+:END:
+
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+from sympy.concrete.products import *
+#+end_src
+
+* Population genetics
+#+begin_src jupyter-python
+n, N, j = symbols('n N j', positive=True, integer=True)
+mu, theta = symbols('mu theta', positive=True, real=True)
+T, lam = symbols('T lambda', real=True, positive=True, cls=IndexedBase)
+lam = lambda j: expand_func(binomial(j, 2)/N)
+Tj = lambda j: Exponential(f"T_{latex(j, mode='plain')}", lam(j))
+Tc = Sum(j*Tj(j), (j, 2, n))
+S = Poisson('S_n', mu*Tc)
+
+# Tc_eq = Eq(Tc, Sum(j*Tjl(j), (j, 2, n)))
+pdf = ((mu*Tc)**j/factorial(j))*exp(-mu*Tc)
+S_eq = Eq(Probability(Eq(S, j)), pdf)
+S_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}P[S_{n} = j] = \frac{\left(\left(\mu \sum_{j=2}^{n} j T_{j}\right)^{j}\right) e^{- \mu \sum_{j=2}^{n} j T_{j}}}{j!}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+LSteps(Probability(Eq(S, 0)),
+       lambda e: Expectation(exp(-mu*j*Tj(j))),
+       lambda e: Product(e.rewrite(Integral), (j, 2, n)),
+       lambda e: Product(e.args[0].doit().args[0].args[0], (j, 2, n)),
+       lambda e: e.subs(2*N*mu, theta),
+       lambda e: e.simplify().subs(2*N*mu, theta),
+       lambda e: e.simplify()
+)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+P[S_{n} = 0]\Rightarrow\\
+\quad \Rightarrow E[e^{- j \mu T_{j}}]\Rightarrow\\
+\quad \Rightarrow \prod_{j=2}^{n} \int\limits_{0}^{\infty} \frac{j \left(j - 1\right) e^{- T_{j} j \mu} e^{- \frac{T_{j} j \left(j - 1\right)}{2 N}}}{2 N}\, dT_{j}\Rightarrow\\
+\quad \Rightarrow \prod_{j=2}^{n} \frac{j - 1}{2 N \mu \left(1 + \frac{j - 1}{2 N \mu}\right)}\Rightarrow\\
+\quad \Rightarrow \prod_{j=2}^{n} \frac{j - 1}{\theta \left(1 + \frac{\frac{j}{2} - \frac{1}{2}}{N \mu}\right)}\Rightarrow\\
+\quad \Rightarrow \frac{\theta^{1 - n} \theta^{n - 1} \left(n - 1\right)!}{{\left(\theta + 1\right)}^{\left(n - 1\right)}}\Rightarrow\\
+\quad \Rightarrow \frac{\Gamma\left(n\right) \Gamma\left(\theta + 1\right)}{\Gamma\left(n + \theta\right)}
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+steps = LSteps(Probability(Eq(S, j)),
+       lambda e: Expectation(pdf),
+       lambda e: e.replace(Sum, lambda *a: 2*Tj(2)),
+       lambda e: e.rewrite(Integral).replace(Integral, lambda *a: Integral(a[0].simplify(), *a[1:])),
+       lambda e: e.factor().replace(Integral, lambda *a: Integral(a[0].simplify(), *a[1:])),
+       lambda e: e.doit().factor(2*N*mu).subs(2*N*mu, theta),
+       lambda e: e.simplify().subs(2*N*mu, theta),
+)
+steps
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+P[S_{n} = j]\Rightarrow\\
+\quad \Rightarrow E[\frac{\left(\left(\mu \sum_{j=2}^{n} j T_{j}\right)^{j}\right) e^{- \mu \sum_{j=2}^{n} j T_{j}}}{j!}]\Rightarrow\\
+\quad \Rightarrow E[\frac{\left(2 \mu T_{2}\right)^{j} e^{- 2 \mu T_{2}}}{j!}]\Rightarrow\\
+\quad \Rightarrow \int\limits_{0}^{\infty} \frac{\left(2 T_{2} \mu\right)^{j} e^{- T_{2} \left(2 \mu + \frac{1}{N}\right)}}{N j!}\, dT_{2}\Rightarrow\\
+\quad \Rightarrow \frac{2^{j} \mu^{j} \int\limits_{0}^{\infty} T_{2}^{j} e^{- T_{2} \left(2 \mu + \frac{1}{N}\right)}\, dT_{2}}{N j!}\Rightarrow\\
+\quad \Rightarrow \frac{2^{j} \mu^{j} \left(\frac{\theta + 1}{N}\right)^{- j} \Gamma\left(j + 1\right)}{\left(\theta + 1\right) j!}\Rightarrow\\
+\quad \Rightarrow \theta^{j} \left(\theta + 1\right)^{- j - 1}
+\end{array}\end{equation}
+:END:
