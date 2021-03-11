@@ -1,0 +1,255 @@
+#+title: Stochastic sis model
+#+roam_tags: sis model stochastic population dynamic system
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/stochastic_sis_model.py :results silent
+:END:
+
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+from encyclopedia.deterministic_sis_model import *
+from scipy.optimize import curve_fit
+#+end_src
+
+* Stochastic sis model
+#+begin_src jupyter-python
+N, TI, TR, m = symbols('N T_I T_R m', integer=True)
+alpha, beta, t = symbols('alpha beta t', real=True, positive=True)
+n = Idx('n', m)
+dt = Symbol('dt')
+b, d, c, Pb, Pd = symbols('b d c P_b P_d', shape=(1,), cls=IndexedBase)
+trns = lambda tr, op, rate: LBiOp(tr, op, rate, separator=':')
+
+rates_lhs = Matrix([b[n], d[n]])
+rates_rhs = Matrix([
+    alpha*n*(1-n/N),
+    beta*n,
+])
+nexts = Matrix([
+    Lambda(n, n+1),
+    Lambda(n, n-1),
+])
+
+LMatColon(nexts, LMatEq(rates_lhs, rates_rhs))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\left( n \mapsto n + 1 \right) : {b_{n}} = \alpha \left(1 - \frac{n}{N}\right) n\\
+\left( n \mapsto n - 1 \right) : {d_{n}} = \beta n
+\end{array}\end{equation}
+:END:
+
+** Comparing to deterministic
+#+begin_src jupyter-python
+nexts_full = nexts.row_insert(2, Matrix([Lambda(n, Add(n, 0, evaluate=False))]))
+rates_rhs_full = rates_rhs.row_insert(2, Matrix([b[n]+d[n]]))
+rates_lhs_full = rates_lhs.row_insert(2, Matrix([b[n]+d[n]]))
+prob_lhs = nexts_full.applyfunc(Probability)
+prob_rhs = rates_lhs_full*dt
+prob_rhs[2] = 1-prob_rhs[2]
+LMatEq(prob_lhs, prob_rhs)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+P[\left( n \mapsto n + 1 \right)] = dt {b_{n}}\\
+P[\left( n \mapsto n - 1 \right)] = dt {d_{n}}\\
+P[\left( n \mapsto n + 0 \right)] = - dt \left({b_{n}} + {d_{n}}\right) + 1
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python :exports none
+prob_bd = lambdify((b[n], d[n], n, N, dt), prob_rhs)
+prob_bd(0.1, 0.2, 2, 10, 0.1).shape
+#+end_src
+
+#+RESULTS:
+| 3 | 1 |
+
+#+begin_src jupyter-python :exports none
+prob = lambdify((alpha, beta, n, N, dt), prob_rhs.subs(zip(rates_lhs, rates_rhs)))
+prob(0.5, 0.1, 2, 10, 0.1)
+#+end_src
+
+#+RESULTS:
+: array([[0.08],
+:        [0.02],
+:        [0.9 ]])
+
+#+begin_src jupyter-python
+def step(alpha, beta, n, N, dt, prob_n):
+    should_transition = np.random.random(size=prob_n.shape) < prob_n
+    for i, nn in zip(range(3), [1, -1, 0]):
+        n += should_transition[i]*nn
+    return n
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :noweb yes :results output
+n_n = 1
+alpha_n = 0.5
+V = {
+    N: 100,
+    S0: 95,
+    I0: 5,
+    n: 5,
+    alpha: 0.4,
+    beta: 0.1,
+    dt: 0.05
+}
+
+n_n = np.array([V[n], V[n]])
+n_hist = [n_n.copy()]
+times = [0]
+t_n = 0
+steps = 1000
+for _ in range(steps):
+    prob_n = np.squeeze(prob(V[alpha], V[beta], n_n, V[N], V[dt]))
+    t_n += V[dt]
+    step(V[alpha], V[beta], n_n, V[N], V[dt], prob_n)
+    n_hist.append(n_n.copy())
+    times.append(t_n)
+
+times = np.array(times)
+n_hist = np.array(n_hist)
+print(n_hist.shape)
+plt.plot(times, V[N]-n_hist[:, 0], color=<<color("green")>>, label="S stochastic", lw=0.5)
+plt.plot(times, n_hist[:, 0], color=<<color("red")>>, label="I stochastic", lw=0.5)
+DeterministicSISModel().plot([0, steps*V[dt]], V, ls='--', alpha=0.8, lw=1.0)
+plt.xlabel("$t$")
+plt.ylabel("population")
+plt.legend()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: (1001, 2)
+[[file:./.ob-jupyter/00bad5c2a903664f71f8c7224b1678213a106f39.png]]
+:END:
+
+** Master equation
+#+begin_src jupyter-python
+rho = symbols('rho', cls=Function)
+master_dt = LEq(rho(n, t+dt), rho(n, t)+dt*((b[n-1]*rho(n-1,t)+d[n+1]*rho(n+1,t))-(b[n]*rho(n, t)+d[n]*rho(n, t))))
+master_dt
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\rho{\left(n,dt + t \right)} = dt \left(\rho{\left(n - 1,t \right)} {b_{n - 1}} + \rho{\left(n + 1,t \right)} {d_{n + 1}} - \rho{\left(n,t \right)} {b_{n}} - \rho{\left(n,t \right)} {d_{n}}\right) + \rho{\left(n,t \right)}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+master_deriv = (master_dt/dt).simplify().subs(rho(n, t+dt)/dt, rho(n, t).diff(t)).subs(rho(n, t)/dt, 0).collect(rho(n, t))
+master_deriv
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d t} \rho{\left(n,t \right)} = \left(- {b_{n}} - {d_{n}}\right) \rho{\left(n,t \right)} + \rho{\left(n - 1,t \right)} {b_{n - 1}} + \rho{\left(n + 1,t \right)} {d_{n + 1}}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+master_integ = master_deriv.integrate(t)
+master_integ.doit()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\rho{\left(n,t \right)} = \int \left(\left(- {b_{n}} - {d_{n}}\right) \rho{\left(n,t \right)} + \rho{\left(n - 1,t \right)} {b_{n - 1}} + \rho{\left(n + 1,t \right)} {d_{n + 1}}\right)\, dt\end{equation}
+:END:
+
+** Efficient simulation
+#+begin_src jupyter-python
+bd_cases = [
+    {b[n]: 0.1, d[n]: 0.2},
+    {b[n]: 1.0, d[n]: 2.0},
+    {b[n]: 10.0, d[n]: 5.0},
+]
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+eq = LMatEq(rates_rhs, [Number(0.1), Number(0.2)])
+eq
+sol = solve([Eq(alpha*(1-n/N), b[n]), Eq(beta*n, d[n])], [alpha, beta])
+alpha_bn = sol[alpha]
+beta_bn = sol[beta]
+LValues(sol)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+\alpha = - \frac{N {b_{n}}}{- N + n}\\
+\beta = \frac{{d_{n}}}{n}
+\end{cases}\end{equation}
+:END:
+
+#+begin_src jupyter-python :noweb yes :results silent
+def plot_dist_sims(axes, results, cases, bins='auto'):
+    for i, (ts, case, axcol) in enumerate(zip(results, bd_cases, axes.T)):
+        b_n = case[b[n]]
+        d_n = case[d[n]]
+        for ax, ti, lab, rate_txt, rate in zip(axcol, ts, ['t_b', 't_d'], ['b_n', 'd_n'], case.values()):
+            ax.set_title(latex(LValues(case, join=LComma), mode='inline'))
+            hist, counts = np.histogram(ti, bins=bins, density=True)
+            t_lin = np.linspace(ti.min(), ti.max(), len(hist))
+            (A, B), _ = curve_fit(lambda t,A,B: A*np.exp(-B*t), t_lin, hist, p0=(rate, rate))
+            ax.plot(t_lin, A*np.exp(-B*t_lin), label=f"best fit$={A:.4f}e^{{{-B:.4f}t}}$", color=<<color("blue")>>)
+            ax.plot(t_lin, rate*np.exp(-rate*t_lin), label=f"theoretical$={rate_txt}e^{{-{rate_txt}t}}$", color=<<color("blue")>>, ls='--')
+            ax.scatter(t_lin, hist)
+            ax.set_yscale('log')
+            ax.set_xlabel(f"${lab}$")
+            ax.set_ylabel(f"$log(P({lab}))$")
+            ax.legend()
+#+end_src
+
+
+# Calculate by continuing time and taking differences
+#+begin_src jupyter-python
+def calc_times(prob, points):
+    t = np.zeros([points])
+    not_done = np.ones([points], dtype=bool)
+    while not_done.any():
+        t[not_done] += dt_n
+        should_transition = np.random.random(size=[points]) < prob
+        not_done[should_transition] = False
+    return t
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :results output :noweb yes :eval never-export
+results = []
+points = 10000
+dt_n = 0.001
+for case in bd_cases:
+    b_n = case[b[n]]
+    d_n = case[d[n]]
+    results.append([
+        calc_times(b_n*dt_n, points),
+        calc_times(d_n*dt_n, points)
+    ])
+
+fig, axs = plt.subplots(2, 3, figsize=(4*3, 4*2))
+fig.suptitle(f"$dt={dt_n}$, samples=${points}$")
+plot_dist_sims(axs, results, bd_cases, bins=100)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/b7add51452d25d2ead51188831fd7425f1842ac0.png]]

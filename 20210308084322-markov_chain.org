@@ -1,0 +1,20 @@
+#+title: Markov chain
+#+roam_tags:
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/markov_chain.py :results silent
+:END:
+
+#+begin_src jupyter-python
+import matplotlib as plt
+import numpy as np
+from sympy import *
+from pyorg.latex import *
+#+end_src
+
+* Markov chain

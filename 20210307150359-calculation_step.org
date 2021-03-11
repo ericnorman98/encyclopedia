@@ -1,0 +1,149 @@
+#+title: Calculation step
+#+roam_tags:
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/calculation_step.py :results silent
+:END:
+
+** Calculation
+#+begin_src jupyter-python
+import matplotlib as plt
+import numpy as np
+from sympy import *
+from pyorg.latex import *
+#+end_src
+
+#+begin_src jupyter-python
+class CalculationStep(Expr):
+    def print(self):
+        return self
+
+    def __call__(self):
+        pass
+#+end_src
+
+#+begin_src jupyter-python
+class Calculation(CalculationStep):
+    def __new__(cls, *args, steps=[]):
+        if len(steps) == 0:
+            return LArray(*args)
+
+        current = steps[0]
+        ex = Expr.__new__(cls, *current(*args))
+        ex._current = current
+        ex._steps = steps
+        return ex
+
+    @property
+    def value(self):
+        if type(self.args) == list and len(self.args) == 1:
+            return self.args[0]
+        return self.args
+
+    @property
+    def step(self):
+        return self._current
+
+    def __iter__(self):
+        return self
+
+    def _latex(self, printer):
+        return printer._print(self.show())
+
+    def show(self):
+        return self._current.show(*self.args)
+
+    def doit(self):
+        return self.show().doit()
+
+    def simplify(self):
+        return self.show().simplify()
+
+    def __call__(self):
+        return Calculation(*self.args, steps=self._steps[1:])
+
+    def __next__(self):
+        calc = self()
+        if len(self._steps) == 0:
+            raise StopIteration
+        else:
+            return calc
+#+end_src
+* Testing
+#+begin_src jupyter-python
+from encyclopedia.dynamical_systems import DynamicalSystem
+#+end_src
+
+#+RESULTS:
+
+#+BEGIN_SRC jupyter-python
+x, y = symbols('x y', cls=Function, real=True)
+t, mu = symbols('t mu', real=True)
+
+system = DynamicalSystem([
+    -mu*y(t)+x(t)-x(t)*y(t),
+    mu*x(t)-x(t)**2+x(t)
+], [x(t), y(t)], t, params=[mu])
+
+system
+#+END_SRC
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{d}{d t} x{\left(t \right)} = - \mu y{\left(t \right)} - x{\left(t \right)} y{\left(t \right)} + x{\left(t \right)}\\
+\frac{d}{d t} y{\left(t \right)} = \mu x{\left(t \right)} - x^{2}{\left(t \right)} + x{\left(t \right)}
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+steady_calc = Calculation(system, steps=[
+    SystemZeroStep(),
+    SteadyStatesStep(),
+    SteadyStatesStarStep(),
+])
+steady_states = steady_calc().value()[0]
+steady_states[0]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+: ---------------------------------------------------------------------------
+: NameError                                 Traceback (most recent call last)
+: <ipython-input-6-20b82b4196da> in <module>
+:       1 steady_calc = Calculation(system, steps=[
+: ----> 2     SystemZeroStep(),
+:       3     SteadyStatesStep(),
+:       4     SteadyStatesStarStep(),
+:       5 ])
+:
+: NameError: name 'SystemZeroStep' is not defined
+:END:
+
+#+begin_src jupyter-python
+J = MatrixSymbol('\\mathbb{J}', 2, 2)
+stability_calc = Calculation(system, steps=[
+    steady_calc
+    StabilityMatrixStep(J),
+    TraceDetStep(J),
+    SubstituteStep(*steady_states)
+])
+stability_calc = stability_calc()
+stability_calc = stability_calc()
+stability_calc.doit().subs({mu: 0.1})
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+:   File "<ipython-input-7-2e038f74e048>", line 4
+:     StabilityMatrixStep(J),
+:     ^
+: SyntaxError: invalid syntax
+:END:

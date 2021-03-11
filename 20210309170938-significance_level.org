@@ -1,0 +1,6 @@
+#+title: Significance level
+#+roam_tags: statistics significance level
+
+* Significance level
+The significance level $\alpha$ is the probability of rejecting the null
+hypothesis in a [[file:20210219100256-hypothesis_test.org][hypothesis test]], when assuming that the null hypothesis is true.

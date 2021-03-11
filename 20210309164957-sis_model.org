@@ -1,0 +1,23 @@
+#+title: SIS Model
+#+roam_tags:
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/sis_model.py :results silent
+:END:
+
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+from sympy import *
+from pyorg.latex import *
+#+end_src
+
+* SIS Model
+#+include: 20210303161107-deterministic_sis_model.org :lines "1-"
+#+include: 20210307131532-stochastic_sis_model.org :lines "1-"
+#+include: 20210309152203-gillespie_algorithm.org :lines "1-"

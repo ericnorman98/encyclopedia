@@ -1,0 +1,142 @@
+#+title: Gillespie algorithm
+#+roam_tags: gillespie algorithm stochastic population dynamic system simulation
+
+- tags :: [[file:20210225084927-dynamical_systems.org][Dynamical systems]]
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/gillespie_algorithm.py :results silent
+:END:
+
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+from sympy import *
+from pyorg.latex import *
+from encyclopedia.deterministic_sis_model import *
+from scipy.optimize import curve_fit
+from scipy.stats import gaussian_kde
+import torch
+device = torch.device('cpu')
+torch.set_grad_enabled(False)
+#+end_src
+
+* Gillespie algorithm
+#+begin_src jupyter-python
+react = torch.tensor([1, -1], device=device)
+minval = torch.tensor([0.0001], device=device, dtype=torch.float)
+def step(alpha, beta, N, n, t, alive):
+    b_n = alpha*(1-n/N)*n
+    d_n = beta*n
+    alive &= (n > 0)
+    Pb = -torch.log(torch.rand(size=n.shape, dtype=torch.float, device=device))/torch.where(alive, b_n, minval)
+    Pd = -torch.log(torch.rand(size=n.shape, dtype=torch.float, device=device))/torch.where(alive, d_n, minval)
+    P = torch.stack([Pb, Pd]).T
+    event = torch.argmin(P, axis=1)
+    dt = P[torch.arange(len(n)), event]
+    t[alive] += dt[alive]
+    n[alive] += react[event[alive]]
+
+n = torch.zeros([10], dtype=torch.float, device=device)
+t = torch.zeros([10], dtype=torch.float, device=device)
+alive = torch.ones([10], dtype=bool, device=device)
+step(0.6, 0.8, 100, n, t, alive)
+t
+#+end_src
+
+#+RESULTS:
+: tensor([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])
+
+#+begin_src jupyter-python
+def run_gillespie(steps, points, V, max_t=0):
+    n_n = torch.zeros([points], device=device)+V[I0]
+    t_n = torch.zeros([points], device=device)
+    n_hist = torch.zeros([steps, points], device=device)
+    t_hist = torch.zeros([steps, points], device=device)
+    n_hist[0, :] = V[I0]
+    alive = torch.ones([points], dtype=bool, device=device)
+    for i in range(steps):
+        if i % 1000 == 0:
+            print(alive.sum())
+        step(V[alpha], V[beta], V[N], n_n, t_n, alive)
+        t_hist[i] = t_n
+        n_hist[i, alive] = n_n[alive]
+    return t_hist.cpu().numpy(), n_hist.cpu().numpy()
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+def run_gillespie_until(max_t, points, V):
+    n_n = torch.zeros([points], device=device)+V[I0]
+    t_n = torch.zeros([points], device=device)
+    n_hist = torch.zeros([steps, points], device=device)
+    t_hist = torch.zeros([steps, points], device=device)
+    n_hist[0, :] = V[I0]
+    alive = torch.ones([points], dtype=bool, device=device)
+    for i in range(steps):
+        step(V[alpha], V[beta], V[N], n_n, t_n, alive)
+        t_hist[i] = t_n
+        n_hist[i, alive] = n_n[alive]
+        if t_n.max() > max_t:
+            return t_hist[:i], n_hist[i:]
+    return t_hist.cpu().numpy(), n_hist.cpu().numpy()
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src jupyter-python :results silent
+def run_gillespie_dead(points, V):
+    n_n = torch.zeros([points], device=device)+V[I0]
+    t_n = torch.zeros([points], device=device)
+    alive = torch.ones([points], dtype=bool, device=device)
+    n_alive = points
+    i = 0
+    while n_alive > 0:
+        if i % 1000 == 0:
+            print(alive.sum())
+        step(V[alpha], V[beta], V[N], n_n, t_n, alive)
+        n_alive = alive.sum()
+        i += 1
+    return t_n.cpu().numpy(), n_n.cpu().numpy()
+#+end_src
+
+#+name: src:t_extinction
+#+begin_src jupyter-python :noweb yes :results output
+V = {
+    N: 100,
+    alpha: 0.8,
+    beta: 0.6,
+}
+V[I0] = int(V[N]*(V[alpha]-V[beta])/V[alpha])
+V[S0] = V[N] - V[I0]
+steps = 40000
+trajectories = 10000
+t_hist, n_hist = run_gillespie(steps, 100, V)
+t_n, n_n = run_gillespie_dead(trajectories, V)
+dead = n_hist[-1, :] == 0
+plt.figure(figsize=(4, 4))
+# plt.plot(t_hist, V[N]-n_hist, color=<<color("green")>>, lw=0.5, alpha=0.5)
+plt.plot(t_hist[:, dead], n_hist[:, dead], color=<<color("red")>>, lw=0.4, alpha=0.1)
+plt.axhline(0, ls='--', color=<<color("fg-hc")>>, alpha=0.4, lw=0.5)
+density = gaussian_kde(t_n)
+plt.scatter(t_hist[-1, dead], n_hist[-1, dead], s=8)
+dens_t = np.linspace(0, t_hist.max(), 200)
+plt.xlabel("$t$")
+plt.ylabel("population")
+axdens = plt.gca().twinx()
+dens = density(dens_t)
+axdens.plot(dens_t, dens)
+axdens.set_ylabel("death density")
+plt.title(latex(LValues(V, join=LComma), mode='inline'))
+T_ext = np.mean(t_n)
+axdens.axvline(T_ext, lw=0.6, color=<<color("blue")>>, label=f"mean $T_{{ext}}\\approx {T_ext:.2f}$")
+plt.legend()
+#+end_src
+
+#+RESULTS: src:t_extinction

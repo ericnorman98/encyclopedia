@@ -1,0 +1,22 @@
+#+title: Mean squared error
+#+roam_tags: statistics mean squared error loss
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210310165008-loss_function.org][Loss function]]
+
+* Setup :noexport:
+#+call: init()
+#+call: init-plot-style()
+
+* Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/mean_squared_error.py :results silent
+:END:
+
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+from sympy import *
+from pyorg.latex import *
+#+end_src
+
+* Mean squared error
