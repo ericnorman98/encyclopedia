@@ -1,6 +1,8 @@
 #+title: Distributions
 #+roam_tags: statistics distribution
 
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
 * Setup :noexport:
 #+call: init()
 #+call: init-plot-style()

@@ -1,6 +1,8 @@
 #+title: Random sampling
 #+roam_tags: statistics random sampling
 
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
 * Setup :noexport:
 #+call: init()
 #+call: init-plot-style()

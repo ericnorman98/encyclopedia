@@ -1,7 +1,0 @@
-from sympy import *
-from pyorg.latex import *
-from scipy.integrate import solve_ivp
-import matplotlib.pyplot as plt
-from cycler import cycler
-import numpy as np
-import matplotlib

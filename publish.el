@@ -33,10 +33,10 @@
 (setq encyclopedia-publish-url "https://ericnorman.net")
 (setq encyclopedia-publish-sitemap-title "Eric's Encyclopedia")
 
+
 (setq org-confirm-babel-evaluate nil)
 (org-babel-do-load-languages
  'org-babel-load-languages '((python . t)))
-(org-babel-lob-ingest "~/org/pyorg/pyorg.org")
 
 (defun ericnorman/configure (publish-dir)
   (encyclopedia-publish-configure publish-dir)

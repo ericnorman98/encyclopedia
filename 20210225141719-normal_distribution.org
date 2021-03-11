@@ -5,7 +5,33 @@
 #+call: init()
 #+call: init-plot-style()
 
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+from sympy import *
+from pyorg.latex import *
+from sympy.stats import *
+#+end_src
+
+#+RESULTS:
+
 * Normal distribution
+#+begin_src jupyter-python
+mu, sigma, n, xm, s, x, z, t = symbols('mu sigma n \\bar{x} s x z t')
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+: ---------------------------------------------------------------------------
+: NameError                                 Traceback (most recent call last)
+: <ipython-input-27-c1f0693360b6> in <module>
+:       1 mu, sigma, n, xm, s, x, z, t = symbols('mu sigma n \\bar{x} s x z t')
+: ----> 2 T = RandomSymbol('T')
+:
+: NameError: name 'RandomSymbol' is not defined
+:END:
+
 #+begin_src jupyter-python
 Z = Normal('Z', mu, sigma)
 Zstd = Normal('Z', 0, 1)
@@ -29,14 +55,11 @@ phi_f(x)
 #+begin_src jupyter-python :results output
 x_n = np.linspace(-5, 5, 200)
 plt.plot(x_n, lambdify(x, phi_f(x).rhs)(x_n))
-plt.axis('off')
-plt.savefig(f"{name}.png")
-plt.axis('on')
 plt.title("Normal PDF")
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/bb81b1f5329d798cee40e5347db773c79d199c8a.png]]
+[[file:./.ob-jupyter/e59cb125b112d249c1484db03da9f674f1fe6b47.png]]
 
 ** CDF
 The definition of the cumulative distribution is using the [[file:20210301091142-error_function.org][error function]].

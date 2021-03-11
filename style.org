@@ -1,6 +1,7 @@
 # -*- eval: (add-hook 'after-save-hook (lambda nil (org-babel-tangle)) nil t); -*-
 #+title: Blog Style
-#+PROPERTY: header-args :eval never-export :tangle css/main.css :results silent :exports none
+#+PROPERTY: header-args :eval never-export :tangle css/main.css :results silent :exports none :noweb yes
+#+STARTUP: overview
 
 * Setup :noexport:
 #+name: style-content-width
@@ -24,15 +25,15 @@ This is just for testing the website styles.
 
 body {
     font-family: 'monospace', Helvetica, sans-serif;
-    background-color: #<<color-bg>>;
+    background-color: <<colorb("bg")>>;
     line-height: 1.5;
     font-size: 18px;
-    color: #<<color-fg>>;
+    color: <<colorb("fg")>>;
     margin: 0;
 }
 
 .MathJax {
-    color: #<<color-fg-hc>>;
+    color: <<colorb("fg-hc")>>;
 }
 
 @media (max-width: 799px) {
@@ -45,7 +46,7 @@ h1,
 h2,
 h3,
 h4 {
-    color: #<<color-fg>>;
+    color: <<colorb("fg")>>;
     font-weight: normal;
     margin: 0;
     padding: 0;
@@ -81,26 +82,26 @@ h3 {
 }
 a {
     text-decoration: none;
-    color: #<<color-blue>>;
+    color: <<colorb("blue")>>;
 }
 a:hover {
-    color: #<<color-cyan>>;
+    color: <<colorb("cyan")>>;
     text-decoration: underline;
 }
 pre {
-    background: #<<color-bg>>;
+    background: <<colorb("bg")>>;
 }
 pre.src {
     overflow-y: auto !important;
     font-size: 16px;
-    border: 1px solid #<<color-black>>;
-    box-shadow: 2px 2px 2px #<<color-brightblack0>>;
+    border: 1px solid <<colorb("black")>>;
+    box-shadow: 2px 2px 2px <<colorb("brightblack0")>>;
 }
 pre.src::before {
-    background-color: #<<color-brightblack1>>;
+    background-color: <<colorb("brightblack1")>>;
     top: 0;
     right: 0;
-    border: 1px solid #<<color-black>>;
+    border: 1px solid <<colorb("black")>>;
 }
 code {
     background: #eee;
@@ -132,10 +133,10 @@ img.rounded-border {
     border-radius: 20px;
 }
 img.black-border {
-    border: 2px solid #<<color-black>>;
+    border: 2px solid <<colorb("black")>>;
 }
 img.spaced-border {
-    border: 1px solid #<<color-brightblack2>>;
+    border: 1px solid <<colorb("brightblack2")>>;
     padding: 15px;
 }
 .tag {
@@ -144,10 +145,11 @@ img.spaced-border {
     font-weight: bold;
     cursor: pointer;
     margin: 1px;
+    display: inline-block;
 }
 span.tag {
-    background: #<<color-blue>>;
-    color: #<<color-fg-hc>>;
+    background: <<colorb("blue")>>;
+    color: <<colorb("fg-hc")>>;
     padding: 2px 5px;
     border-radius: 4px;
 }
@@ -184,7 +186,7 @@ span.tag {
 #+begin_src css :noweb yes
 .intro {
     padding-top: 20px;
-    color: #<<color-fg>>;
+    color: <<colorb("fg")>>;
     text-align: center;
 }
 .org-info-js_info-navigation {
@@ -202,6 +204,7 @@ span.tag {
     margin-top: 10px;
     text-align: left;
     font-size: 16px;
+    min-height: 800px;
 }
 /* #content a { */
 /*     color: #<<color-fg-hc>>; */
@@ -216,7 +219,7 @@ span.tag {
     border-top: 1px solid #e2e2e2;
 }
 #postamble a {
-    color: #e9a390;
+    color: <<colorb("orange")>>;
 }
 @media (min-width: 800px) {
     #preamble {
@@ -246,7 +249,7 @@ span.tag {
 }
 
 .sitemap .sitemap-item .sitemap-item-thumb {
-    background-color: #<<color-bg-alt>>;
+    background-color: <<colorb("bg-alt")>>;
     width: 220px;
     height: 220px;
 }
@@ -257,7 +260,7 @@ span.tag {
 
 .sitemap .sitemap-item a {
     font-size: 20px;
-    color: #<<color-fg>>;
+    color: <<colorb("fg")>>;
 }
 .sitemap .sitemap-item p {
     font-size: 16px;
@@ -299,7 +302,7 @@ figure img, figure video, figure .org-svg {
     display: block !important;
 }
 details summary {
-    color: #a9a1e1;
+    color: <<colorb("violet")>>;
     cursor: pointer;
 }
 
@@ -317,6 +320,11 @@ details summary {
 .animation-slider {
     display: block;
     margin: 0 auto;
+}
+input[type=range] {
+  -webkit-appearance: none;
+  width: 50%;
+  background: transparent;
 }
 input[type=range] {
   -webkit-appearance: none;
@@ -379,13 +387,13 @@ input[type=range]::-webkit-slider-runnable-track {
   height: 4px;
   cursor: pointer;
   box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
-  background: #98be65;
+  background: <<colorb("green")>>;
   border-radius: 1.3px;
   border: 0.2px solid #010101;
 }
 
 input[type=range]:focus::-webkit-slider-runnable-track {
-  background: #98be65;
+  background: <<colorb("green")>>;
 }
 
 input[type=range]::-moz-range-track {
@@ -393,7 +401,7 @@ input[type=range]::-moz-range-track {
   height: 4px;
   cursor: pointer;
   box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
-  background: #98be65;
+  background: <<colorb("green")>>;
   border-radius: 1.3px;
   border: 0.2px solid #010101;
 }
@@ -408,29 +416,28 @@ input[type=range]::-ms-track {
   color: transparent;
 }
 input[type=range]::-ms-fill-lower {
-  background: #98be65;
+  background: <<colorb("green")>>;
   border: 0.2px solid #010101;
   border-radius: 2.6px;
   box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
 }
 input[type=range]:focus::-ms-fill-lower {
-  background: #98be65;
+  background: <<colorb("green")>>;
 }
 input[type=range]::-ms-fill-upper {
-  background: #98be65;
+  background: <<colorb("green")>>;
   border: 0.2px solid #010101;
   border-radius: 2.6px;
   box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
 }
 input[type=range]:focus::-ms-fill-upper {
-  background: #98be65;
+  background: <<colorb("green")>>;
 }
 #+end_src
 
 #+begin_export html
 <input type="range">
 #+end_export
-
 
 ** Tables
 #+begin_src css :noweb yes
@@ -440,10 +447,10 @@ table {
   transform: translateX(-50%);
 }
 thead {
-    border-top: 2px solid #<<color-fg-hc>>;
+    border-top: 2px solid <<colorb("fg-hc")>>;
 }
 tbody {
-    border-bottom: 2px solid #<<color-fg-hc>>;
+    border-bottom: 2px solid <<colorb("fg-hc")>>;
 }
 td, th {
   padding: 3px 12px;
@@ -455,3 +462,45 @@ td, th {
 |-----------+-------+-------------|
 | sit       | amet  | consectetur |
 | adipicing | elit  | quisque     |
+
+** Bar
+#+begin_src css
+.bar {
+    display: inline-block;
+    border-radius: 3px;
+    position: relative;
+    width: 64px;
+    height: 6px;
+    overflow: hidden;
+    background-color: <<colorb("brightblack3")>>;
+}
+.bar span[class^="bar-"] {
+    top: 0;
+    left: 0;
+    position: absolute;
+    display: inline-block;
+    height: 100%;
+    background-color: <<colorb("blue")>>;
+}
+#+end_src
+
+#+begin_src elisp :results replace :wrap src css
+(mapconcat (lambda (size)
+             (let ((s (number-to-string size)))
+               (concat ".bar .bar-"s" {width: "s"%;}")))
+           (number-sequence 10 100 10) "\n")
+#+end_src
+
+#+RESULTS:
+#+begin_src css
+.bar .bar-10 {width: 10%;}
+.bar .bar-20 {width: 20%;}
+.bar .bar-30 {width: 30%;}
+.bar .bar-40 {width: 40%;}
+.bar .bar-50 {width: 50%;}
+.bar .bar-60 {width: 60%;}
+.bar .bar-70 {width: 70%;}
+.bar .bar-80 {width: 80%;}
+.bar .bar-90 {width: 90%;}
+.bar .bar-100 {width: 100%;}
+#+end_src

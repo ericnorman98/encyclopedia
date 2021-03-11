@@ -29,7 +29,7 @@ x = IndexedBase('x')
 I = implemented_function('I', lambda xi, xj: Piecewise((1, xj<=xi), (0, True)))
 F = implemented_function('F', lambda x, n, i: Sum(I(x[i], x[j]), (j, 0, n-1))/n)
 F_lam = lambdify((x, n, i), F._imp_(x, n, i), 'numpy')
-LJoin(LFunc(F(x, n, i)), LFunc(I(x[i], x[j])), separator='\\quad\\text{where}\\quad ')
+Latex(LFunc(F(x, n, i)), LFunc(I(x[i], x[j])), separator='\\quad\\text{where}\\quad ')
 #+end_src
 
 #+RESULTS:

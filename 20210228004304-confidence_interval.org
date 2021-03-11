@@ -1,6 +1,8 @@
 #+title: Confidence interval
 #+roam_tags: statistics confidence interval
 
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
 * Setup :noexport:
 #+call: init()
 

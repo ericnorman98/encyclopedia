@@ -23,7 +23,7 @@ from hypothesis_testing import *
 
 * Kruskal-Wallis test
 The Kruskal-Wallis test is a non-parametric, one-way analysis of variance on
-ranks, [[file:20210219100256-hypothesis_testing.org][hypothesis test]] with the assumption of independent observations. It does
+ranks, [[file:20210219100256-hypothesis_test.org][hypothesis test]] with the assumption of independent observations. It does
 not make any assumptions about the distribution.
 
 To perform this test, we rank the pooled sample

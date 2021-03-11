@@ -36,10 +36,3 @@ T = RandomSymbol('T')
 #+end_src
 
 * Statistics
-
-- [[file:20210219100101-random_sampling.org][Random sampling]]
-- [[file:20210219103418-distributions.org][Distributions]]
-- [[file:20210228004304-confidence_interval.org][Confidence interval]]
-- [[file:20210219100256-hypothesis_testing.org][Hypothesis testing]]
-- [[file:20210219100345-bayesian_inference.org][Bayesian inference]]
-- [[file:20210226085840-linear_least_squares.org][Linear least squares]]

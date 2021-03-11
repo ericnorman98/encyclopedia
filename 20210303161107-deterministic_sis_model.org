@@ -1,15 +1,14 @@
 #+title: Deterministic SIS model
 #+theme: light
-#+roam_tags: sis model deterministic model population dynamic system
+#+roam_tags: sis model deterministic population dynamic system
 
 * Setup :noexport:
 #+call: init()
-
 #+call: init-plot-style()
 
 * Lib :noexport:
 :PROPERTIES:
-:header-args: :tangle yes :results silent
+:header-args: :tangle encyclopedia/deterministic_sis_model.py :results silent
 :END:
 
 #+begin_src jupyter-python
@@ -20,22 +19,41 @@ import matplotlib.pyplot as plt
 from cycler import cycler
 import numpy as np
 import matplotlib
+from encyclopedia.dynamical_systems import DynamicalSystem
+from encyclopedia.stability_analysis import plot_stability_diagram, stability_classify
+#+end_src
+
+#+begin_src jupyter-python
+S, I = symbols('S I', integer=True, positive=True, cls=Function)
+S0, I0, N = symbols('S_0 I_0 N', integer=True, positive=True)
+alpha, beta, t, r0 = symbols('alpha beta t r_0', real=True, positive=True)
+#+end_src
+
+#+begin_src jupyter-python :noweb yes
+class DeterministicSISModel(DynamicalSystem):
+    def __new__(cls):
+        system = DynamicalSystem.__new__(cls, [
+            -(alpha/(S(t)+I(t)))*S(t)*I(t) + beta*I(t),
+            (alpha/(S(t)+I(t)))*S(t)*I(t) - beta*I(t)
+        ], [S(t), I(t)], t, params=[alpha, beta])
+        return system
+
+    def integrate(self, t_span, V, **kwargs):
+        return super().integrate(t_span, [V[S0], V[I0]], args=[V[alpha], V[beta]], rtol=1e-5, **kwargs)
+
+    def plot(self, t_span, V, t_eval=None, **kwargs):
+        plt.ylim([0, V[S0]+V[I0]])
+        sol = self.integrate(t_span, V, t_eval=t_eval)
+        y = sol.y.T
+        plt.plot(sol.t, y[:, 0], color=<<color("green")>>, label="S deterministic", **kwargs)
+        plt.plot(sol.t, y[:, 1], color=<<color("red")>>, label="I deterministic", **kwargs)
 #+end_src
 
 * Deterministic SIS model
 #+begin_src jupyter-python
-S, I = symbols('S I', integer=True, positive=True, cls=Function)
-S0, I0, N, Sstar, Istar = symbols('S_0 I_0 N S^* I^*', integer=True, positive=True)
-alpha, beta, t, r0 = symbols('alpha beta t r_0', real=True, positive=True)
+model = DeterministicSISModel()
 
-deps = Matrix([S(t), I(t)])
-model_lhs = Matrix([S(t).diff(t), I(t).diff(t)])
-model_rhs = Matrix([
-    -(alpha/(S(t)+I(t)))*S(t)*I(t) + beta*I(t),
-    (alpha/(S(t)+I(t)))*S(t)*I(t) - beta*I(t),
-])
-
-LMatEq(model_lhs, model_rhs)
+model
 #+end_src
 
 #+RESULTS:
@@ -46,66 +64,48 @@ LMatEq(model_lhs, model_rhs)
 \end{array}\end{equation}
 :END:
 
-#+begin_src jupyter-python :exports none
-model_lam = lambdify((S(t), I(t), alpha, beta), model_rhs, 'numpy')
-
-def model_ode(t, y, alpha, beta):
-    return model_lam(*y, alpha, beta)
-
-model_lam(2, 3, 1, 2)
-#+end_src
-
-#+RESULTS:
-: array([[ 4.8],
-:        [-4.8]])
-
 #+begin_src jupyter-python :results output :noweb yes
-alphas_n = np.linspace(0, 2, 20)
-betas_n = np.linspace(0, 1, 40)
-alpha_n = 0.5
-beta_n = 0.1
-plt.ylim([0, 100])
-sol = solve_ivp(model_ode, [0, 100], [90, 10], rtol=1e-5, args=[alpha_n, beta_n], vectorized=True)
-y = sol.y.T
-plt.plot(sol.t, y[:, 0], color=<<color("green")>>)
-plt.plot(sol.t, y[:, 1], color=<<color("red")>>)
+model.plot([0, 50], {
+    S0: 95,
+    I0: 5,
+    alpha: 0.5,
+    beta: 0.1
+})
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/34484fd3973adaebf3b75d753b227596eb76a315.png]]
+[[file:./.ob-jupyter/f49a3b48092e32935e9e3c7bede58a9b711c9d1c.png]]
 
 #+begin_src jupyter-python
 SI_consteq = Eq(S(t)+I(t),N)
-steady_eq_sys = model_lhs.applyfunc(lambda e: Eq(e, 0))
-LImply(LCases(*steady_eq_sys), Eq(S(t).diff(t)+I(t).diff(t),0), SI_consteq)
+steady_eq_sys = model.rhs.applyfunc(lambda e: Eq(e, 0))
+steady_states_uneval = model.steady_states(add_eqs=[SI_consteq])
+LImply(steady_states_uneval, Eq(model.lhs[0]+model.lhs[1],0), SI_consteq)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\begin{cases}
-\frac{d}{d t} S{\left(t \right)} = 0\\
-\frac{d}{d t} I{\left(t \right)} = 0
-\end{cases} \Rightarrow \frac{d}{d t} I{\left(t \right)} + \frac{d}{d t} S{\left(t \right)} = 0 \Rightarrow I{\left(t \right)} + S{\left(t \right)} = N\end{equation}
+\begin{equation}\begin{array}{l}
+- \frac{\alpha I{\left(t \right)} S{\left(t \right)}}{I{\left(t \right)} + S{\left(t \right)}} + \beta I{\left(t \right)} = 0\\
+\frac{\alpha I{\left(t \right)} S{\left(t \right)}}{I{\left(t \right)} + S{\left(t \right)}} - \beta I{\left(t \right)} = 0
+\end{array} \Rightarrow \frac{d}{d t} I{\left(t \right)} + \frac{d}{d t} S{\left(t \right)} = 0 \Rightarrow I{\left(t \right)} + S{\left(t \right)} = N\end{equation}
 :END:
 
 #+begin_src jupyter-python
-steady_states_subs = solve(list(model_rhs)+[SI_consteq], [S(t), I(t)], dict=True)[1]
-steady_states = {
-    Sstar: steady_states_subs[S(t)],
-    Istar: steady_states_subs[I(t)],
-}
-# steady_states = {
-#     Sstar: steady_states[S(t)].subs(beta/alpha, 1/r0),
-#     Istar: steady_states[I(t)].apart(alpha).subs(beta/alpha, 1/r0).collect(N),
-# }
-LValues(steady_states)
+steady_states_subs = steady_states_uneval()
+steady_states_stars = steady_states_subs()
+Sstar, Istar = steady_states_stars.step.stars
+steady_states = steady_states_stars.value[0]
+steady_states_stars
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{cases}
-S^{*} = \frac{N \beta}{\alpha}\\
-I^{*} = \frac{N \left(\alpha - \beta\right)}{\alpha}
+{S^{*}_{0}} = N\\
+{I^{*}_{0}} = 0\\
+{S^{*}_{1}} = \frac{N \beta}{\alpha}\\
+{I^{*}_{1}} = \frac{N \left(\alpha - \beta\right)}{\alpha}
 \end{cases}\end{equation}
 :END:
 
@@ -123,7 +123,7 @@ beta_max = 2.0
 alphas_n = np.linspace(0.001, alpha_max, n)
 betas_n = np.linspace(0.001, beta_max, n)
 
-Istar_lam = lambdify((N, alpha, beta), steady_states[Istar])
+Istar_lam = lambdify((N, alpha, beta), steady_states[Istar[1]])
 for i, alpha_n in enumerate(alphas_n):
     for j, beta_n in enumerate(betas_n):
         # if alpha_n > beta_n:
@@ -132,7 +132,7 @@ for i, alpha_n in enumerate(alphas_n):
 
 fig, ax1 = plt.subplots(1, 1, figsize=(8, 4))
 im = ax1.imshow(infect_limits, origin='lower', vmin=0, vmax=N_n)
-ax1.set_title(latex(Istar, mode='inline'))
+ax1.set_title(latex(Istar[1], mode='inline'))
 ax1.set_xticks([0, n//2, n])
 ax1.set_xticklabels([0, alpha_max/2, alpha_max])
 ax1.set_yticks([0, n//2, n])
@@ -145,14 +145,81 @@ fig.colorbar(im, ax=ax1)
 #+caption: Steady states for the infectives evaluated for every combination of $\alpha$ and $\beta$ in the interval $(0, 2]$. The plot shows that $I(\infty)>0$ when $\alpha>\beta$.
 #+label: fig:param_infect_steady
 #+RESULTS: src:fig:param_infect_steady
-[[file:./.ob-jupyter/3991937bb12ec5c501b3440912f84c4888a2e5b9.png]]
+[[file:./.ob-jupyter/db196b4385fe2e3008e1c34fb20f5f2104b56001.png]]
 
 #+begin_src jupyter-python
-J = Matrix(model_rhs).jacobian([S(t), I(t)])
-trace(J).subs(steady_states_subs).simplify()
+stability_analysis = model.stability_analysis()
+stability_analysis.simplify()
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}- \alpha + \beta\end{equation}
+\begin{equation}\mathbb{J} = \left[\begin{matrix}- \frac{\alpha I^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} & - \frac{\alpha S^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} + \beta\\\frac{\alpha I^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} & \frac{\alpha S^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} - \beta\end{matrix}\right]\end{equation}
 :END:
+
+#+begin_src jupyter-python
+stability_analysis_trace_det = stability_analysis()
+stability_analysis_trace_det
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\operatorname{tr}\left(\mathbb{J} \right) = \operatorname{tr}\left(\left[\begin{matrix}- \frac{\alpha I^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} & - \frac{\alpha S^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} + \beta\\\frac{\alpha I^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} & \frac{\alpha S^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} - \beta\end{matrix}\right] \right)\\
+\operatorname{det}\left(\mathbb{J}\right) = \operatorname{det}\left(\left[\begin{matrix}- \frac{\alpha I^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} & - \frac{\alpha S^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} + \beta\\\frac{\alpha I^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} & \frac{\alpha S^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} - \beta\end{matrix}\right]\right)
+\end{array}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+stability_analysis_at = stability_analysis_trace_det()
+trace_dets = stability_analysis_at.value
+stability_analysis_at.doit()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\alpha - \beta\\
+0\\
+\frac{\alpha \beta^{2} I^{2}{\left(t \right)}}{\left(\alpha - \beta\right)^{2} \left(\frac{\beta I{\left(t \right)}}{\alpha - \beta} + I{\left(t \right)}\right)^{2}} - \frac{\alpha I^{2}{\left(t \right)}}{\left(\frac{\beta I{\left(t \right)}}{\alpha - \beta} + I{\left(t \right)}\right)^{2}} - \beta\\
+0\end{equation}
+:END:
+
+#+begin_src jupyter-python
+Matrix(trace_dets[1].args).applyfunc(lambda e: e.simplify())
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\left[\begin{matrix}\frac{\beta \left(- \alpha + \beta\right)}{\alpha} - \frac{\left(\alpha - \beta\right)^{2}}{\alpha}\\0\end{matrix}\right]\end{equation}
+:END:
+
+#+begin_src jupyter-python :results silent
+def plot_stability(V, tr, det):
+    det_n = det.simplify().subs(V)
+    tr_n = tr.simplify().subs(V)
+    stability_class = stability_classify(det_n, tr_n)
+    plot_stability_diagram(labels=[stability_class],
+                        points=[(det_n, tr_n)],
+                        points_label=latex(LValues(V, join=lambda *args: Latex(*args, separator=', ')), mode='inline'))
+    if V[alpha] > V[beta]:
+        plt.title("$\\alpha>\\beta$")
+    else:
+        plt.title("$\\alpha<\\beta$")
+#+end_src
+
+#+begin_src jupyter-python :noweb yes :results output
+plt.figure(figsize=(6, 3))
+plt.subplot(1, 2, 1)
+plot_stability({
+    alpha: 0.8,
+    beta: 0.1
+}, *trace_dets[0])
+plt.subplot(1, 2, 2)
+plot_stability({
+    alpha: 0.1,
+    beta: 0.8
+}, *trace_dets[0])
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/0d88777391147a77738031cd437a94244b57e1c3.png]]

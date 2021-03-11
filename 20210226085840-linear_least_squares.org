@@ -2,6 +2,7 @@
 #+roam_tags: statistics linear least squares
 #+options: toc:nil num:nil
 
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
 
 * Setup :noexport:
 #+call: init()

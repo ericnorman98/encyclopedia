@@ -6,25 +6,32 @@
 #+call: init-plot-style()
 
 * Lib :noexport:
+:PROPERTIES:
+:header-args: :tangle encyclopedia/dynamical_systems.py :results silent
+:END:
 #+begin_src jupyter-python
 from sympy import *
 from pyorg.latex import *
 import matplotlib.pyplot as plt
 import numpy as np
-from stability_analysis import SteadyStates, StabilityAnalysis
+from encyclopedia.stability_analysis import SteadyStates, StabilityAnalysis
+from scipy.integrate import solve_ivp
 #+end_src
 
 #+begin_src jupyter-python
 class DynamicalSystem(Expr):
-    def __new__(cls, model_rhs, variables, t):
+    def __new__(cls, model_rhs, variables, t, params=[]):
         model_lhs = Matrix([var.diff(t) for var in variables])
         if type(model_rhs) == list:
             model_rhs = Matrix(model_rhs)
-            
+
         ex = Expr.__new__(cls, model_lhs, model_rhs)
         ex._model_lhs = model_lhs
         ex._model_rhs = model_rhs
         ex._variables = variables
+        ex._params = params
+        ex._lambda = lambdify(variables+params+[t], model_rhs, 'numpy')
+        ex._t = t
         return ex
 
     @property
@@ -33,16 +40,34 @@ class DynamicalSystem(Expr):
     @property
     def lhs(self):
         return self._model_lhs
-    
+
     @property
     def variables(self):
         return self._variables
 
-    def steady_states(self):
-        return SteadyStates(self)
-    
-    def stability_analysis(self):
-        return StabilityAnalysis(SteadyStates(self))
+    @property
+    def parameters(self):
+        return self._params
+
+    @property
+    def size(self):
+        return len(self._variables)
+
+    def remove_nonlin(self):
+        return DynamicalSystem(self.rhs.subs([(u*v, 0) for u in self.variables for v in self.variables]),
+                               self.variables, self._t, params=self._params)
+
+    def __call__(self, t, y, *args):
+        return self._lambda(*y, *args, t)
+
+    def integrate(self, t_span, y0, **kwargs):
+        return solve_ivp(self, t_span, y0, vectorized=True, **kwargs)
+
+    def steady_states(self, **kwargs):
+        return SteadyStates(self, **kwargs)
+
+    def stability_analysis(self, **kwargs):
+        return StabilityAnalysis(self, **kwargs)
 
     def _latex(self, printer):
         return printer._print(LMatEq(self._model_lhs, self._model_rhs))
@@ -57,16 +82,38 @@ class DynamicalSystem(Expr):
 #+begin_src jupyter-python
 x, y = symbols('x y', cls=Function)
 t = symbols('t')
-DynamicalSystem([
-    x(t)+2*y(t),
-    4*x(t)+y(t)/2,
+system = DynamicalSystem([
+    x(t)+y(t)/3,
+    2*x(t)+y(t)/2,
 ], [x(t), y(t)], t)
+system
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{array}{l}
-\frac{d}{d t} x{\left(t \right)} = x{\left(t \right)} + 2 y{\left(t \right)}\\
-\frac{d}{d t} y{\left(t \right)} = 4 x{\left(t \right)} + \frac{y{\left(t \right)}}{2}
+\frac{d}{d t} x{\left(t \right)} = x{\left(t \right)} + \frac{y{\left(t \right)}}{3}\\
+\frac{d}{d t} y{\left(t \right)} = 2 x{\left(t \right)} + \frac{y{\left(t \right)}}{2}
 \end{array}\end{equation}
 :END:
+
+#+begin_src jupyter-python
+system(1, 1).shape
+#+end_src
+
+#+RESULTS:
+| 2 | 1 |
+
+#+begin_src jupyter-python
+system.integrate(np.array([0, 10]), np.array([1, 1])).y
+#+end_src
+
+#+RESULTS:
+: array([[1.00000000e+00, 1.11304851e+00, 2.59981713e+00, 8.44635917e+00,
+:         3.16050626e+01, 1.24989093e+02, 5.05075389e+02, 2.05860055e+03,
+:         8.41982631e+03, 3.44871195e+04, 1.41341094e+05, 5.79411420e+05,
+:         2.37547371e+06, 7.76943324e+06],
+:        [1.00000000e+00, 1.21148698e+00, 3.95278339e+00, 1.46027689e+01,
+:         5.66181228e+01, 2.25860320e+02, 9.14527805e+02, 3.72915457e+03,
+:         1.52540697e+04, 6.24812064e+04, 2.56072615e+05, 1.04974117e+06,
+:         4.30373494e+06, 1.40761747e+07]])

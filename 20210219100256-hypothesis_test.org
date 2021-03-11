@@ -1,5 +1,7 @@
-#+title: Hypothesis testing
-#+roam_tags: statistics hypothesis testing test
+#+title: Hypothesis test
+#+roam_tags: statistics hypothesis test
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
 
 * Setup :noexport:
 #+call: init()
@@ -74,7 +76,7 @@ class HypothesisTest(Expr):
 #+end_src
 
 
-* Hypothesis testing
+* Hypothesis test
 #+begin_src jupyter-python
 p_value = PValue(t, T, TestSide.LEFT)
 hypothesis = HypothesisTest(LText("the effect of interest is zero"),
@@ -97,9 +99,9 @@ compare it to the unknown distribution $T$. There are three types of p-values
 
 #+begin_src jupyter-python
 LArray(
-    LJoin(PValue(t, T, TestSide.LEFT).show(), "\\quad", LText("one-sided left-tailed test")),
-    LJoin(PValue(t, T, TestSide.RIGHT).show(), "\\quad", LText("one-sided right-tailed test")),
-    LJoin(PValue(t, T, TestSide.BOTH).show(), "\\quad", LText("two-sided test")),
+    Latex(PValue(t, T, TestSide.LEFT).show(), "\\quad", LText("one-sided left-tailed test")),
+    Latex(PValue(t, T, TestSide.RIGHT).show(), "\\quad", LText("one-sided right-tailed test")),
+    Latex(PValue(t, T, TestSide.BOTH).show(), "\\quad", LText("two-sided test")),
 )
 #+end_src
 

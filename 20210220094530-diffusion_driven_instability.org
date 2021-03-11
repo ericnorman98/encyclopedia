@@ -1,5 +1,5 @@
 #+title: Diffusion driven instability
-#+roam_tags: dynamical systems population diffusion instability
+#+roam_tags: dynamical systems population diffusion stability
 
 * Setup :noexport:
 #+call: init()

@@ -38,7 +38,7 @@
 : dark
 
 #+begin_src elisp
-(setq encyclopedia-theme--current encyclopedia-theme-default)
+(setq encyclopedia-theme-current encyclopedia-theme-default)
 #+end_src
 
 #+RESULTS:
@@ -173,6 +173,12 @@
 : encyclopedia-babel-get-header-args:jupyter-python
 
 * Document
+** Files
+#+begin_src elisp
+(defun encyclopedia-document-list-documents ()
+  (directory-files encyclopedia-root-path nil encyclopedia-match-file-regexp))
+#+end_src
+
 ** Slug
 #+begin_src elisp
 (defun encyclopedia-document-title-to-slug (title)
@@ -184,7 +190,7 @@
   (encyclopedia-document-title-to-slug (car (org-roam--extract-titles-title))))
 #+end_src
 
-** Tags
+** COMMENT Tags
 #+begin_src elisp
 (defun encyclopedia-document-get-tags ()
   (interactive)
@@ -197,6 +203,24 @@
     (insert-file-contents file)
     (encyclopedia-document-get-tags)))
 #+end_src
+
+#+begin_src elisp
+(defun encyclopedia-document-get-tags-files ()
+  (delete-dups (apply 'append (let ((documents (encyclopedia-document-list-documents)))
+                                (mapcar (lambda (file)
+                                          (with-temp-buffer
+                                            (insert-file-contents file)
+                                            (if (encyclopedia-document-thumb-extract)
+                                                (encyclopedia-document-get-tags)))) documents)))))
+#+end_src
+
+#+begin_src elisp :results replace :tangle no
+(encyclopedia-document-get-tags-files)
+#+end_src
+
+#+RESULTS:
+| statistics | hypothesis | testing | test | dynamical | systems | population | traveling | waves | diffusion | instability | kuramoto | model | oscillator | synchronisation | fractal | tree | recursion | ricker | map | chaos | graph | theory | erdos | renyi | small | world | network | mandelbrot | set | distribution | normal | henon | attractor | linear | least | squares |
+
 
 ** Backlinks
 #+begin_src elisp
@@ -245,6 +269,7 @@
 #+begin_src elisp
 (defun encyclopedia-export-org-export-preprocessor (backend)
   (let ((links (encyclopedia-document-backlinks-file (buffer-file-name))))
+    (flush-lines "^- tags ::")
     (save-excursion
       (goto-char (point-min))
       (insert (encyclopedia-export-latex-generate-headers encyclopedia-theme-current))
@@ -314,7 +339,8 @@
 #+end_src
 
 #+begin_src elisp
-(defvar encyclopedia-publish-postamble-format "<p class=\"postamble\">Last Updated %C.</p>")
+(defvar encyclopedia-publish-postamble-format (concat "<p class=\"postamble\">Last Updated %C.</p>\n"
+                                                      "<script type=\"application/javascript\" src=\"/js/main.js\"></script>"))
 #+end_src
 
 #+begin_src elisp
@@ -327,22 +353,35 @@
 (defvar encyclopedia-publish-sitemap-title "Encyclopedia")
 #+end_src
 
+Old tag stuff
+#+begin_comment
 #+begin_src elisp
-(defvar encyclopedia-publish-tag-format "@@html:<span class=\"tag badge\">@@%s@@html:</span>@@")
+(defvar encyclopedia-publish-tag-format "@@html:<span class=\"tag badge\" onclick=\"addFilter('%s')\">@@%s@@html:</span>@@")
 #+end_src
+#+end_comment
+#+begin_comment
+#+begin_src elisp
+(defvar encyclopedia-publish-all-tags '())
+#+end_src
+#+end_comment
 
 ** Sitemap
 #+begin_src elisp
 (defun encyclopedia-publish-sitemap-format-entry (entry _style project)
   "Return string for each ENTRY in PROJECT."
+  (message entry)
   (with-temp-buffer
     (insert-file-contents entry)
     (let* ((title (org-publish-find-title entry project))
            (slug (encyclopedia-document-title-to-slug title))
            (thumb (encyclopedia-document-thumb-extract))
-           (tags (encyclopedia-document-get-tags)))
+           ;; (tags (encyclopedia-document-get-tags))
+           )
+      (message title)
       (if (and thumb (file-exists-p thumb))
-          (concat "@@html:<div class=\"sitemap-item\">@@\n"
+          (concat "@@html:<div class=\"sitemap-item "
+                  ;; (mapconcat 'identity tags " ")
+                  "\">@@\n"
                   "@@html:<div class=\"sitemap-item-thumb\">@@\n"
                   "[[file:"thumb"]]\n"
                   "@@html:</div>@@\n"
@@ -352,8 +391,8 @@
                   (format-time-string "%d %h %Y"
                                       (org-publish-find-date entry project))
                   "@@html:</div>@@\n"
-                  (mapconcat (lambda (tag)
-                               (format encyclopedia-publish-tag-format tag)) tags "")
+                  ;; (mapconcat (lambda (tag)
+                  ;;              (format encyclopedia-publish-tag-format tag tag)) tags "")
                   "@@html:</div>@@\n"
                   "@@html:</div>@@\n")
         ""))))
@@ -361,18 +400,26 @@
 
 #+begin_src elisp
 (defun encyclopedia-publish-sitemap-function (title list)
-  (concat "#+title: " title "\n\n"
-          "\n#+begin_sitemap\n\n"
-          (mapconcat (lambda (li)
-                       (format "%s" (car li)))
-                     (seq-filter #'car (cdr list))
-                     "")
-          "\n#+end_sitemap\n"))
+  (message "Sitemap function")
+  (let (
+        ;; (tags encyclopedia-publish-all-tags)
+        )
+    (concat "#+title: " title "\n\n"
+            ;; "\n#+begin_filtering\n"
+            ;; "Filter tags: @@html:<input type=\"text\" id=\"filter\"><button onclick=\"clearFilter()\">Clear</button>@@"
+            ;; "\n#+end_filtering\n"
+            "\n#+begin_sitemap\n"
+            (mapconcat (lambda (li)
+                         (format "%s" (car li)))
+                       (seq-filter #'car (cdr list))
+                       "")
+            "\n#+end_sitemap\n")))
 #+end_src
 
 ** Configure
 #+begin_src elisp
 (defun encyclopedia-publish-configure (publish-dir)
+  (message (concat "Configure encyclopedia publising to " publish-dir))
   (setq org-export-with-toc nil
         org-export-with-author t
         org-export-with-email nil
@@ -380,9 +427,11 @@
         org-export-with-section-numbers nil
 
         org-html-scripts (concat org-html-scripts)
-        org-html-head encyclopedia-publish-head-extra
+        ;; org-html-head encyclopedia-publish-head-extra
 
         org-html-postamble encyclopedia-publish-postamble-format
+
+        ;; encyclopedia-publish-all-tags (encyclopedia-document-get-tags-files)
 
         org-publish-project-alist
         `(("encyclopedia"
@@ -390,7 +439,7 @@
           ("encyclopedia-notes"
            :base-directory ,encyclopedia-root-path
            :base-extension "org"
-           :exclude "index.org\\|setup.org"
+           :exclude "index.org\\|setup.org\\|lob.org\\|encyclopedia.org"
            :publishing-directory ,publish-dir
            :publishing-function org-html-publish-to-html
            :recursive t
@@ -401,7 +450,13 @@
            :html-preamble ,encyclopedia-publish-preamble
            :html-head-include-scripts nil
            :html-head-include-default-style nil
-           :html-head-extra ,encyclopedia-publish-head-extra
+           :html-head-extra ,(concat encyclopedia-publish-head-extra
+                                     ;; "<script type=\"application/javascript\">\n"
+                                     ;; "window.tags = ["
+                                     ;; (mapconcat '(lambda (tag) (format "\"%s\"" tag)) encyclopedia-publish-all-tags ",")
+                                     ;; "];\n"
+                                     ;; "</script>"
+                                     )
            :html-container "section"
            :htmlized-source nil
            :auto-sitemap t
@@ -414,7 +469,7 @@
            )
           ("encyclopedia-static"
            :base-directory ,encyclopedia-root-path
-           :base-extension "css\\|js\\|png\\|jpg\\|gif\\|svg\\|svg\\|json\\|pdf\\|mp4"
+           :base-extension "css\\|js\\|png\\|jpg\\|gif\\|svg\\|svg\\|json\\|mp4"
            :publishing-directory ,publish-dir
            :exclude "node_modules"
            :recursive t
@@ -430,7 +485,7 @@
 #+begin_src elisp
 (defun encyclopedia-tangle-files ()
   (interactive)
-  (let ((files (directory-files encyclopedia-root-path nil encyclopedia-match-file-regexp)))
+  (let ((files (encyclopedia-document-list-documents)))
     (cl-loop for file in files
              do (message (concat "Tangling " file "..."))
              do (encyclopedia-tangle-file file))))

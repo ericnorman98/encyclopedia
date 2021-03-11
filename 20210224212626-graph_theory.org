@@ -1,5 +1,5 @@
-#+title: Graphs and networks
-#+roam_tags: graph theory network
+#+title: Graph theory
+#+roam_tags: graph theory
 
 * Setup :noexport:
 #+call: init()
@@ -38,14 +38,7 @@ def degree_hist(G):
     plt.hist(dist, bins=2000, density=True, rwidth=1, width=1.1)
 #+end_src
 
-* Graphs and networks
-- [[file:20210228010349-average_path_length.org][Average path length]]
-- [[file:20210224212955-clustering_coefficient.org][Clustering coefficient]]
-- [[file:20210224212824-small_world_network.org][Small world network]]
-- [[file:20210224212714-erdos_renyi_model.org][Erdos-renyi model]]
-- [[file:20210224212907-preferential_growth_model.org][Preferential growth model]]
-
-
+* Graph theory
 ** COMMENT Graph diameter
 #+begin_src python
 def maximum_path_length(A):

@@ -23,7 +23,7 @@ from hypothesis_testing import *
 
 * Friedman's test
 The Friedman's test is a non-parametric, two-way analysis of variance on ranks,
-[[file:20210219100256-hypothesis_testing.org][hypothesis test]]. It does not make any assumptions about the distribution.
+[[file:20210219100256-hypothesis_test.org][hypothesis test]]. It does not make any assumptions about the distribution.
 
 In this test you rank each column,
 

@@ -1,6 +1,8 @@
 #+title: Average path length
 #+roam_tags:
 
+- tags :: [[file:20210224212626-graph_theory.org][Graph theory]]
+
 * Setup :noexport:
 #+call: init()
 #+call: init-plot-style()

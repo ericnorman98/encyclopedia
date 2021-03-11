@@ -15,100 +15,144 @@ from sympy import *
 from pyorg.latex import *
 import matplotlib.pyplot as plt
 import numpy as np
+from encyclopedia.calculation_step import CalculationStep, Calculation
+#+end_src
+
+** Steady states
+#+begin_src jupyter-python
+class SystemZeroStep(CalculationStep):
+    def __call__(self, system):
+        return system.rhs.applyfunc(lambda e: Eq(e, 0)), system.variables
+
+    def show(self, system_zeros, variables):
+        return LArray(*system_zeros)
 #+end_src
 
 #+begin_src jupyter-python
-class SteadyStatesEvaluated(Expr):
-    def __new__(cls, states, deps):
-        ex = Expr.__new__(cls, *[val for sol in states for val in sol.values()])
-        ex._steady_states = states
-        ex._deps = deps
-        return ex
+class SteadyStatesSolveStep(CalculationStep):
+    def __call__(self, system_zero, deps):
+        return solve(
+            list(system_zero)+list(self.args),
+            deps,
+            dict=True
+        ), deps
 
-    def __getitem__(self, idx):
-        return self._steady_states[idx]
-
-    def __len__(self):
-        return len(self._steady_states)
-
-    def __iter__(self):
-        yield from self._steady_states
-
-    @property
-    def states(self):
-        return self._steady_states
-
-    @property
-    def vars(self):
-        return self._deps
-
-    def _latex(self, printer):
-        return printer._print(LValues(*self._steady_states))
+    def show(self, steady_states, deps):
+        return LArray(*steady_states)
 #+end_src
 
 #+begin_src jupyter-python
-class SteadyStates(Expr):
-    def __new__(cls, system):
-        ex = Expr.__new__(cls, system.rhs)
-        ex._model_zero = system.rhs.applyfunc(lambda e: Eq(e, 0))
-        ex._model_rhs = system.rhs
-        ex._deps = system.variables
-        return ex
+class SteadyStatesStarStep(CalculationStep):
+    def __call__(self, states, deps):
+        self.stars = list(map(lambda e: IndexedBase(f'{e.name}^*'), deps))
+        return {star[i]: v
+                       for i, s in enumerate(states)
+                       for star, v in zip(self.stars, s.values())},
 
-    def _latex(self, printer):
-        return printer._print(LCases(*self._model_zero))
-
-    def doit(self, **kwargs):
-        return SteadyStatesEvaluated(solve(self._model_rhs, self._deps, dict=True), self._deps)
+    def show(self, star_steady):
+        return LValues(star_steady)
 #+end_src
 
 #+begin_src jupyter-python
-class StabilityAnalysis(Expr):
-    def __new__(cls, *args):
-        if len(args) == 1:
-            system = args[0]
-            jac = system.rhs.jacobian(system.variables)
-            trace = Trace(jac)
-            det = Determinant(jac)
-            ex = Expr.__new__(cls, jac, trace, det)
-            ex._jac = jac
-            ex._trace = trace
-            ex._det = det
-            return ex
-        elif len(args) == 3:
-            jac, trace, det = args
-            ex = Expr.__new__(cls, jac, trace, det)
-            ex._jac = jac
-            ex._trace = trace
-            ex._det = det
-            return ex
-
-    @property
-    def stability_matrix(self):
-        return self._jac
-    
-    @property
-    def determinant(self):
-        return self._det
-    
-    @property
-    def trace(self):
-        return self._trace
-
-    def doit(self):
-        return StabilityAnalysis(self._jac, self._trace.doit(), self._det.doit())
-
-    def subs(self, *args):
-        return StabilityAnalysis(self._jac.subs(*args),
-                                 self._trace.subs(*args),
-                                 self._det.subs(*args))
-
-    def at(self, steady_states):
-        return Matrix([self.doit().subs(state) for state in steady_states])
+class SteadyStates(Calculation):
+    def __new__(cls, system, add_eqs=[]):
+        return Calculation(system, steps=[
+            SystemZeroStep(),
+            SteadyStatesSolveStep(*add_eqs),
+            SteadyStatesStarStep(),
+        ])
 #+end_src
 
+** Stability analysis
+#+begin_src jupyter-python
+class StabilityMatrixStep(CalculationStep):
+    def __call__(self, system):
+        return system.rhs.jacobian(system.variables).applyfunc(lambda e: e.simplify()),
+
+    def show(self, stability_matrix):
+        return Eq(*self.args, stability_matrix)
+#+end_src
+
+#+begin_src jupyter-python
+class TraceDetStep(CalculationStep):
+    def __call__(self, stability_matrix):
+        return Trace(stability_matrix), Determinant(stability_matrix)
+
+    def show(self, trace, determinant):
+        if len(self.args) > 0:
+            J = self.args[0]
+            return LArray(Eq(Trace(J), trace),
+                          Eq(Determinant(J), determinant))
+        else:
+            return LArray(trace, determinant)
+#+end_src
+
+#+begin_src jupyter-python
+class SubstituteStep(CalculationStep):
+    def __call__(self, trace, determinant):
+        return [LCases(trace.subs(steady), determinant.subs(steady)) for steady in self.args]
+
+    def show(self, *args):
+        return LArray(*args)
+#+end_src
+
+#+begin_src jupyter-python
+class StabilityAnalysis(Calculation):
+    def __new__(cls, system, J=None):
+        if J is None:
+            J = MatrixSymbol('\\mathbb{J}', system.size, system.size)
+        return Calculation(system, steps=[
+            StabilityMatrixStep(J),
+            TraceDetStep(J),
+            SubstituteStep(*system.steady_states()().value[0])
+        ])
+#+end_src
+
+** Classification
 #+begin_src jupyter-python :noweb yes
-def plot_stability_diagram(xmin=-0.1, xmax=0.5):
+classifications = {
+    "saddle": "saddle point", "uniform": "uniform motion",
+    "center": "center", "line_unstable": "line of unstable points",
+    "line_stable": "line of stable points", "degenerate_sink": "degenerate sink",
+    "degenerate_source": "degenerate source", "spiral_sink": "spiral sink",
+    "spiral_source": "spiral source", "source": "source", "sink": "sink"
+}
+
+
+
+def stability_classify(det, tr):
+    delta = tr**2-4*det
+    if det < 0:
+        return "saddle"
+    elif det == 0 and tr == 0:
+        return "uniform"
+    elif tr == 0 and det > 0:
+        return "center"
+    elif det == 0 and tr > 0:
+        return "line_unstable"
+    elif det == 0 and tr < 0:
+        return "line_stable"
+    elif tr > 0 and delta == 0:
+        return "degenerate_sink"
+    elif tr < 0 and delta == 0:
+        return "degenerate_source"
+    elif tr < 0 and delta < 0:
+        return "spiral_sink"
+    elif tr > 0 and delta < 0:
+        return "spiral_source"
+    elif tr > 0 and delta > 0:
+        return "source"
+    elif tr < 0 and delta > 0:
+        return "sink"
+#+end_src
+
+** Plotting
+#+begin_src jupyter-python :noweb yes
+def plot_stability_diagram(labels, xmin=-0.1, xmax=0.5, selected_colors=None, points=None, points_label="classification"):
+    if points is not None:
+        points = np.array(points, dtype=float)
+        xmin = np.minimum(points[:, 0].min(), -0.1)
+        xmax = np.maximum(points[:, 0].max(), 0.5)
     delta = np.linspace(0.0, xmax, 500)
     parab = np.sqrt(4*delta)
     plt.xticks([0], [0])
@@ -117,27 +161,61 @@ def plot_stability_diagram(xmin=-0.1, xmax=0.5):
     ymax = xmax*3
     plt.xlim([xmin, xmax])
     plt.ylim([ymin, ymax])
-    plt.plot(delta, delta*0, color=<<color("green")>>, ls=':', label="centers")
-    plt.plot(delta, parab, color=<<color("green")>>, ls='--', label="stars, degenerate nodes")
-    plt.plot(delta, -parab, color=<<color("green")>>, ls='--')
-    plt.axvline(0, color=<<color("green")>>, label="non-isolated fixed points")
-    plt.fill_between(delta, parab, ymax, color=<<color("magenta")>>, label="unstable nodes")
-    plt.fill_between(delta, 0, parab, color=<<color("red")>>, label="unstable spirals")
-    plt.fill_between(delta, -parab, 0, color=<<color("orange")>>, label="stable spirals")
-    plt.fill_between(delta, -parab, ymin, color=<<color("yellow")>>, label="stable nodes")
-    plt.fill_between(np.linspace(xmin, 0), ymin, ymax, color=<<color("brightblack3")>>, label="saddle points")
-    plt.legend()
+    selc = []
+    if selected_colors:
+        selc = selected_colors
+    else:
+        selc = map(lambda l: <<color("green")>>, labels)
+    fg = <<color("brightblack4")>>
+    bg = <<color("bg")>>
+    notc = [bg, fg, fg, fg, fg, fg, fg, bg, bg, bg, bg]
+
+    saddle = plt.fill_between(np.linspace(xmin, 0), ymin, ymax, color=notc)
+
+    uniform = plt.scatter(0, 0, zorder=2)
+
+    center, = plt.plot(delta, delta*0, ls=':', zorder=1)
+
+    line_unstable = plt.vlines(0, 0, ymax, zorder=1)
+    line_stable = plt.vlines(0, ymin, 0, zorder=1)
+
+    degenerate_sink, = plt.plot(delta, -parab, ls='--', zorder=1)
+    degenerate_source, = plt.plot(delta, parab, ls='--', zorder=1)
+
+    spiral_source = plt.fill_between(delta, 0, parab, zorder=0)
+
+    spiral_sink = plt.fill_between(delta, -parab, 0, zorder=0)
+
+    source = plt.fill_between(delta, parab, ymax, zorder=0)
+    sink = plt.fill_between(delta, -parab, ymin, zorder=0)
+
+    handles = [saddle, uniform, center, line_unstable, line_stable,
+               degenerate_sink, degenerate_source, spiral_sink,
+               spiral_source, source, sink]
+    for h, c in zip(handles, notc):
+        h.set_color(c)
+    handles = zip(handles, classifications.keys())
+    handles = list(filter(lambda h: h[1] in labels, handles) if type(labels) == list else handles)
+    for (h, key), c in zip(handles, selc):
+        h.set_color(c)
+    handles = list(map(lambda h: (h[0], classifications[h[1]]), handles))
+
+    if points is not None:
+        points = np.array(points)
+        classpoints = plt.scatter(points[:, 0], points[:, 1], color=<<color("fg-hc")>>, zorder=4)
+        handles.append((classpoints, points_label))
+
+    if len(handles) > 0:
+        plt.legend(map(lambda h: h[0], handles),
+                   map(lambda h: h[1], handles))
+
     plt.xlabel("$\\Delta$")
     plt.ylabel("$\\tau$")
-plot_stability_diagram()
 #+end_src
-
-#+RESULTS:
-[[file:./.ob-jupyter/f00d4b9515c6e6111ec40cbfd289625458f40afc.png]]
 
 * Stability analysis
 #+begin_src jupyter-python
-from dynamical_systems import DynamicalSystem
+from encyclopedia.dynamical_systems import DynamicalSystem
 #+end_src
 
 #+RESULTS:
@@ -149,7 +227,7 @@ t, mu = symbols('t mu', real=True)
 system = DynamicalSystem([
     -mu*y(t)+x(t)-x(t)*y(t),
     mu*x(t)-x(t)**2+x(t)
-], [x(t), y(t)], t)
+], [x(t), y(t)], t, params=[mu])
 
 system
 #+END_SRC
@@ -164,66 +242,85 @@ system
 
 #+begin_src jupyter-python
 steady_states = system.steady_states()
+steady_states_subs = steady_states()
 steady_states
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\begin{cases}
+\begin{equation}\begin{array}{l}
 - \mu y{\left(t \right)} - x{\left(t \right)} y{\left(t \right)} + x{\left(t \right)} = 0\\
 \mu x{\left(t \right)} - x^{2}{\left(t \right)} + x{\left(t \right)} = 0
-\end{cases}\end{equation}
+\end{array}\end{equation}
 :END:
 
 #+begin_src jupyter-python
-steady_states_eval = steady_states.doit()
-steady_states_eval
+steady_states_star = steady_states_subs()
+steady_states_star
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{cases}
-x{\left(t \right)} = 0\\
-y{\left(t \right)} = 0\\
-x{\left(t \right)} = \mu + 1\\
-y{\left(t \right)} = \frac{\mu + 1}{2 \mu + 1}
+{x^{*}_{0}} = 0\\
+{y^{*}_{0}} = 0\\
+{x^{*}_{1}} = \mu + 1\\
+{y^{*}_{1}} = \frac{\mu + 1}{2 \mu + 1}
 \end{cases}\end{equation}
 :END:
 
 #+begin_src jupyter-python
-stability_analysis = StabilityAnalysis(system)
-stability_analysis.stability_matrix
+stability_analysis = system.stability_analysis()
+stability_analysis
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\left[\begin{matrix}1 - y{\left(t \right)} & - \mu - x{\left(t \right)}\\\mu - 2 x{\left(t \right)} + 1 & 0\end{matrix}\right]\end{equation}
+\begin{equation}\mathbb{J} = \left[\begin{matrix}1 - y{\left(t \right)} & - \mu - x{\left(t \right)}\\\mu - 2 x{\left(t \right)} + 1 & 0\end{matrix}\right]\end{equation}
 :END:
 
 #+begin_src jupyter-python
-stability_analysis.trace.doit()
+stability_analysis_trace_det = stability_analysis()
+trace, det = stability_analysis_trace_det.doit()
+LArray(trace, det)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}1 - y{\left(t \right)}\end{equation}
+\begin{equation}\begin{array}{l}
+\operatorname{tr}\left(\mathbb{J} \right) = 1 - y{\left(t \right)}\\
+\operatorname{det}\left(\mathbb{J}\right) = \mu^{2} - \mu x{\left(t \right)} + \mu - 2 x^{2}{\left(t \right)} + x{\left(t \right)}
+\end{array}\end{equation}
 :END:
 
 #+begin_src jupyter-python
-stability_analysis.determinant.doit()
+stability_analysis_at = stability_analysis_trace_det()
+stability_analysis_at
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\mu^{2} - \mu x{\left(t \right)} + \mu - 2 x^{2}{\left(t \right)} + x{\left(t \right)}\end{equation}
+\begin{equation}\begin{array}{l}
+\begin{cases}
+\operatorname{tr}\left(\left[\begin{matrix}1 & - \mu\\\mu + 1 & 0\end{matrix}\right] \right)\\
+\operatorname{det}\left(\left[\begin{matrix}1 & - \mu\\\mu + 1 & 0\end{matrix}\right]\right)
+\end{cases}\\
+\begin{cases}
+\operatorname{tr}\left(\left[\begin{matrix}- \frac{\mu + 1}{2 \mu + 1} + 1 & - 2 \mu - 1\\- \mu - 1 & 0\end{matrix}\right] \right)\\
+\operatorname{det}\left(\left[\begin{matrix}- \frac{\mu + 1}{2 \mu + 1} + 1 & - 2 \mu - 1\\- \mu - 1 & 0\end{matrix}\right]\right)
+\end{cases}
+\end{array}\end{equation}
 :END:
 
 #+begin_src jupyter-python
-stability_analysis_at = stability_analysis.at(steady_states_eval)
-plot_stability_diagram()
+get_points = lambda V: [(det.doit().subs(V), trace.doit().subs(V)) for trace, det in stability_analysis_at.value()]
+points = get_points({mu:-1.1})
+classes = [stability_classify(*point) for point in points]
+plot_stability_diagram(classes, points=points)
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/b700488140715b47cd7b3548740dd0fb1465fb1c.png]]
-
-
+:RESULTS:
+: -0.1200000000000001 0.5
+[[file:./.ob-jupyter/126a396cc083826b86963ea45077dfc45b5c3ddd.png]]
+:END:

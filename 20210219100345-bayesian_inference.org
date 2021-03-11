@@ -1,6 +1,8 @@
 #+title: Bayesian inference
 #+roam_tags: statistics bayes bayesian inference
 
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
 * Bayesian inference
 #+begin_src jupyter-python
 H, E = symbols('H E')
