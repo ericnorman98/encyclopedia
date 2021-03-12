@@ -150,22 +150,26 @@ V = {
 }
 V[I0] = int(V[N]*(V[alpha]-V[beta])/V[alpha])
 V[S0] = V[N] - V[I0]
+times = [5, T_ext, T_ext*100]
 trajectories = 10000
-t_hist, n_hist = run_gillespie_until(T_ext, trajectories, V)
-plt.figure(figsize=(4, 4))
-hist, bins = np.histogram(n_hist[-1, :], bins=range(0, V[N]), density=True)
-bins = bins[1:]
-plt.xlim([0, V[N]])
-plt.scatter(bins, 1/hist)
-plt.yscale('log')
-plt.title(f"t={T_ext:.2f}")
-plt.axvline(V[I0], color=<<color("blue")>>)
-plt.xlabel("$n_t$")
-plt.ylabel("$P(n_t)$")
+plt.figure(figsize=(3*4, 4))
+for i, t in enumerate(times):
+    plt.subplot(1, 3, i+1)
+    t_hist, n_hist = run_gillespie_until(t, trajectories, V)
+    hist, bins = np.histogram(n_hist, bins=range(0, V[N]), density=True)
+    bins = bins[1:]
+    plt.xlim([0, V[N]])
+    plt.scatter(bins, 1/hist)
+    plt.yscale('log')
+    t_max = t_hist[-1, :].max()
+    plt.title(f"t={t_max:.2f}")
+    plt.axvline(V[I0], color=<<color("blue")>>)
+    plt.xlabel("$n_t$")
+    plt.ylabel("$P(n_t)$")
 # plt.legend()
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-[[file:./.ob-jupyter/7b7a1da07f56b75a82720ccc24cd01ca9ac7c42e.png]]
+[[file:./.ob-jupyter/135a5d8eaf21ac5dfd598467a0e64174d48e2e83.png]]
 :END:
