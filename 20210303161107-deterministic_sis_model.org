@@ -50,9 +50,11 @@ class DeterministicSISModel(DynamicalSystem):
 #+end_src
 
 * Deterministic SIS model
+The SIS (Susceptible, Infectious, Susceptible) model is a compartmental model
+for modeling infectious diseases.
+
 #+begin_src jupyter-python
 model = DeterministicSISModel()
-
 model
 #+end_src
 
@@ -64,23 +66,46 @@ model
 \end{array}\end{equation}
 :END:
 
+#+name: src:fig:simulation
 #+begin_src jupyter-python :results output :noweb yes
-model.plot([0, 50], {
+V = {
     S0: 95,
     I0: 5,
     alpha: 0.5,
     beta: 0.1
-})
+}
+plt.title(latex(LValues(V, join=LComma), mode='inline'))
+model.plot([0, 50], V)
 #+end_src
 
-#+RESULTS:
-[[file:./.ob-jupyter/f49a3b48092e32935e9e3c7bede58a9b711c9d1c.png]]
+#+caption: A simulation of the SIS model with parameters .
+#+attr_latex: scale=0.75
+#+label: fig:simulation
+#+RESULTS: src:fig:simulation
+[[file:./.ob-jupyter/3eda243b06aa520a83c17f475a132438f368abc8.png]]
 
+** Steady states
+To calculate the steady states, we can simplify out expressions by realizing
+that the sum of the two compartments is constant. We will define this as $N$.
 #+begin_src jupyter-python
 SI_consteq = Eq(S(t)+I(t),N)
 steady_eq_sys = model.rhs.applyfunc(lambda e: Eq(e, 0))
 steady_states_uneval = model.steady_states(add_eqs=[SI_consteq])
-LImply(steady_states_uneval, Eq(model.lhs[0]+model.lhs[1],0), SI_consteq)
+LImply( Eq(model.lhs[0]+model.lhs[1],0), SI_consteq)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d t} I{\left(t \right)} + \frac{d}{d t} S{\left(t \right)} = 0 \Rightarrow I{\left(t \right)} + S{\left(t \right)} = N\end{equation}
+:END:
+
+Solving for where the
+#+begin_src jupyter-python
+steady_states_subs = steady_states_uneval()
+steady_states_stars = steady_states_subs()
+Sstar, Istar = steady_states_stars.step.stars
+steady_states = steady_states_stars.value[0]
+LImply(steady_states_uneval, steady_states_stars)
 #+end_src
 
 #+RESULTS:
@@ -88,20 +113,7 @@ LImply(steady_states_uneval, Eq(model.lhs[0]+model.lhs[1],0), SI_consteq)
 \begin{equation}\begin{array}{l}
 - \frac{\alpha I{\left(t \right)} S{\left(t \right)}}{I{\left(t \right)} + S{\left(t \right)}} + \beta I{\left(t \right)} = 0\\
 \frac{\alpha I{\left(t \right)} S{\left(t \right)}}{I{\left(t \right)} + S{\left(t \right)}} - \beta I{\left(t \right)} = 0
-\end{array} \Rightarrow \frac{d}{d t} I{\left(t \right)} + \frac{d}{d t} S{\left(t \right)} = 0 \Rightarrow I{\left(t \right)} + S{\left(t \right)} = N\end{equation}
-:END:
-
-#+begin_src jupyter-python
-steady_states_subs = steady_states_uneval()
-steady_states_stars = steady_states_subs()
-Sstar, Istar = steady_states_stars.step.stars
-steady_states = steady_states_stars.value[0]
-steady_states_stars
-#+end_src
-
-#+RESULTS:
-:RESULTS:
-\begin{equation}\begin{cases}
+\end{array} \Rightarrow \begin{cases}
 {S^{*}_{0}} = N\\
 {I^{*}_{0}} = 0\\
 {S^{*}_{1}} = \frac{N \beta}{\alpha}\\
@@ -126,8 +138,6 @@ betas_n = np.linspace(0.001, beta_max, n)
 Istar_lam = lambdify((N, alpha, beta), steady_states[Istar[1]])
 for i, alpha_n in enumerate(alphas_n):
     for j, beta_n in enumerate(betas_n):
-        # if alpha_n > beta_n:
-            # suscept_limits[i, j] = N_n*beta_n/alpha_n
         infect_limits[i, j] = Istar_lam(N_n, alpha_n, beta_n)
 
 fig, ax1 = plt.subplots(1, 1, figsize=(8, 4))
@@ -145,8 +155,9 @@ fig.colorbar(im, ax=ax1)
 #+caption: Steady states for the infectives evaluated for every combination of $\alpha$ and $\beta$ in the interval $(0, 2]$. The plot shows that $I(\infty)>0$ when $\alpha>\beta$.
 #+label: fig:param_infect_steady
 #+RESULTS: src:fig:param_infect_steady
-[[file:./.ob-jupyter/db196b4385fe2e3008e1c34fb20f5f2104b56001.png]]
+[[file:./.ob-jupyter/28f0138d282322519e621d2e02c911c2bfd3ad5f.png]]
 
+We can investigate the stability of the system by doing stability analysis, we start by
 #+begin_src jupyter-python
 stability_analysis = model.stability_analysis()
 stability_analysis.simplify()
