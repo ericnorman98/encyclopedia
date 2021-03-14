@@ -3,22 +3,17 @@
 
 - tags :: [[file:20210219102643-statistics.org][Statistics]]
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
-
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/estimator.py :results silent
-:END:
 
 #+begin_src jupyter-python
 import matplotlib.pyplot as plt
 import numpy as np
 from sympy import *
 from sympy.stats import *
-from pyorg.latex import *
+from pyorg.latex2 import *
 #+end_src
+
+#+RESULTS:
 
 * TODO Estimator
 #+begin_src jupyter-python
@@ -35,27 +30,24 @@ estimator
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\hat{\sigma}^{2}{\left(X_{1},X_{2} \right)} = \frac{X_{1}^{2}}{2} + \frac{X_{2}^{2}}{2}\end{equation}
+\begin{equation}\hat{\sigma}^{2}{\left(X_{1},X_{2} \right)}=\frac{X_{1}^{2}}{2} + \frac{X_{2}^{2}}{2}\end{equation}
 :END:
 
 #+begin_src jupyter-python
-LSteps(Expectation(estimator.lhs),
-    lambda e: e.subs(estimator.lhs, estimator.rhs),
-    lambda e: e.subs(estimator.lhs, estimator.rhs),
-    lambda e: e.expand(),
-    lambda e: Add(*[a.doit() for a in e.args], evaluate=False),
-    lambda e: e.doit()
-)
+LCalculation(
+    LSubsStep(estimator.lhs, estimator.rhs),
+    LExpandStep(),
+    LMapArgsStep(LAdd, LDoitStep()),
+    LDoitStep()
+).steps(Expectation(estimator.lhs))
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\begin{array}{l}
-E[\hat{\sigma}^{2}{\left(X_{1},X_{2} \right)}]\Rightarrow\\
-\quad \Rightarrow E[\frac{X_{1}^{2}}{2} + \frac{X_{2}^{2}}{2}]\Rightarrow\\
-\quad \Rightarrow E[\frac{X_{1}^{2}}{2} + \frac{X_{2}^{2}}{2}]\Rightarrow\\
-\quad \Rightarrow \frac{E[X_{1}^{2}]}{2} + \frac{E[X_{2}^{2}]}{2}\Rightarrow\\
-\quad \Rightarrow \frac{\sigma^{2}}{2} + \frac{\sigma^{2}}{2}\Rightarrow\\
-\quad \Rightarrow \sigma^{2}
-\end{array}\end{equation}
+\begin{equation}\begin{aligned}
+E[\hat{\sigma}^{2}{\left(X_{1},X_{2} \right)}]&=E[\frac{X_{1}^{2}}{2} + \frac{X_{2}^{2}}{2}]=\\
+&=\frac{E[X_{1}^{2}]}{2} + \frac{E[X_{2}^{2}]}{2}=\\
+&=\frac{\sigma^{2}}{2} + \frac{\sigma^{2}}{2}=\\
+&=\sigma^{2}
+\end{aligned}\end{equation}
 :END:
