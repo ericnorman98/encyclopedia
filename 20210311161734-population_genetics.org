@@ -1,5 +1,6 @@
 #+title: Population genetics
 #+roam_tags:
+#+PROPERTY: header-args :tangle encyclopedia/population_genetics.py
 
 * Setup :noexport:
 #+call: init()
@@ -20,58 +21,86 @@ from sympy.concrete.products import *
 #+end_src
 
 * Population genetics
+In population genetics, the probability of there being $j$ Single Nucleotide
+Polymorphisms (SNPs) with a sample size of $n$ is defined like this
 #+begin_src jupyter-python
 n, N, j = symbols('n N j', positive=True, integer=True)
 mu, theta = symbols('mu theta', positive=True, real=True)
-T, lam = symbols('T lambda', real=True, positive=True, cls=IndexedBase)
+T, lams = symbols('T lambda', real=True, positive=True, cls=IndexedBase)
 lam = lambda j: expand_func(binomial(j, 2)/N)
 Tj = lambda j: Exponential(f"T_{latex(j, mode='plain')}", lam(j))
-Tc = Sum(j*Tj(j), (j, 2, n))
-S = Poisson('S_n', mu*Tc)
-
-# Tc_eq = Eq(Tc, Sum(j*Tjl(j), (j, 2, n)))
-pdf = ((mu*Tc)**j/factorial(j))*exp(-mu*Tc)
-S_eq = Eq(Probability(Eq(S, j)), pdf)
+Tc = lambda n: Sum(j*Tj(j), (j, 2, n))
+Tcs = Symbol('T_c')
+S = lambda n: Poisson(f"S_{latex(n, mode='plain')}", mu*Tc(n))
+prob = lambda n, j: ((mu*Tc(n))**j/factorial(j))*exp(-mu*Tc(n))
+S_eq = Eq(Probability(Eq(S(n), j)), ((mu*Tcs)**j/factorial(j))*exp(-mu*Tcs))
 S_eq
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}P[S_{n} = j] = \frac{\left(\left(\mu \sum_{j=2}^{n} j T_{j}\right)^{j}\right) e^{- \mu \sum_{j=2}^{n} j T_{j}}}{j!}\end{equation}
+\begin{equation}P[S_{n} = j] = \frac{\left(T_{c} \mu\right)^{j} e^{- T_{c} \mu}}{j!}\end{equation}
+:END:
+where $\mu$ is the /mutation rate/ and $T_c$ is
+#+begin_src jupyter-python
+Eq(Tcs, Tc(n))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}T_{c} = \sum_{j=2}^{n} j T_{j}\end{equation}
 :END:
 
+The random variable $T_j$ is exponentially distributed with rate $\lambda_i$
 #+begin_src jupyter-python
-LSteps(Probability(Eq(S, 0)),
-       lambda e: Expectation(exp(-mu*j*Tj(j))),
-       lambda e: Product(e.rewrite(Integral), (j, 2, n)),
-       lambda e: Product(e.args[0].doit().args[0].args[0], (j, 2, n)),
-       lambda e: e.subs(2*N*mu, theta),
-       lambda e: e.simplify().subs(2*N*mu, theta),
-       lambda e: e.simplify()
+LEq(lams[j], binomial(j,2)/N, lam(j))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}{\lambda_{j}} = \frac{{\binom{j}{2}}}{N} = \frac{j \left(j - 1\right)}{2 N}\end{equation}
+:END:
+
+** Deriving the probability of no SNPs
+Here we can derive the probability of no SNPs for some sample size $n$ as
+follows
+#+begin_src jupyter-python
+LSteps(LEq(Probability(Eq(S(n), 0)), LExplain("expand the probability")), col_join=LEq)(
+    LStep(lambda e: Expectation(prob(n, 0))).explain("replace sum with product"),
+    LApplyStep(Product, (j, 2, n)).append(LReplaceStep(Sum, lambda *a: a[0])).explain("rewrite as integral"),
+    LRewriteStep(Integral).explain("evaluate integral"),
+    LReplaceInnerStep(Product, lambda *a: (a[0].doit().args[0].args[0], *a[1:])).explain("evaluate product"),
+    LDoitStep().explain("substitute ", Eq(2*N*mu, theta)),
+    LSubsStep(2*N*mu, theta).explain("simplify using Gamma function"),
+    LSimplifyStep(),
 )
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{array}{l}
-P[S_{n} = 0]\Rightarrow\\
-\quad \Rightarrow E[e^{- j \mu T_{j}}]\Rightarrow\\
-\quad \Rightarrow \prod_{j=2}^{n} \int\limits_{0}^{\infty} \frac{j \left(j - 1\right) e^{- T_{j} j \mu} e^{- \frac{T_{j} j \left(j - 1\right)}{2 N}}}{2 N}\, dT_{j}\Rightarrow\\
-\quad \Rightarrow \prod_{j=2}^{n} \frac{j - 1}{2 N \mu \left(1 + \frac{j - 1}{2 N \mu}\right)}\Rightarrow\\
-\quad \Rightarrow \prod_{j=2}^{n} \frac{j - 1}{\theta \left(1 + \frac{\frac{j}{2} - \frac{1}{2}}{N \mu}\right)}\Rightarrow\\
-\quad \Rightarrow \frac{\theta^{1 - n} \theta^{n - 1} \left(n - 1\right)!}{{\left(\theta + 1\right)}^{\left(n - 1\right)}}\Rightarrow\\
-\quad \Rightarrow \frac{\Gamma\left(n\right) \Gamma\left(\theta + 1\right)}{\Gamma\left(n + \theta\right)}
+P[S_{n} = 0] = \{\text{expand the probability}\} = \\
+\quad = E[e^{- \mu \sum_{j=2}^{n} j T_{j}}] = \{\text{replace sum with product}\} = \\
+\quad = \prod_{j=2}^{n} E[e^{- j \mu T_{j}}] = \{\text{rewrite as integral}\} = \\
+\quad = \prod_{j=2}^{n} \int\limits_{0}^{\infty} \frac{j \left(j - 1\right) e^{- T_{j} j \mu} e^{- \frac{T_{j} j \left(j - 1\right)}{2 N}}}{2 N}\, dT_{j} = \{\text{evaluate integral}\} = \\
+\quad = \prod_{j=2}^{n} \frac{j - 1}{2 N \mu \left(1 + \frac{j - 1}{2 N \mu}\right)} = \{\text{evaluate product}\} = \\
+\quad = \frac{\left(\frac{1}{2 N \mu}\right)^{1 - n} \left(\frac{1}{2 N \mu}\right)^{n - 1} \left(n - 1\right)!}{{\left(2 N \mu + 1\right)}^{\left(n - 1\right)}} = \{\text{substitute } 2 N \mu = \theta\} = \\
+\quad = \frac{\theta^{1 - n} \theta^{n - 1} \left(n - 1\right)!}{{\left(\theta + 1\right)}^{\left(n - 1\right)}} = \{\text{simplify using Gamma function}\} = \\
+\quad = \frac{\Gamma\left(n\right) \Gamma\left(\theta + 1\right)}{\Gamma\left(n + \theta\right)} \;\blacksquare
 \end{array}\end{equation}
 :END:
 
+** Deriving the distribution where $n=2$
+We can derive the distribution of SNPs where sample size is $n=2$ as follows
 #+begin_src jupyter-python
-steps = LSteps(Probability(Eq(S, j)),
-       lambda e: Expectation(pdf),
-       lambda e: e.replace(Sum, lambda *a: 2*Tj(2)),
-       lambda e: e.rewrite(Integral).replace(Integral, lambda *a: Integral(a[0].simplify(), *a[1:])),
-       lambda e: e.factor().replace(Integral, lambda *a: Integral(a[0].simplify(), *a[1:])),
-       lambda e: e.doit().factor(2*N*mu).subs(2*N*mu, theta),
-       lambda e: e.simplify().subs(2*N*mu, theta),
+steps = LSteps(LImply(Probability(Eq(S(2), j)), LExplain("expand probability")))(
+    LStep(lambda e: Expectation(prob(2, j))).explain("evaluate sums"),
+    LReplaceInnerStep(Expectation, lambda *a: (a[0].doit(),)).explain("rewrite as integral"),
+    LRewriteStep(Integral).explain("factor integral"),
+    LFactorStep().explain("evaluate integral"),
+    LDoitStep().explain("simplify fraction"),
+    LSimplifyStep().explain("substitute ", Eq(2*N*mu, theta)),
+    LSubsStep(2*N*mu, theta),
 )
 steps
 #+end_src
@@ -79,12 +108,18 @@ steps
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{array}{l}
-P[S_{n} = j]\Rightarrow\\
-\quad \Rightarrow E[\frac{\left(\left(\mu \sum_{j=2}^{n} j T_{j}\right)^{j}\right) e^{- \mu \sum_{j=2}^{n} j T_{j}}}{j!}]\Rightarrow\\
-\quad \Rightarrow E[\frac{\left(2 \mu T_{2}\right)^{j} e^{- 2 \mu T_{2}}}{j!}]\Rightarrow\\
-\quad \Rightarrow \int\limits_{0}^{\infty} \frac{\left(2 T_{2} \mu\right)^{j} e^{- T_{2} \left(2 \mu + \frac{1}{N}\right)}}{N j!}\, dT_{2}\Rightarrow\\
-\quad \Rightarrow \frac{2^{j} \mu^{j} \int\limits_{0}^{\infty} T_{2}^{j} e^{- T_{2} \left(2 \mu + \frac{1}{N}\right)}\, dT_{2}}{N j!}\Rightarrow\\
-\quad \Rightarrow \frac{2^{j} \mu^{j} \left(\frac{\theta + 1}{N}\right)^{- j} \Gamma\left(j + 1\right)}{\left(\theta + 1\right) j!}\Rightarrow\\
-\quad \Rightarrow \theta^{j} \left(\theta + 1\right)^{- j - 1}
+P[S_{2} = j] \Rightarrow \{\text{expand probability}\} \Rightarrow \\
+\quad \Rightarrow E[\frac{\left(\left(\mu \sum_{j=2}^{2} j T_{j}\right)^{j}\right) e^{- \mu \sum_{j=2}^{2} j T_{j}}}{j!}] \Rightarrow \{\text{evaluate sums}\} \Rightarrow \\
+\quad \Rightarrow E[\frac{\left(2 \mu T_{j}\right)^{j} e^{- 2 \mu T_{j}}}{j!}] \Rightarrow \{\text{rewrite as integral}\} \Rightarrow \\
+\quad \Rightarrow \int\limits_{0}^{\infty} \frac{\left(2 T_{j} \mu\right)^{j} e^{- \frac{T_{j}}{N}} e^{- 2 T_{j} \mu}}{N j!}\, dT_{j} \Rightarrow \{\text{factor integral}\} \Rightarrow \\
+\quad \Rightarrow \frac{2^{j} \mu^{j} \int\limits_{0}^{\infty} T_{j}^{j} e^{- \frac{T_{j}}{N}} e^{- 2 T_{j} \mu}\, dT_{j}}{N j!} \Rightarrow \{\text{evaluate integral}\} \Rightarrow \\
+\quad \Rightarrow \frac{2^{j} N^{j} \mu^{j} \left(2 N \mu + 1\right)^{- j - 1} \Gamma\left(j + 1\right)}{j!} \Rightarrow \{\text{simplify fraction}\} \Rightarrow \\
+\quad \Rightarrow \left(2 N \mu\right)^{j} \left(2 N \mu + 1\right)^{- j - 1} \Rightarrow \{\text{substitute } 2 N \mu = \theta\} \Rightarrow \\
+\quad \Rightarrow \theta^{j} \left(\theta + 1\right)^{- j - 1} \;\blacksquare
 \end{array}\end{equation}
 :END:
+
+#+latex: \pagebreak
+#+latex: \appendix
+* Code
+#+include: encyclopedia/population_genetics.py src python

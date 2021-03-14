@@ -3,22 +3,14 @@
 
 - tags :: [[file:20210224212626-graph_theory.org][Graph theory]]
 
-
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/small_world_network.py :results silent
-:END:
-
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 import numpy as np
 import networkx as nx
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 def small_world(n, c, p):
     A = np.zeros([n, n])
     for i in range(n):

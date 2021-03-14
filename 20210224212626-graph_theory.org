@@ -1,17 +1,9 @@
 #+title: Graph theory
 #+roam_tags: graph theory
 
-* Setup :noexport:
 #+call: init()
 
-#+call: init-plot-style()
-
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/graphs_and_networks.py :results silent
-:END:
-
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 import collections
 import numpy as np
 from networkx import nx
@@ -19,7 +11,7 @@ import matplotlib.pyplot as plt
 import numba
 #+end_src
 
-#+begin_src jupyter-python :noweb yes
+#+begin_src jupyter-python :noweb yes :lib yes
 def get_degree_count(degrees):
     degree_sequence = np.flip(np.sort(degrees))
     degree_count = collections.Counter(degree_sequence)

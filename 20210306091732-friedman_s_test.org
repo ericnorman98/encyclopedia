@@ -1,15 +1,9 @@
 #+title: Friedman's test
 #+roam_tags: statistics friedman hypothesis test
 
-* Setup :noexport:
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210219100256-hypothesis_test.org][Hypothesis test]]
+
 #+call: init()
-
-#+call: init-plot-style()
-
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :results silent
-:END:
 
 #+begin_src jupyter-python
 from scipy.stats import rankdata
@@ -17,9 +11,11 @@ from sympy import *
 from sympy.stats import *
 from pyorg.latex import *
 import numpy as np
-from statistics import *
-from hypothesis_testing import *
+from encyclopedia.statistics import *
+from encyclopedia.hypothesis_test import *
 #+end_src
+
+#+RESULTS:
 
 * Friedman's test
 The Friedman's test is a non-parametric, two-way analysis of variance on ranks,
@@ -39,7 +35,7 @@ SSA_eq
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}{SS}_{A} = J \sum_{i=0}^{I - 1} \left(- \overline {R}_{..} + \overline {R}_{i.}\right)^{2}\end{equation}
+\begin{equation}{SS_{A}}=J \sum_{i=0}^{I - 1} \left(- \overline {R_{..}} + \overline {R_{i.}}\right)^{2}\end{equation}
 :END:
 
 #+begin_src jupyter-python
@@ -49,7 +45,7 @@ Rid_eq
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\overline {R}_{i.} = \frac{\sum_{j=0}^{J - 1} {R}_{ij}}{J}\end{equation}
+\begin{equation}\overline {R_{i.}}=\frac{\sum_{j=0}^{J - 1} {R_{ij}}}{J}\end{equation}
 :END:
 
 #+begin_src jupyter-python
@@ -59,7 +55,7 @@ Rdd_eq
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\overline {R}_{..} = \frac{\sum_{\substack{0 \leq j \leq J - 1\\0 \leq i \leq I - 1}} {R}_{ij}}{N}\end{equation}
+\begin{equation}\overline {R_{..}}=\frac{\sum_{\substack{0 \leq j \leq J - 1\\0 \leq i \leq I - 1}} {R_{ij}}}{N}\end{equation}
 :END:
 
 #+begin_src jupyter-python
@@ -70,7 +66,7 @@ Q_eq
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}Q = \frac{12 {SS}_{A}}{I \left(I + 1\right)}\end{equation}
+\begin{equation}Q=\frac{12 {SS_{A}}}{I \left(I + 1\right)}\end{equation}
 :END:
 
 ** Example
@@ -119,7 +115,7 @@ LEq(Q, Q_n)
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}Q = 14.8607142857143\end{equation}
+\begin{equation}Q=14.8607142857143\end{equation}
 :END:
 
 #+begin_src jupyter-python
@@ -129,39 +125,37 @@ V = {
 }
 X = ChiSquared(f'\\chi^2_{dof}', dof)
 p, x = symbols('p x')
-p_value = PValue(Q, X, TestSide.RIGHT)
-hypothesis = HypothesisTest(LText("there no effect"),
-                            LText("there is an effect"),
-                            p_value)
-hypothesis
+p_value = calculate_p_value(Q, X, right_tailed)
+hypothesis = hypothesis_test("there no effect", "there is an effect", p_value, V)
+hypothesis[0].subs(V)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\begin{cases}
-H_{0} : \text{there no effect}\\
-H_{1} : \text{there is an effect}
-\end{cases}\end{equation}
+\begin{equation}\begin{cases} H_{0}:\mathtt{\text{there no effect}} & \text{for}\: p \geq 0.05 \\H_{1}:\mathtt{\text{there is an effect}} & \text{otherwise} \end{cases}\end{equation}
 :END:
 
 #+begin_src jupyter-python
-p_value.show(V)
+p_value.subs(V).round(4)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\begin{array}{l}
-p = P[\chi^{2}_{6} \geq Q]=\\
-\quad =P[\chi^{2}_{6} \geq 14.8607142857143]=\\
-\quad =0.0213681524734211
-\end{array}\end{equation}
+\begin{equation}\begin{aligned}
+p&=P[T \geq t]=\\
+&=P[\chi^{2}_{6} \geq 14.8607]=\\
+&=0.0214
+\end{aligned}\end{equation}
 :END:
 
 #+begin_src jupyter-python
-hypothesis.doit(V)
+hypothesis[-1].round(4)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}p < \alpha \Rightarrow 0.0213681524734211 \leq 0.05 \Rightarrow \text{there is an effect}\end{equation}
+\begin{equation}\begin{aligned}
+p < \alpha&\Rightarrow 0.0214<0.05\Rightarrow \\
+&\Rightarrow H_{1}:\mathtt{\text{there is an effect}}
+\end{aligned}\end{equation}
 :END:

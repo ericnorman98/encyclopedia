@@ -1,5 +1,6 @@
 #+title: Stochastic sis model
 #+roam_tags: sis model stochastic population dynamic system
+#+PROPERTY: header-args :tangle encyclopedia/stochastic_sis_model.py
 
 * Setup :noexport:
 #+call: init()
@@ -18,10 +19,12 @@ from sympy.stats import *
 from pyorg.latex import *
 from encyclopedia.deterministic_sis_model import *
 from scipy.optimize import curve_fit
+from scipy.stats import gaussian_kde
+from scipy.stats import norm
 #+end_src
 
 * Stochastic sis model
-The definition of the stochastic version of the sis model is a Markov chain and
+The definition of the stochastic version of the sis model is a [[file:20210308084322-markov_chain.org][Markov chain]] and
 can be described like this
 #+begin_src jupyter-python
 N, TI, TR, m = symbols('N T_I T_R m', integer=True)
@@ -185,7 +188,7 @@ LSteps(master_dynamic.lhs, col_join=LEq)(
 \quad = \frac{d}{d t} I{\left(t \right)}
 \end{array}\end{equation}
 :END:
-which is the same as the deterministic model.
+which is the same as the [[file:20210303161107-deterministic_sis_model.org][deterministic sis model]].
 
 However, this does not mean that the stochastic model will behave exactly like
 the deterministic model, the stochastic model actually has a /quasi-steady
@@ -219,7 +222,7 @@ P[\left( n \mapsto n + 0 \right)] = - dt \left({b_{n}} + {d_{n}}\right) + 1
 
 Using the probabilities, we can simulate an event happening by comparing the
 probability with a uniform random variable $r$ in the range $(0, 1)$. See Figure
-[[src:fig:stoch_simulation]] for a simulation of the system compared to the
+[[fig:stoch_simulation]] for a simulation of the system compared to the
 deterministic model. If we run the model for longer (see Figure
 [[fig:stoch_quasi]]), we can see that it is only a quasi-steady state since the
 infected population eventually dies out.
@@ -252,10 +255,35 @@ def step(alpha, beta, n, N, dt, prob_n):
 
 #+RESULTS:
 
+#+begin_src jupyter-python :results silent
+def run_stoch_model(steps, V):
+    V[n] = V[I0]
+    V[S0] = V[N] - V[I0]
+    n_n = np.array([V[n], V[n]])
+    n_hist = [n_n.copy()]
+    times = [0]
+    t_n = 0
+    for _ in range(steps):
+        prob_n = np.squeeze(prob(V[alpha], V[beta], n_n, V[N], V[dt]))
+        t_n += V[dt]
+        step(V[alpha], V[beta], n_n, V[N], V[dt], prob_n)
+        n_hist.append(n_n.copy())
+        times.append(t_n)
+
+    times = np.array(times)
+    n_hist = np.array(n_hist)
+    return times, n_hist
+#+end_src
+
+#+begin_src jupyter-python :results silent :noweb yes
+def plot_stoch_model(times, n_hist, V):
+    plt.plot(times, V[N]-n_hist[:, 0], color=<<color("green")>>, label="S stochastic", lw=0.5)
+    plt.plot(times, n_hist[:, 0], color=<<color("red")>>, label="I stochastic", lw=0.5)
+    deterministic_model.plot([0, len(times)*V[dt]], V, ls='--', alpha=0.8, lw=1.0)
+#+end_src
+
 #+name: src:fig:stoch_simulation
-#+begin_src jupyter-python :noweb yes :results output
-n_n = 1
-alpha_n = 0.5
+#+begin_src jupyter-python :noweb yes :results output :eval never-export
 V = {
     N: 100,
     I0: 10,
@@ -263,25 +291,9 @@ V = {
     beta: 0.1,
     dt: 0.05
 }
-V[n] = V[I0]
-V[S0] = V[N] - V[I0]
-n_n = np.array([V[n], V[n]])
-n_hist = [n_n.copy()]
-times = [0]
-t_n = 0
 steps = 1000
-for _ in range(steps):
-    prob_n = np.squeeze(prob(V[alpha], V[beta], n_n, V[N], V[dt]))
-    t_n += V[dt]
-    step(V[alpha], V[beta], n_n, V[N], V[dt], prob_n)
-    n_hist.append(n_n.copy())
-    times.append(t_n)
-
-times = np.array(times)
-n_hist = np.array(n_hist)
-plt.plot(times, V[N]-n_hist[:, 0], color=<<color("green")>>, label="S stochastic", lw=0.5)
-plt.plot(times, n_hist[:, 0], color=<<color("red")>>, label="I stochastic", lw=0.5)
-deterministic_model.plot([0, steps*V[dt]], V, ls='--', alpha=0.8, lw=1.0)
+times, n_hist = run_stoch_model(steps, V)
+plot_stoch_model(times, n_hist, V)
 plt.xlabel("$t$")
 plt.ylabel("population")
 plt.legend()
@@ -291,10 +303,29 @@ plt.legend()
 #+attr_latex: scale=0.75
 #+label: fig:stoch_simulation
 #+RESULTS: src:fig:stoch_simulation
-[[file:./.ob-jupyter/adfebca63a2f31d083a0a655f2f8e50452f95e91.png]]
+[[file:./.ob-jupyter/e27105bfa4dbe01d563f05ff9102f3e8b6e43633.png]]
+
+#+thumb:
+#+begin_src jupyter-python :noweb yes :results output :eval never-export :exports none
+V = {
+    N: 100,
+    I0: 10,
+    alpha: 0.5,
+    beta: 0.1,
+    dt: 0.05
+}
+steps = 1000
+times, n_hist = run_stoch_model(steps, V)
+plot_stoch_model(times, n_hist, V)
+plt.xticks([])
+plt.yticks([])
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/f14840946652c492559c36799c34a902f862a42f.png]]
 
 #+name: src:fig:stoch_quasi
-#+begin_src jupyter-python :noweb yes :results output
+#+begin_src jupyter-python :noweb yes :results output :eval never-export
 V = {
     N: 100,
     S0: 95,
@@ -305,25 +336,8 @@ V = {
     dt: 0.05
 }
 V[I0] = int(V[N]*(V[alpha]-V[beta])/V[alpha])
-V[n] = V[I0]
-V[S0] = V[N] - V[I0]
-n_n = np.array([V[n], V[n]])
-n_hist = [n_n.copy()]
-times = [0]
-t_n = 0
-steps = 10000
-for _ in range(steps):
-    prob_n = np.squeeze(prob(V[alpha], V[beta], n_n, V[N], V[dt]))
-    t_n += V[dt]
-    step(V[alpha], V[beta], n_n, V[N], V[dt], prob_n)
-    n_hist.append(n_n.copy())
-    times.append(t_n)
-
-times = np.array(times)
-n_hist = np.array(n_hist)
-plt.plot(times, V[N]-n_hist[:, 0], color=<<color("green")>>, label="S stochastic", lw=0.5)
-plt.plot(times, n_hist[:, 0], color=<<color("red")>>, label="I stochastic", lw=0.5)
-deterministic_model.plot([0, steps*V[dt]], V, ls='--', alpha=0.8, lw=1.0)
+times, n_hist = run_stoch_model(50000, V)
+plot_stoch_model(times, n_hist, V)
 plt.xlabel("$t$")
 plt.ylabel("population")
 plt.legend()
@@ -333,7 +347,7 @@ plt.legend()
 #+attr_latex: scale=0.75
 #+label: fig:stoch_quasi
 #+RESULTS: src:fig:stoch_quasi
-[[file:./.ob-jupyter/0587960cff3332cde172db83712e55198e3febf4.png]]
+[[file:./.ob-jupyter/71ee1cabb99883a2350f8e6d17b5739a888f47d7.png]]
 
 ** Efficient simulation
 We can make our simulation more efficient by realizing the similarity of the
@@ -341,7 +355,9 @@ algorithm to the one generating numbers from the exponential distribution. The
 hypothesis is that we can simply sample from an exponential distribution to get
 the time of the next event instead of simulating the whole system.
 
-We will try and find the parameters for the distribution in this section.
+We will try and find the parameters for the distribution by simulating the
+system and recording the event time deltas. See Figure [[fig:exponent_sims]] for the
+results.
 
 #+begin_src jupyter-python
 bd_cases = [
@@ -415,6 +431,7 @@ def calc_times(prob_n, points, steps):
 
 #+RESULTS:
 
+#+name: src:fig:exponent_sims
 #+begin_src jupyter-python :results output :noweb yes :eval never-export
 results = []
 points = 100
@@ -430,5 +447,217 @@ fig.suptitle(f"$dt={dt_n}$, samples=${points*steps}$")
 plot_dist_sims(axs, results, bd_cases, bins=100)
 #+end_src
 
-#+RESULTS:
+#+caption: Simulations of three different sets of parameters, showing a comparison to the theoretical exponential distribution.
+#+attr_latex: scale=0.75
+#+label: fig:exponent_sims
+#+RESULTS: src:fig:exponent_sims
 [[file:./.ob-jupyter/7631f7314416378dfd0853697048676f0f0b8ce4.png]]
+
+
+
+** Gillespie algorithm
+Using the results from the previous section, we can now create a much faster
+simulation using the [[file:20210309152203-gillespie_algorithm.org][Gillespie algorithm]], with this algorith we can just sample
+the exponential distribution to get the time deltas.
+
+*** Calculating $T_{ext}$
+In this section we will calculate the time until extinction $T_{ext}$. We will
+do this by running the simulation numerous times and recording when each
+trajectory goes extinct to get an estimation. See Figure [[fig:t_extinction]] for
+the results, the final value calculated was $T_{ext}\approx 289$.
+
+#+begin_src jupyter-python :exports none
+react = np.array([1, -1])
+minval = np.array([0.0001])
+def step(alpha, beta, N, n, t, alive):
+    b_n = alpha*(1-n/N)*n
+    d_n = beta*n
+    alive &= (n > 0)
+    Pb = -np.log(np.random.random(size=n.shape))/np.where(alive, b_n, minval)
+    Pd = -np.log(np.random.random(size=n.shape))/np.where(alive, d_n, minval)
+    P = np.stack([Pb, Pd]).T
+    event = np.argmin(P, axis=1)
+    dt = P[np.arange(len(n)), event]
+    t[alive] += dt[alive]
+    n[alive] += react[event[alive]]
+
+n = np.zeros([10])
+t = np.zeros([10])
+alive = np.ones([10], dtype=bool)
+step(0.6, 0.8, 100, n, t, alive)
+t
+#+end_src
+
+#+RESULTS:
+: array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])
+
+#+begin_src jupyter-python
+def run_gillespie(steps, points, V, max_t=0):
+    n_n = np.zeros([points])+V[I0]
+    t_n = np.zeros([points])
+    n_hist = np.zeros([steps, points])
+    t_hist = np.zeros([steps, points])
+    n_hist[0, :] = V[I0]
+    alive = np.ones([points], dtype=bool)
+    for i in range(steps):
+        step(V[alpha], V[beta], V[N], n_n, t_n, alive)
+        t_hist[i] = t_n
+        n_hist[i, alive] = n_n[alive]
+    return t_hist, n_hist
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :results silent
+def run_gillespie_until(max_t, points, V):
+    n_n = np.zeros([points])+V[I0]
+    t_n = np.zeros([points])
+    n_hist = np.zeros([steps, points])
+    t_hist = np.zeros([steps, points])
+    n_hist[0, :] = V[I0]
+    alive = np.ones([points], dtype=bool)
+    i = 0
+    for i in range(steps):
+        step(V[alpha], V[beta], V[N], n_n, t_n, alive)
+        t_hist[i] = t_n
+        n_hist[i, alive] = n_n[alive]
+        if t_n.max() > max_t:
+            return t_hist[:i], n_hist[i:]
+        i += 1
+    return t_hist, n_hist
+#+end_src
+
+#+begin_src jupyter-python :results silent
+def run_gillespie_dead(points, V):
+    n_n = np.zeros([points])+V[I0]
+    t_n = np.zeros([points])
+    alive = np.ones([points], dtype=bool)
+    n_alive = points
+    i = 0
+    while n_alive > 0:
+        step(V[alpha], V[beta], V[N], n_n, t_n, alive)
+        n_alive = alive.sum()
+        i += 1
+    return t_n, n_n
+#+end_src
+
+#+thumb:
+#+begin_src jupyter-python :noweb yes :results output :eval never-export :exports none
+V = {
+    N: 200,
+    alpha: 0.8,
+    beta: 0.6,
+}
+V[I0] = int(V[N]*(V[alpha]-V[beta])/V[alpha])
+V[S0] = V[N] - V[I0]
+steps = 40000
+t_hist, n_hist = run_gillespie(steps, 10, V)
+dead = n_hist[-1, :] == 0
+plt.figure(figsize=(4, 4))
+plt.plot(t_hist[:, dead], n_hist[:, dead], color=<<color("red")>>, lw=0.8, alpha=0.6)
+plt.axhline(0, ls='--', color=<<color("fg-hc")>>, alpha=0.4, lw=0.5)
+plt.scatter(t_hist[-1, dead], n_hist[-1, dead], marker='x', s=8)
+plt.xticks([])
+plt.yticks([])
+T_ext = np.mean(t_n)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/06ebb8b1bc1ac2c8ce9748138b0ef6daa2905a66.png]]
+
+
+#+name: src:t_extinction
+#+begin_src jupyter-python :noweb yes :results output :eval never-export
+V = {
+    N: 100,
+    alpha: 0.8,
+    beta: 0.6,
+}
+V[I0] = int(V[N]*(V[alpha]-V[beta])/V[alpha])
+V[S0] = V[N] - V[I0]
+steps = 40000
+trajectories = 10000
+t_hist, n_hist = run_gillespie(steps, 100, V)
+t_n, n_n = run_gillespie_dead(trajectories, V)
+dead = n_hist[-1, :] == 0
+plt.figure(figsize=(4, 4))
+# plt.plot(t_hist, V[N]-n_hist, color=<<color("green")>>, lw=0.5, alpha=0.5)
+plt.plot(t_hist[:, dead], n_hist[:, dead], color=<<color("red")>>, lw=0.4, alpha=0.1)
+plt.axhline(0, ls='--', color=<<color("fg-hc")>>, alpha=0.4, lw=0.5)
+density = gaussian_kde(t_n)
+# plt.scatter(t_hist[-1, dead], n_hist[-1, dead], s=8)
+dens_t = np.linspace(0, t_hist.max(), 200)
+plt.xlabel("$t$")
+plt.ylabel("population")
+axdens = plt.gca().twinx()
+dens = density(dens_t)
+axdens.plot(dens_t, dens, label="accumulated death density")
+axdens.set_ylabel("death density")
+plt.title(latex(LValues(V, join=LComma), mode='inline'))
+T_ext = np.mean(t_n)
+axdens.axvline(T_ext, lw=0.6, color=<<color("blue")>>, label=f"mean $T_{{ext}}\\approx {T_ext:.2f}$")
+plt.legend()
+#+end_src
+
+#+caption: A simulation of $10000$ trajectories showing the distribution of extinction events.
+#+attr_latex: scale=0.75
+#+label: fig:t_extinction
+#+RESULTS: src:t_extinction
+[[file:./.ob-jupyter/63059e743b5247ba2e59758300ec65fd0e97ec17.png]]
+
+
+#+begin_src jupyter-python :exports none :eval never-export
+V = {
+    N: 100,
+    alpha: 0.8,
+    beta: 0.6,
+}
+V[I0] = int(V[N]*(V[alpha]-V[beta])/V[alpha])
+V[S0] = V[N] - V[I0]
+times = [5, T_ext, T_ext*100]
+trajectories = 10000
+results = [run_gillespie_until(t, trajectories, V) for i, t in enumerate(times)]
+print("Done")
+#+end_src
+
+#+RESULTS:
+: Done
+
+*** Distribution $P(n_t)$
+We will now find $P(n_t)$ by running the simulation until some time $t$ and
+calculating the distribution of $n_t$. See Figure [[fig:prob_n]] for the results.
+
+#+name: src:fig:prob_n
+#+begin_src jupyter-python :eval never-export :results output :noweb yes
+plt.figure(figsize=(3*4, 4))
+def gaussian(x, a, x0, sigma):
+    return a * np.exp(-(x - x0)**2 / (2 * sigma**2))
+
+for i, (t_hist, n_hist) in enumerate(results):
+    plt.subplot(1, 3, i+1)
+    hist, bins = np.histogram(n_hist, bins=range(0, V[N]), density=True)
+    hist = hist[1:]
+    bins = bins[2:]
+    plt.scatter(bins, 1/np.where(hist==0, np.nan, hist))
+    t_max = t_hist[-1, :].max()
+    plt.title(f"t={t_max:.2f}")
+    t_norm = np.linspace(0, V[N], 200)
+    mean = np.sum(bins*hist)/np.sum(hist)
+    sigma = np.sqrt(np.sum(hist*(bins-mean)**2)/np.sum(hist))
+    a, b = curve_fit(gaussian, bins, hist, p0=[hist.max(), mean, sigma])
+    gaussian_fit = gaussian(t_norm, *a)
+    plt.plot(t_norm, 1/np.where(gaussian_fit == 0, np.nan, gaussian_fit), color=<<color("blue")>>, label="gaussian fit", lw=1.0)
+    plt.axvline(V[I0], color=<<color("red")>>, label="steady state", lw=1.0)
+    plt.xlabel("$n_t$")
+    plt.ylabel("$P(n_t)$")
+    plt.xlim([0, V[N]])
+    plt.ylim([10, 10e9])
+    plt.yscale('log')
+    plt.legend()
+#+end_src
+
+#+caption: Three simulations showing the distribution $P(n_t)$, one at an early state, one at $t=T_{\text{ext}}$ and one greater than $T_{\text{ext}}$.
+#+attr_latex: scale=0.75
+#+label: fig:prob_n
+#+RESULTS: src:fig:prob_n
+[[file:./.ob-jupyter/7c13efc6cc96d0731c79fbe1727e156b1d0b4b1d.png]]

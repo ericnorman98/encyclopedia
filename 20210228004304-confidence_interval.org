@@ -3,15 +3,7 @@
 
 - tags :: [[file:20210219102643-statistics.org][Statistics]]
 
-* Setup :noexport:
 #+call: init()
-
-#+call: init-plot-style()
-
-* TODO Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/confidence_interval.py :results silent
-:END:
 
 #+begin_src jupyter-python
 from sympy import *
@@ -20,10 +12,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pyorg.latex import *
 from matplotlib.animation import FuncAnimation
+from encyclopedia.statistics import *
+#+end_src
+
+#+RESULTS:
+
+* Confidence interval
+#+begin_src jupyter-python :lib yes
+z = symbols('z')
+alpha = symbols('alpha', real=True, positive=True)
+z_f = symbols('z', cls=Function)
+pdf = symbols('\\operatorname{pdf}', cls=Function)
+Z = Normal('Z', 0, 1)
 #+end_src
 
 
-* Confidence interval
+#+RESULTS:
+
 A confidence interval is a random interval from some population parameter
 $\theta$, the interval will contain this parameter with $1-\alpha$ probability.
 This is commonly used to state the uncertainty of an estimate.
@@ -34,11 +39,6 @@ $\alpha$.
 
 We will start with the density function for the standard [[file:20210225141719-normal_distribution.org][normal distribution]]
 #+begin_src jupyter-python
-mu, sigma, z = symbols('mu sigma z')
-alpha = symbols('alpha', real=True, positive=True)
-z_f = symbols('z', cls=Function)
-pdf = symbols('\\operatorname{pdf}', cls=Function)
-
 Z = Normal('Z', 0, 1)
 
 Z_pdf = Eq(pdf(Z), density(Z)(z))
@@ -52,29 +52,67 @@ Z_pdf
 
 then to get the area to the right we integrate from $z(\alpha)$ to infinity,
 here $\operatorname{erf}$ is the [[file:20210301091142-error_function.org][error function]]
+#+begin_src jupyter-python :lib yes
+integrate_pdf = LCalculation(
+    Latex(density(Z)(z)).integrate((z, z_f(alpha), oo)),
+    lambda e: e.doit(),
+    join=leq
+).steps(Integral(pdf(Z), (z, z_f(alpha), oo)))
+#+end_src
+
+#+RESULTS:
+
 #+begin_src jupyter-python
-z_integral = Integral(Z_pdf.rhs, (z, z_f(alpha), oo))
-z_alpha_int = Eq(z_integral, z_integral.doit())
-z_alpha_int
+integrate_pdf
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\int\limits_{z{\left(\alpha \right)}}^{\infty} \frac{\sqrt{2} e^{- \frac{z^{2}}{2}}}{2 \sqrt{\pi}}\, dz = \frac{1}{2} - \frac{\operatorname{erf}{\left(\frac{\sqrt{2} z{\left(\alpha \right)}}{2} \right)}}{2}\end{equation}
+\begin{equation}\begin{aligned}
+\int\limits_{z{\left(\alpha \right)}}^{\infty} \operatorname{pdf}{\left(Z \right)}\, dz&=\int\limits_{z{\left(\alpha \right)}}^{\infty} \frac{\sqrt{2} e^{- \frac{z^{2}}{2}}}{2 \sqrt{\pi}}\, dz=\\
+&=\frac{1}{2} - \frac{\operatorname{erf}{\left(\frac{\sqrt{2} z{\left(\alpha \right)}}{2} \right)}}{2}
+\end{aligned}\end{equation}
 :END:
 
 finally, we set the integral equal to $\alpha$ and solve for the function
+#+begin_src jupyter-python :lib yes
+solve_z_f = LCalculation(
+    lambda e: LEq(z_f(alpha), solve(Eq(*e.args), z_f(alpha))[0]),
+    join=limply
+).steps(LEq(integrate_pdf[-1][0], alpha))
+#+end_src
+
+#+RESULTS:
+
 #+begin_src jupyter-python
-z_alpha_eq = Eq(z_alpha_int.rhs, alpha)
-z_alpha = Eq(z_f(alpha), solve(z_alpha_eq, z_f(alpha))[0])
-Implies(z_alpha_eq, z_alpha)
+solve_z_f
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\frac{1}{2} - \frac{\operatorname{erf}{\left(\frac{\sqrt{2} z{\left(\alpha \right)}}{2} \right)}}{2} = \alpha \Rightarrow z{\left(\alpha \right)} = \sqrt{2} \operatorname{erfinv}{\left(1 - 2 \alpha \right)}\end{equation}
+\begin{equation}\frac{1}{2} - \frac{\operatorname{erf}{\left(\frac{\sqrt{2} z{\left(\alpha \right)}}{2} \right)}}{2}=\alpha\Rightarrow z{\left(\alpha \right)}=\sqrt{2} \operatorname{erfinv}{\left(1 - 2 \alpha \right)}\end{equation}
 :END:
 
+#+begin_src jupyter-python :lib yes
+z_alpha_derivation = LArray(
+    integrate_pdf,
+    solve_z_f
+)
+z_alpha = LEq(z_f, Lambda(alpha, z_alpha_derivation[1][-1][-1]))
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+z_alpha(0.01).evalf()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}z{\left(0.01 \right)}=2.32634787404084\end{equation}
+:END:
+
+#+thumb:
 #+begin_src jupyter-python :results output :noweb yes :exports none
 alpha_n = np.linspace(0.01, 0.99, 20)[::-1]
 V = {
@@ -85,7 +123,7 @@ Z_pdf_lam = lambdify(z, Z_pdf.rhs)
 z_n = np.linspace(-3, 3, 200)
 Z_pdf_n = Z_pdf_lam(z_n)
 Z_pdf_line, = ax.plot(z_n, Z_pdf_n)
-z_alpha_n = float(z_alpha.rhs.subs(V).evalf())
+z_alpha_n = float(z_alpha(V[alpha]).evalf().rhs)
 z_n_alpha = np.linspace(z_alpha_n, 3)
 vline = ax.axvline(z_alpha_n, color=<<color("red")>>, lw=1.0)
 fill = ax.fill_between(z_n_alpha, 0, Z_pdf_lam(z_n_alpha), color=<<color("blue")>>)
@@ -93,7 +131,7 @@ ax.set_title(f"$\\alpha={V[alpha]}$")
 
 def animate(a):
     global fill
-    z_alpha_n = float(z_alpha.rhs.subs(alpha, a).evalf())
+    z_alpha_n = float(z_alpha(a).evalf().rhs)
     vline.set_xdata(z_alpha_n)
     z_n_alpha = np.linspace(z_alpha_n, 3)
     fill.remove()
@@ -109,6 +147,93 @@ with open('confidence_z_alpha.html', 'w') as f:
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/a5d543d08a0c55e6bd79bac51e9e5cf53d795dcf.png]]
+[[file:./.ob-jupyter/6784af4fc592a38ef59bf6a4257ddeb230d5d13d.png]]
 
 #+include: confidence_z_alpha.html export html
+
+#+begin_src jupyter-python :lib yes
+def calculate_confidence(standardized_rv, parameter, level):
+    prob = LProbability(LLe(-z_alpha(alpha/2).lhs, Z, z_alpha(alpha/2).lhs))
+    return LCalculation(
+        LSubsStep([(Z, standardized_rv), (alpha, level)]),
+        LSubsStep([(z_alpha(level/2).lhs, z_alpha(level/2).rhs)]),
+        LDoitStep(),
+    ).steps(prob).rdups()
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :lib yes
+def calculate_confidence_interval(rv, standardized_rv, parameter):
+    eq = Eq(standardized_rv, z_alpha(alpha).lhs)
+    param_solve = solve(eq, parameter)[0].subs(rv, 0)
+    prob = LEq(LProbability(LLe(-z_alpha(alpha/2).lhs, Z, z_alpha(alpha/2).lhs)), 1-alpha)
+    return LCalculation(
+        LSubsStep(Z, standardized_rv),
+        LEq(LProbability(LLe(rv+param_solve, parameter, rv-param_solve)), 1-alpha),
+        LSubsStep(z_alpha(alpha).lhs, z_alpha(alpha).rhs),
+        join=limply
+    ).steps(prob).rdups()
+#+end_src
+
+#+RESULTS:
+
+
+#+begin_src jupyter-python
+calculate_confidence_interval(Xm, (Xm-mu)/(sigma/sqrt(n)), mu)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+P[- z{\left(\frac{\alpha}{2} \right)}\leq Z\leq z{\left(\frac{\alpha}{2} \right)}]=1 - \alpha&\Rightarrow P[- z{\left(\frac{\alpha}{2} \right)}\leq \frac{\sqrt{n} \left(- \mu + \bar{X}\right)}{\sigma}\leq z{\left(\frac{\alpha}{2} \right)}]=1 - \alpha\Rightarrow \\
+&\Rightarrow P[\bar{X} - \frac{\sigma z{\left(\alpha \right)}}{\sqrt{n}}\leq \mu\leq \bar{X} + \frac{\sigma z{\left(\alpha \right)}}{\sqrt{n}}]=1 - \alpha\Rightarrow \\
+&\Rightarrow P[\bar{X} - \frac{\sqrt{2} \sigma \operatorname{erfinv}{\left(1 - 2 \alpha \right)}}{\sqrt{n}}\leq \mu\leq \bar{X} + \frac{\sqrt{2} \sigma \operatorname{erfinv}{\left(1 - 2 \alpha \right)}}{\sqrt{n}}]=1 - \alpha
+\end{aligned}\end{equation}
+:END:
+
+** Confidence interval on the mean: variance known
+Let $X_1,X_2,\dots,X_n$ denote a random sample from the normal distribution $X$,
+we want to find $z(\alpha)$ such that $P[-z(\alpha)\leq\mu\leq z(\alpha)]=0.95$
+with the following known parameters,
+#+begin_src jupyter-python
+V = {
+    alpha: 0.05,
+    sigma: sqrt(9),
+    n: 40
+}
+Latex(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+\alpha=0.05\\
+\sigma=3\\
+n=40
+\end{cases}\end{equation}
+:END:
+
+We first have to standardize the random sample like this
+#+begin_src jupyter-python
+standardized_rv = LEq(Z, (Xm-mu)/(sigma/sqrt(n)))
+standardized_rv
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}Z=\frac{\sqrt{n} \left(- \mu + \bar{X}\right)}{\sigma}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+calculate_confidence_interval(Xm, standardized_rv.rhs, mu).subs(V).evalf(4)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+P[- z{\left(0.025 \right)}\leq Z\leq z{\left(0.025 \right)}]=0.95&\Rightarrow P[- z{\left(0.025 \right)}\leq - 2.108 \mu + 2.108 \bar{X}\leq z{\left(0.025 \right)}]=0.95\Rightarrow \\
+&\Rightarrow P[- 0.4743 z{\left(0.05 \right)} + \bar{X}\leq \mu\leq 0.4743 z{\left(0.05 \right)} + \bar{X}]=0.95\Rightarrow \\
+&\Rightarrow P[\bar{X} - 0.7802\leq \mu\leq \bar{X} + 0.7802]=0.95
+\end{aligned}\end{equation}
+:END:

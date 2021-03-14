@@ -1,20 +1,11 @@
 #+title: Henon map
 #+roam_tags: dynamical systems henon map fractal chaos attractor
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* TODO Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/henon_map.py :results silent
-:END:
-
-#+begin_src jupyter-python :results silent
+#+begin_src jupyter-python :results silent :lib
 import sympy as sm
 import matplotlib.pyplot as plt
-import pyorg.plot as plot
-plot.use_style()
 import numpy as np
 import numba
 from sympy import *
@@ -22,7 +13,6 @@ from pyorg.latex import *
 #+end_src
 
 * Henon map
-
 #+begin_src jupyter-python
 a, b = symbols('a b')
 V = {
@@ -105,6 +95,8 @@ def plot_henon_map():
     plt.ylim([-0.5, 0.5])
 #+end_src
 
+#+RESULTS:
+
 
 #+thumb:
 #+begin_src jupyter-python :results output
@@ -113,7 +105,7 @@ plt.title("Hénon map")
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/b33ce406aba24b2dbf9a4c7e563272df09b38851.png]]
+[[file:./.ob-jupyter/09b083c489976c6f88f4e37fe8ee82c53f94e859.png]]
 
 ** Fractal dimension
 #+begin_src jupyter-python
@@ -141,6 +133,8 @@ def create_boxes(eps=0.01, xd=2, yd=1, rows=16, cols=16):
     return boxes
 #+end_src
 
+#+RESULTS:
+
 #+begin_src jupyter-python :exports none
 boxes = create_boxes()
 boxes.sum()
@@ -163,7 +157,7 @@ def I(eps, q):
 
 #+RESULTS:
 
-#+begin_src jupyter-python :exports none
+#+begin_src jupyter-python :exports none :eval never-export
 from scipy.stats import linregress
 eps = np.linspace(1e-4, 2e-2, 10)
 q = 0
@@ -205,7 +199,7 @@ plot_boxes()
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/94af9178aafd7b40f6fdb7799d2fcb9f6e043451.png]]
+[[file:./.ob-jupyter/96d28afaf70a8a3929796b519d599c043ebf69c8.png]]
 
 
 #+begin_src jupyter-python :exports none
@@ -225,7 +219,7 @@ def D(eps, q):
 
 #+RESULTS:
 
-#+begin_src jupyter-python :results output
+#+begin_src jupyter-python :results output :eval never-export
 D = symbols('D', cls=Function)
 eps = np.linspace(1e-4, 2e-2, 10)
 plt.figure(figsize=(4, 4))
@@ -244,9 +238,9 @@ plt.legend()
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/42ab72b07e415f1be796f32099194c5dfc544440.png]]
+[[file:./.ob-jupyter/db46417862d657bb2900d7ad3478efeac55ccfe3.png]]
 
-#+begin_src jupyter-python :results output
+#+begin_src jupyter-python :results output :eval never-export
 D = []
 eps = np.linspace(1e-4, 2e-2, 2)
 plt.figure(figsize=(4, 4))
@@ -267,7 +261,7 @@ plt.plot(qs, D)
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/e3b4eb9fe065a04538e079f7d906d81f9d760b63.png]]
+[[file:./.ob-jupyter/a8754bfefc538587e77e93b07e16fe363f6fd2c0.png]]
 
 ** Lyapunov exponents
 
@@ -323,7 +317,7 @@ def stability():
 
 #+RESULTS:
 
-#+begin_src jupyter-python :results output
+#+begin_src jupyter-python :results output :eval never-export
 def plot_hist(t, hist):
     lines = plt.plot(t, hist)
     plt.xscale('log')
@@ -334,4 +328,7 @@ hist[-1]
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/01f09a789084c191cb951dac678689b760337a27.png]]
+:RESULTS:
+: 100000, t=100000, [ 0.41949319 -1.623466  ]
+[[file:./.ob-jupyter/68ba0be8ce171f1bb98a878c9bac093c3c758574.png]]
+:END:

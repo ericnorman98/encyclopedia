@@ -1,18 +1,13 @@
 #+title: Gillespie algorithm
 #+roam_tags: gillespie algorithm stochastic population dynamic system simulation
+#+PROPERTY: header-args :tangle encyclopedia/gillespie_algorithm.py
 
-- tags :: [[file:20210225084927-dynamical_systems.org][Dynamical systems]]
+- tags :: [[file:20210225084927-dynamical_systems.org][Dynamical systems]], [[file:20210313082049-probability_theory.org][Probability theory]]
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/gillespie_algorithm.py :results silent
-:END:
-
-#+begin_src jupyter-python
+* Gillespie algorithm
+#+begin_src jupyter-python :lib yes
 import matplotlib.pyplot as plt
 import numpy as np
 from sympy import *
@@ -20,156 +15,18 @@ from pyorg.latex import *
 from encyclopedia.deterministic_sis_model import *
 from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
+from scipy.stats import norm
 #+end_src
-
-* Gillespie algorithm
-#+begin_src jupyter-python
-react = np.array([1, -1])
-minval = np.array([0.0001])
-def step(alpha, beta, N, n, t, alive):
-    b_n = alpha*(1-n/N)*n
-    d_n = beta*n
-    alive &= (n > 0)
-    Pb = -np.log(np.random.random(size=n.shape))/np.where(alive, b_n, minval)
-    Pd = -np.log(np.random.random(size=n.shape))/np.where(alive, d_n, minval)
-    P = np.stack([Pb, Pd]).T
-    event = np.argmin(P, axis=1)
-    dt = P[np.arange(len(n)), event]
-    t[alive] += dt[alive]
-    n[alive] += react[event[alive]]
-
-n = np.zeros([10])
-t = np.zeros([10])
-alive = np.ones([10], dtype=bool)
-step(0.6, 0.8, 100, n, t, alive)
-t
-#+end_src
-
-#+RESULTS:
-: array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0.])
 
 #+begin_src jupyter-python
-def run_gillespie(steps, points, V, max_t=0):
-    n_n = np.zeros([points])+V[I0]
-    t_n = np.zeros([points])
-    n_hist = np.zeros([steps, points])
-    t_hist = np.zeros([steps, points])
-    n_hist[0, :] = V[I0]
-    alive = np.ones([points], dtype=bool)
-    for i in range(steps):
-        if i % 10000 == 0:
-            print(alive.sum())
-        step(V[alpha], V[beta], V[N], n_n, t_n, alive)
-        t_hist[i] = t_n
-        n_hist[i, alive] = n_n[alive]
-    return t_hist, n_hist
-#+end_src
-
-#+RESULTS:
-
-#+begin_src jupyter-python :results silent
-def run_gillespie_until(max_t, points, V):
-    n_n = np.zeros([points])+V[I0]
-    t_n = np.zeros([points])
-    n_hist = np.zeros([steps, points])
-    t_hist = np.zeros([steps, points])
-    n_hist[0, :] = V[I0]
-    alive = np.ones([points], dtype=bool)
-    i = 0
-    for i in range(steps):
-        if i % 1000 == 0:
-            print(t_n.max(), alive.sum())
-        step(V[alpha], V[beta], V[N], n_n, t_n, alive)
-        t_hist[i] = t_n
-        n_hist[i, alive] = n_n[alive]
-        if t_n.max() > max_t:
-            return t_hist[:i], n_hist[i:]
-        i += 1
-    return t_hist, n_hist
-#+end_src
-
-#+begin_src jupyter-python :results silent
-def run_gillespie_dead(points, V):
-    n_n = np.zeros([points])+V[I0]
-    t_n = np.zeros([points])
-    alive = np.ones([points], dtype=bool)
-    n_alive = points
-    i = 0
-    while n_alive > 0:
-        if i % 5000 == 0:
-            print(alive.sum())
-        step(V[alpha], V[beta], V[N], n_n, t_n, alive)
-        n_alive = alive.sum()
-        i += 1
-    return t_n, n_n
-#+end_src
-
-#+name: src:t_extinction
-#+begin_src jupyter-python :noweb yes :results output
-V = {
-    N: 100,
-    alpha: 0.8,
-    beta: 0.6,
-}
-V[I0] = int(V[N]*(V[alpha]-V[beta])/V[alpha])
-V[S0] = V[N] - V[I0]
-steps = 40000
-trajectories = 10000
-t_hist, n_hist = run_gillespie(steps, 100, V)
-t_n, n_n = run_gillespie_dead(trajectories, V)
-dead = n_hist[-1, :] == 0
-plt.figure(figsize=(4, 4))
-# plt.plot(t_hist, V[N]-n_hist, color=<<color("green")>>, lw=0.5, alpha=0.5)
-plt.plot(t_hist[:, dead], n_hist[:, dead], color=<<color("red")>>, lw=0.4, alpha=0.1)
-plt.axhline(0, ls='--', color=<<color("fg-hc")>>, alpha=0.4, lw=0.5)
-density = gaussian_kde(t_n)
-plt.scatter(t_hist[-1, dead], n_hist[-1, dead], s=8)
-dens_t = np.linspace(0, t_hist.max(), 200)
-plt.xlabel("$t$")
-plt.ylabel("population")
-axdens = plt.gca().twinx()
-dens = density(dens_t)
-axdens.plot(dens_t, dens)
-axdens.set_ylabel("death density")
-plt.title(latex(LValues(V, join=LComma), mode='inline'))
-T_ext = np.mean(t_n)
-axdens.axvline(T_ext, lw=0.6, color=<<color("blue")>>, label=f"mean $T_{{ext}}\\approx {T_ext:.2f}$")
-plt.legend()
-#+end_src
-
-#+RESULTS: src:t_extinction
-:RESULTS:
-[[file:./.ob-jupyter/94bb6e08343eecdf25e80cfc483a9cd4dd3a7be9.png]]
-:END:
-
-#+begin_src jupyter-python :results output :noweb yes
-V = {
-    N: 100,
-    alpha: 0.8,
-    beta: 0.6,
-}
-V[I0] = int(V[N]*(V[alpha]-V[beta])/V[alpha])
-V[S0] = V[N] - V[I0]
-times = [5, T_ext, T_ext*100]
-trajectories = 10000
-plt.figure(figsize=(3*4, 4))
-for i, t in enumerate(times):
-    plt.subplot(1, 3, i+1)
-    t_hist, n_hist = run_gillespie_until(t, trajectories, V)
-    hist, bins = np.histogram(n_hist, bins=range(0, V[N]), density=True)
-    bins = bins[1:]
-    plt.xlim([0, V[N]])
-    plt.scatter(bins, 1/hist)
-    plt.yscale('log')
-    t_max = t_hist[-1, :].max()
-    plt.title(f"t={t_max:.2f}")
-    plt.axvline(V[I0], color=<<color("blue")>>)
-    plt.xlabel("$n_t$")
-    plt.ylabel("$P(n_t)$")
-# plt.legend()
+plt.plot([2, 5, 2, 7])
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-[[file:./.ob-jupyter/135a5d8eaf21ac5dfd598467a0e64174d48e2e83.png]]
+| <matplotlib.lines.Line2D | at | 0x7f7d58a3d610> |
+[[file:./.ob-jupyter/77099c83f5de07b39ec5e06ca055b2c213f2b764.png]]
 :END:
+
+The Gillespie algorithm is a way of efficiently generating a trajectory in a
+stochastic system with known reaction rates.

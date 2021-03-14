@@ -21,16 +21,6 @@ mu, sigma, n, xm, s, x, z, t = symbols('mu sigma n \\bar{x} s x z t')
 #+end_src
 
 #+RESULTS:
-:RESULTS:
-# [goto error]
-: ---------------------------------------------------------------------------
-: NameError                                 Traceback (most recent call last)
-: <ipython-input-27-c1f0693360b6> in <module>
-:       1 mu, sigma, n, xm, s, x, z, t = symbols('mu sigma n \\bar{x} s x z t')
-: ----> 2 T = RandomSymbol('T')
-:
-: NameError: name 'RandomSymbol' is not defined
-:END:
 
 #+begin_src jupyter-python
 Z = Normal('Z', mu, sigma)
@@ -59,7 +49,7 @@ plt.title("Normal PDF")
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/e59cb125b112d249c1484db03da9f674f1fe6b47.png]]
+[[file:./.ob-jupyter/eeb6a099c37e3c12ddb9908b966250544f50d861.png]]
 
 ** CDF
 The definition of the cumulative distribution is using the [[file:20210301091142-error_function.org][error function]].
@@ -81,4 +71,4 @@ plt.title("Normal CDF")
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/0c8bec99c2f4c82873188b3bd17adaac6e661290.png]]
+[[file:./.ob-jupyter/f70cdbc15fc91e0b470c3f408a5bfb6fd993266d.png]]

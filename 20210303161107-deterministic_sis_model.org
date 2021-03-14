@@ -2,16 +2,9 @@
 #+theme: light
 #+roam_tags: sis model deterministic population dynamic system
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/deterministic_sis_model.py :results silent
-:END:
-
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 from sympy import *
 from pyorg.latex import *
 from scipy.integrate import solve_ivp
@@ -23,13 +16,13 @@ from encyclopedia.dynamical_systems import DynamicalSystem
 from encyclopedia.stability_analysis import plot_stability_diagram, stability_classify
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 S, I = symbols('S I', integer=True, positive=True, cls=Function)
 S0, I0, N = symbols('S_0 I_0 N', integer=True, positive=True)
 alpha, beta, t, r0 = symbols('alpha beta t r_0', real=True, positive=True)
 #+end_src
 
-#+begin_src jupyter-python :noweb yes
+#+begin_src jupyter-python :noweb yes :lib yes
 class DeterministicSISModel(DynamicalSystem):
     def __new__(cls):
         system = DynamicalSystem.__new__(cls, [
@@ -66,6 +59,21 @@ model
 \end{array}\end{equation}
 :END:
 
+#+thumb:
+#+begin_src jupyter-python :results output :noweb yes :exports none
+model.plot([0, 50], {
+    S0: 95,
+    I0: 5,
+    alpha: 0.5,
+    beta: 0.1
+})
+plt.xticks([])
+plt.yticks([])
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/3309527409d7f4154b96a824ed499c3844765021.png]]
+
 #+name: src:fig:simulation
 #+begin_src jupyter-python :results output :noweb yes
 V = {
@@ -78,7 +86,7 @@ plt.title(latex(LValues(V, join=LComma), mode='inline'))
 model.plot([0, 50], V)
 #+end_src
 
-#+caption: A simulation of the SIS model with parameters .
+#+caption: A simulation of the deterministic SIS model.
 #+attr_latex: scale=0.75
 #+label: fig:simulation
 #+RESULTS: src:fig:simulation
@@ -157,7 +165,8 @@ fig.colorbar(im, ax=ax1)
 #+RESULTS: src:fig:param_infect_steady
 [[file:./.ob-jupyter/28f0138d282322519e621d2e02c911c2bfd3ad5f.png]]
 
-We can investigate the stability of the system by doing stability analysis, we start by
+We can investigate the stability of the system by doing stability analysis, we
+start by calculating the stability matrix
 #+begin_src jupyter-python
 stability_analysis = model.stability_analysis()
 stability_analysis.simplify()
@@ -168,6 +177,7 @@ stability_analysis.simplify()
 \begin{equation}\mathbb{J} = \left[\begin{matrix}- \frac{\alpha I^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} & - \frac{\alpha S^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} + \beta\\\frac{\alpha I^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} & \frac{\alpha S^{2}{\left(t \right)}}{\left(I{\left(t \right)} + S{\left(t \right)}\right)^{2}} - \beta\end{matrix}\right]\end{equation}
 :END:
 
+then calculating the trace and determinant
 #+begin_src jupyter-python
 stability_analysis_trace_det = stability_analysis()
 stability_analysis_trace_det
@@ -181,28 +191,23 @@ stability_analysis_trace_det
 \end{array}\end{equation}
 :END:
 
+evaluating the trace and determinant at the fixed point, we get
 #+begin_src jupyter-python
 stability_analysis_at = stability_analysis_trace_det()
 trace_dets = stability_analysis_at.value
-stability_analysis_at.doit()
+J = MatrixSymbol('\\mathbb{J}', 2, 2)
+LMatEq([Trace(J), Determinant(J)], trace_dets[0].doit())
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\alpha - \beta\\
-0\\
-\frac{\alpha \beta^{2} I^{2}{\left(t \right)}}{\left(\alpha - \beta\right)^{2} \left(\frac{\beta I{\left(t \right)}}{\alpha - \beta} + I{\left(t \right)}\right)^{2}} - \frac{\alpha I^{2}{\left(t \right)}}{\left(\frac{\beta I{\left(t \right)}}{\alpha - \beta} + I{\left(t \right)}\right)^{2}} - \beta\\
-0\end{equation}
+\begin{equation}\begin{array}{l}
+\operatorname{tr}\left(\mathbb{J} \right) = \alpha - \beta\\
+\operatorname{det}\left(\mathbb{J}\right) = 0
+\end{array}\end{equation}
 :END:
 
-#+begin_src jupyter-python
-Matrix(trace_dets[1].args).applyfunc(lambda e: e.simplify())
-#+end_src
-
-#+RESULTS:
-:RESULTS:
-\begin{equation}\left[\begin{matrix}\frac{\beta \left(- \alpha + \beta\right)}{\alpha} - \frac{\left(\alpha - \beta\right)^{2}}{\alpha}\\0\end{matrix}\right]\end{equation}
-:END:
+We can see that the system will have stable steady states when $\alpha<\beta$.
 
 #+begin_src jupyter-python :results silent
 def plot_stability(V, tr, det):
@@ -218,6 +223,7 @@ def plot_stability(V, tr, det):
         plt.title("$\\alpha<\\beta$")
 #+end_src
 
+#+name: src:fig:det_sis_class
 #+begin_src jupyter-python :noweb yes :results output
 plt.figure(figsize=(6, 3))
 plt.subplot(1, 2, 1)
@@ -232,5 +238,6 @@ plot_stability({
 }, *trace_dets[0])
 #+end_src
 
-#+RESULTS:
+#+RESULTS: src:fig:det_sis_class
 [[file:./.ob-jupyter/0d88777391147a77738031cd437a94244b57e1c3.png]]
+
