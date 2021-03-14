@@ -3,16 +3,27 @@
 
 - tags :: [[file:20210219102643-statistics.org][Statistics]]
 
+#+call: init()
+
+#+begin_src jupyter-python
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+#+end_src
+
+#+RESULTS:
+
+
 * Bayesian inference
 #+begin_src jupyter-python
 H, E = symbols('H E')
-bayesian_eq = LEq(Prob(H, condition=E), (Prob(E, condition=H)*Prob(H))/Prob(E))
+bayesian_eq = LEq(Probability(H, condition=E), (Probability(E, condition=H)*Probability(H))/Probability(E))
 bayesian_eq
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}P[H|E] = P[E|H] P[H] P[E]^{-1}\end{equation}
+\begin{equation}P[H]=P[E] P[H] P[E]^{-1}\end{equation}
 :END:
 
 ** Example
@@ -32,35 +43,35 @@ class LContains(Expr):
     def doit(self):
         return Contains(*self.args)
 LCases(
-    LBiOp(':', H1, "\\text{picked marble is from jar 1}"),
-    LBiOp(':', H2, "\\text{picked marble is from jar 2}")
+    LColon(H1, "\\text{picked marble is from jar 1}"),
+    LColon(H2, "\\text{picked marble is from jar 2}")
 )
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{cases}
-H_{1} : \text{picked marble is from jar 1}\\
-H_{2} : \text{picked marble is from jar 2}
+H_{1}:\mathtt{\text{\textbackslashtext\{picked marble is from jar 1\}}}\\
+H_{2}:\mathtt{\text{\textbackslashtext\{picked marble is from jar 2\}}}
 \end{cases}\end{equation}
 :END:
 
 and the evidence is,
 #+begin_src jupyter-python
-LBiOp(':', E, "\\text{picked a red marble}")
+LColon(E, "\\text{picked a red marble}")
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}E : \text{picked a red marble}\end{equation}
+\begin{equation}E:\mathtt{\text{\textbackslashtext\{picked a red marble\}}}\end{equation}
 :END:
 
 #+begin_src jupyter-python
-PH1 = Prob(H1)
-PH2 = Prob(H2)
-PEH1 = Prob(E, condition=H1)
-PEH2 = Prob(E, condition=H2)
-PE = Prob(E)
+PH1 = Probability(H1)
+PH2 = Probability(H2)
+PEH1 = Probability(E, condition=H1)
+PEH2 = Probability(E, condition=H2)
+PE = Probability(E)
 V = {
     PH1: 1/2,
     PH2: 1/2,
@@ -73,10 +84,10 @@ V = {
 
 #+begin_src jupyter-python
 bayes_ex = (PEH1 * PH1) / (PEH1 * PH1 + PEH2 * PH2)
-LEq(Prob(H1, condition=E), bayes_ex, bayes_ex.subs(V))
+LEq(Probability(H1, condition=E), bayes_ex, bayes_ex.subs(V))
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}P[H_{1}|E] = P[E|H_{1}] P[H_{1}] \left(P[E|H_{1}] P[H_{1}] + P[E|H_{2}] P[H_{2}]\right)^{-1} = 0.6\end{equation}
+\begin{equation}P[H_{1}]=P[E] P[H_{1}] \left(P[E] P[H_{1}] + P[E] P[H_{2}]\right)^{-1}=0.6\end{equation}
 :END:

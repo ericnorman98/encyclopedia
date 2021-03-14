@@ -1,15 +1,8 @@
 #+title: Statistics
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/statistics.py :results silent
-:END:
-
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 from sympy import *
 from sympy.stats import *
 from sympy.stats.rv import RandomSymbol
@@ -18,21 +11,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 #+end_src
 
-#+begin_src jupyter-python
-class Prob(Probability):
-    def _latex(self, printer):
-        if len(self.args) > 1:
-            return f"P[{printer._print(self.args[0])}|{printer._print(self.args[1])}]"
-        else:
-            return f"P[{printer._print(self.args[0])}]"
-class Expected(Expectation):
-    def _latex(self, printer):
-        return f"E[{printer._print(self.args[0])}]"
-#+end_src
-
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 mu, sigma, n, xm, s, x, z, t = symbols('mu sigma n \\bar{x} s x z t')
+sigma2 = sigma**2
 T = RandomSymbol('T')
+Xm = RandomSymbol('\\bar{X}')
 #+end_src
 
 * Statistics

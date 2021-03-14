@@ -1,65 +1,54 @@
 #+title: p-value
 #+roam_tags: statistics p-value
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/p_value.py :results silent
-:END:
-
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 from enum import Enum
 from sympy import *
 from sympy.stats import *
 from pyorg.latex import *
-from statistics import *
+from encyclopedia.statistics import *
 #+end_src
 
-#+begin_src jupyter-python
-class TestSide(Enum):
-    RIGHT = 0
-    LEFT = 1
-    BOTH = 2
+#+RESULTS:
+
+#+begin_src jupyter-python :lib yes
+left_tailed = Latex('left')
+right_tailed = Latex('right')
+two_tailed = Latex('two')
 #+end_src
 
-#+begin_src jupyter-python
-class PValue(Expr):
-    def __new__(cls, statistic, distribution, side):
-        if side == TestSide.RIGHT:
-            p_value = Prob(distribution >= statistic)
-        elif side == TestSide.LEFT:
-            p_value = Prob(distribution <= statistic)
-        elif side == TestSide.BOTH:
-            p_value = Prob(abs(distribution) >= abs(statistic))
-
-        ex = Expr.__new__(cls, statistic, distribution, side)
-        ex._statistic = statistic
-        ex._distribution = distribution
-        ex._side = side
-        ex._p_value = p_value
-        ex._sym = Symbol('p')
-        return ex
-
-    @property
-    def distribution(self):
-        return self._distribution
-
-    @property
-    def statistic(self):
-        return self._statistic
-
-    def doit(self, **kwargs):
-        return self._p_value.doit(**kwargs)
-
-    def _latex(self, printer):
-        return printer._print(self._p_value)
-
-    def show(self, V=None):
-        return LArray(LEq(self._sym, self._p_value),
-                      ,*([self._p_value.subs(V).evalf(), self._p_value.subs(V).doit().evalf()] if V is not None else []), separator='=\\\\\n\\quad =')
-#+end_src
+#+RESULTS:
 
 * p-value
+#+begin_src jupyter-python :lib yes
+p = Symbol('p')
+def calculate_p_value(statistic, distribution, side):
+    if side == right_tailed:
+        prob = Probability(T >= t)
+    elif side == left_tailed:
+        prob = Probability(T <= t)
+    else:
+        prob = Probability(abs(T) >= abs(t))
+    return LCalculation(
+        LSubsStep(p, prob),
+        LSubsStep([(t, statistic), (T, distribution)]),
+        LDoitStep(),
+    ).steps(p).rdups()
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+calculate_p_value(Rational(2, 3), Normal('Z', 0, 1), left_tailed).evalf()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+p&=P[T \leq t]=\\
+&=P[Z \leq \frac{2}{3}]=\\
+&=0.747507462453077
+\end{aligned}\end{equation}
+:END:
