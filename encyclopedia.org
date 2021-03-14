@@ -163,7 +163,7 @@
   (list (cons :exports "results")
         (cons :session slug)
         (cons :results "raw")
-        (cons :eval "always")
+        (cons :eval "never-export")
         (cons :pandoc t)
         (cons :async "yes")
         (cons :kernel "python")))
@@ -478,6 +478,26 @@ Old tag stuff
 * Tangle
 
 #+begin_src elisp
+(defun encyclopedia-tangle-target (slug)
+  (concat "encyclopedia/"slug".py"))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-tangle (&optional file)
+  (interactive)
+  (setq output "")
+  (with-current-buffer (if file (find-file-noselect file) (current-buffer))
+    (let ((tangle-target (encyclopedia-tangle-target (encyclopedia-document-slug-extract))))
+      (write-region "" nil tangle-target)
+      (org-babel-map-src-blocks file
+        (if (string-match-p (regexp-quote ":lib yes") header-args)
+            (let* ((info (org-babel-get-src-block-info))
+                   (body (org-babel-expand-noweb-references info)))
+              (setq output (concat output body "\n")))))
+      (write-region output nil tangle-target))))
+#+end_src
+
+#+begin_src elisp
 (defun encyclopedia-tangle-file (file)
   (org-babel-tangle-file file))
 #+end_src
@@ -488,7 +508,23 @@ Old tag stuff
   (let ((files (encyclopedia-document-list-documents)))
     (cl-loop for file in files
              do (message (concat "Tangling " file "..."))
-             do (encyclopedia-tangle-file file))))
+             do (encyclopedia-tangle file))))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-execute (&optional file)
+  (interactive)
+  (with-current-buffer (if file (find-file-noselect file) (current-buffer))
+    (org-babel-execute-buffer)))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-execute-files ()
+  (interactive)
+  (let ((files (encyclopedia-document-list-documents)))
+    (cl-loop for file in files
+             do (message (concat "Executing " file "..."))
+             do (encyclopedia-execute file))))
 #+end_src
 
 * Provide
