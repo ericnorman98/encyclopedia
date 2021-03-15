@@ -15,19 +15,19 @@ from encyclopedia.statistics import *
 #+begin_src jupyter-python :lib yes
 L = Function('L')
 N = Symbol('N', integer=True, positive=True)
-def likelihood(X, x, i, parameter, samples=N):
+def likelihood(X, x, i, parameter, observations=N):
     dens = density(X)
     tmp = Symbol('z')
     if isinstance(dens, BinomialDistribution):
         dens = dens(tmp).args[0][0]
     else:
         dens = dens(tmp)
-    return LEq(L, Lambda(parameter, Product(dens.subs(tmp, x[i]), (i, 1, samples)).doit()))
+    return LEq(L, Lambda(parameter, Product(dens.subs(tmp, x[i]), (i, 1, observations)).doit()))
 #+end_src
 
 #+begin_src jupyter-python :lib yes
 l = Function('l')
-def loglikelihood(X, x, i, parameter, samples=N):
-    likl = likelihood(X, x, i, parameter, samples)
+def loglikelihood(X, x, i, parameter, observations=N):
+    likl = likelihood(X, x, i, parameter, observations)
     return LEq(l, Lambda(parameter, log(likl.rhs.args[1]).expand(force=True)))
 #+end_src
