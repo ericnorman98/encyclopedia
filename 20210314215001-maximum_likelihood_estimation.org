@@ -1,0 +1,168 @@
+#+title: Maximum likelihood estimation
+#+roam_tags: statistics mle
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
+#+call: init()
+
+#+begin_src jupyter-python :lib yes
+from sympy import *
+from sympy.stats import *
+from sympy.stats.frv_types import BinomialDistribution
+from pyorg.latex import *
+from encyclopedia.statistics import *
+from encyclopedia.likelihood_function import *
+#+end_src
+
+#+RESULTS:
+
+* TODO Maximum likelihood estimation
+Given some parameter $\theta$, the sample $(x_1,\dots,x_n)$ is a realization of
+the random vector $(X_1,\dots,X_n)$ which has a joint distribution
+
+#+begin_src jupyter-python
+y = IndexedBase('y')
+x = IndexedBase('y')
+theta = symbols('theta')
+f = symbols('f', cls=Function)
+f(LGiven(lsample(y), theta))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}f{\left({y_{1}},\dots ,{y_{n}}|\theta \right)}\end{equation}
+:END:
+
+Fixing the variables $y_i$ to the samples $x_i$, and let the distribution
+parameter to vary, we get the likelihood function
+
+#+begin_src jupyter-python
+LEq(L(theta), f(LGiven(lsample(x))))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}L{\left(\theta \right)}=f{\left({y_{1}},\dots ,{y_{n}} \right)}\end{equation}
+:END:
+
+The maximum likelihood estimate $\hat{\theta}$ of $\theta$ is the value of
+$\theta$ that maximizes $L(\theta)$.
+
+#+begin_src jupyter-python
+i = Idx('i')
+def maximum_likelihood_estimation(X, x, parameter, observations=N):
+    lik = likelihood(X, x, i, parameter, observations)(parameter)
+    loglik = loglikelihood(X, x, i, parameter, observations)(parameter)
+    return LArray(
+        loglik,
+        lambda e: e.diff(parameter),
+        lambda e: e.doit(),
+        lambda e: LEq(LHat(parameter), solve(e.rhs.expand().doit(), parameter)),
+    ).steps(lik)
+#+end_src
+
+#+RESULTS:
+
+** Example: Estimate Binomial proportion p
+Let $X\sim \operatorname{Bin}(n,p)$, with a /single observation/ corresponding to
+$n$ observations in the $\operatorname{Ber}(p)$ model. From $\mu=np$ we see that
+the [[file:20210314182234-method_of_moments.org][method of moments]] estimate $\hat{p}=x/n$ is the sample proportion.
+
+To maximize the likelihood function
+#+begin_src jupyter-python
+p = symbols('p', real=True, positive=True)
+k = symbols('x', integer=True, positive=True, cls=IndexedBase)
+X = Binomial('X', n, p)
+likest = maximum_likelihood_estimation(X, k, p, 1)
+likest[0]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}L{\left(p \right)}=p^{{x_{1}}} \left(1 - p\right)^{n - {x_{1}}} {\binom{n}{{x_{1}}}}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+likest[1]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}l{\left(p \right)}=n \log{\left(1 - p \right)} + \log{\left(p \right)} {x_{1}} - \log{\left(1 - p \right)} {x_{1}} + \log{\left({\binom{n}{{x_{1}}}} \right)}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+likest[2]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d p} l{\left(p \right)}=\frac{\partial}{\partial p} \left(n \log{\left(1 - p \right)} + \log{\left(p \right)} {x_{1}} - \log{\left(1 - p \right)} {x_{1}} + \log{\left({\binom{n}{{x_{1}}}} \right)}\right)\end{equation}
+:END:
+
+#+begin_src jupyter-python
+likest[3]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d p} l{\left(p \right)} = - \frac{n}{1 - p} + \frac{{x_{1}}}{1 - p} + \frac{{x_{1}}}{p}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+likest[4]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\hat p=\frac{{x_{1}}}{n}\end{equation}
+:END:
+
+
+** Example: Normal
+#+begin_src jupyter-python
+X = Normal('X', mu, sigma)
+likest = maximum_likelihood_estimation(X, k, mu)
+likest[0]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}L{\left(\mu \right)}=\left(\frac{\sqrt{2}}{2 \sqrt{\pi} \sigma}\right)^{N} \prod_{i=1}^{N} e^{- \frac{\left(- \mu + {x_{i}}\right)^{2}}{2 \sigma^{2}}}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+likest[1]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}l{\left(\mu \right)}=- N \log{\left(\sigma \right)} - \frac{N \log{\left(\pi \right)}}{2} - \frac{N \log{\left(2 \right)}}{2} + \sum_{i=1}^{N} \left(- \frac{\mu^{2}}{2 \sigma^{2}} + \frac{\mu {x_{i}}}{\sigma^{2}} - \frac{{x_{i}}^{2}}{2 \sigma^{2}}\right)\end{equation}
+:END:
+
+#+begin_src jupyter-python
+likest[2]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d \mu} l{\left(\mu \right)}=\frac{\partial}{\partial \mu} \left(- N \log{\left(\sigma \right)} - \frac{N \log{\left(\pi \right)}}{2} - \frac{N \log{\left(2 \right)}}{2} + \sum_{i=1}^{N} \left(- \frac{\mu^{2}}{2 \sigma^{2}} + \frac{\mu {x_{i}}}{\sigma^{2}} - \frac{{x_{i}}^{2}}{2 \sigma^{2}}\right)\right)\end{equation}
+:END:
+
+#+begin_src jupyter-python
+likest[3]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d \mu} l{\left(\mu \right)} = \sum_{i=1}^{N} \left(- \frac{\mu}{\sigma^{2}} + \frac{{x_{i}}}{\sigma^{2}}\right)\end{equation}
+:END:
+
+#+begin_src jupyter-python
+likest[4]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\hat \mu=\frac{\sum_{i=1}^{N} {x_{i}}}{N}\end{equation}
+:END:
