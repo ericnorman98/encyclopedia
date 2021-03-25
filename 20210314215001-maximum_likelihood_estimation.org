@@ -1,7 +1,7 @@
 #+title: Maximum likelihood estimation
 #+roam_tags: statistics mle
 
-- tags :: [[file:20210219102643-statistics.org][Statistics]]
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210310162604-estimator.org][Estimator]]
 
 #+call: init()
 
@@ -48,7 +48,7 @@ LEq(L(theta), f(LGiven(lsample(x))))
 The maximum likelihood estimate $\hat{\theta}$ of $\theta$ is the value of
 $\theta$ that maximizes $L(\theta)$.
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 i = Idx('i')
 def maximum_likelihood_estimation(X, x, parameter, observations=N):
     lik = likelihood(X, x, i, parameter, observations)(parameter)

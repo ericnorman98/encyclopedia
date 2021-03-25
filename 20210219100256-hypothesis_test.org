@@ -19,6 +19,8 @@ from encyclopedia.p_value import *
 alpha, mu0, H0, H1 = symbols('alpha mu_0 H_0 H_1')
 #+end_src
 
+#+RESULTS:
+
 * Hypothesis test
 #+begin_src jupyter-python :lib yes
 def hypothesis_test(h0, h1, p_value, V):
@@ -46,7 +48,7 @@ hypothesis[0]
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\begin{cases} H_{0}:\mathtt{\text{the effect of interest is zero}} & \text{for}\: p\geq\alpha \\H_{1}:\mathtt{\text{the effect of interest is not zero}} & \text{otherwise} \end{cases}\end{equation}
+\begin{equation}\begin{cases} H_{0}:\mathtt{\text{the effect of interest is zero}} & \text{for}\: p\geq \alpha \\H_{1}:\mathtt{\text{the effect of interest is not zero}} & \text{otherwise} \end{cases}\end{equation}
 :END:
 
 We reject the null hypothesis if the [[file:20210302194452-p_value.org][p-value]] is less than the /significance
@@ -77,8 +79,8 @@ hypothesis[-1].replace(Probability, lambda e: 0.01)
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{aligned}
-p < \alpha&\Rightarrow 0.01<0.05\Rightarrow \\
-&\Rightarrow H_{1}:\mathtt{\text{the effect of interest is not zero}}
+p < \alpha&=0.01<0.05=\\
+&=H_{1}:\mathtt{\text{the effect of interest is not zero}}
 \end{aligned}\end{equation}
 :END:
 
@@ -139,7 +141,7 @@ hypothesis_ex[0]
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\begin{cases} H_{0}:\mu_{0} = \frac{7}{2} & \text{for}\: p\geq\alpha \\H_{1}:\mu_{0} \neq \frac{7}{2} & \text{otherwise} \end{cases}\end{equation}
+\begin{equation}\begin{cases} H_{0}:\mu_{0} = \frac{7}{2} & \text{for}\: p\geq \alpha \\H_{1}:\mu_{0} \neq \frac{7}{2} & \text{otherwise} \end{cases}\end{equation}
 :END:
 
 If $\bar{X}$ is the sample distribution, the test distribution becomes,

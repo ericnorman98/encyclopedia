@@ -2,15 +2,9 @@
 #+theme: dark
 #+roam_tags: stability analysis dynamic system
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/stability_analysis.py :results silent
-:END:
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 from sympy import *
 from pyorg.latex import *
 import matplotlib.pyplot as plt
@@ -19,7 +13,7 @@ from encyclopedia.calculation_step import CalculationStep, Calculation
 #+end_src
 
 ** Steady states
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class SystemZeroStep(CalculationStep):
     def __call__(self, system):
         return system.rhs.applyfunc(lambda e: Eq(e, 0)), system.variables
@@ -28,7 +22,7 @@ class SystemZeroStep(CalculationStep):
         return LArray(*system_zeros)
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class SteadyStatesSolveStep(CalculationStep):
     def __call__(self, system_zero, deps):
         return solve(
@@ -41,7 +35,7 @@ class SteadyStatesSolveStep(CalculationStep):
         return LArray(*steady_states)
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class SteadyStatesStarStep(CalculationStep):
     def __call__(self, states, deps):
         self.stars = list(map(lambda e: IndexedBase(f'{e.name}^*'), deps))
@@ -50,10 +44,10 @@ class SteadyStatesStarStep(CalculationStep):
                        for star, v in zip(self.stars, s.values())},
 
     def show(self, star_steady):
-        return LValues(star_steady)
+        return Latex(star_steady)
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class SteadyStates(Calculation):
     def __new__(cls, system, add_eqs=[]):
         return Calculation(system, steps=[
@@ -64,7 +58,7 @@ class SteadyStates(Calculation):
 #+end_src
 
 ** Stability analysis
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class StabilityMatrixStep(CalculationStep):
     def __call__(self, system):
         return system.rhs.jacobian(system.variables).applyfunc(lambda e: e.simplify()),
@@ -73,7 +67,7 @@ class StabilityMatrixStep(CalculationStep):
         return Eq(*self.args, stability_matrix)
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class TraceDetStep(CalculationStep):
     def __call__(self, stability_matrix):
         return Trace(stability_matrix), Determinant(stability_matrix)
@@ -87,7 +81,7 @@ class TraceDetStep(CalculationStep):
             return LArray(trace, determinant)
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class SubstituteStep(CalculationStep):
     def __call__(self, trace, determinant):
         return [LCases(trace.subs(steady), determinant.subs(steady)) for steady in self.args]
@@ -96,7 +90,7 @@ class SubstituteStep(CalculationStep):
         return LArray(*args)
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class StabilityAnalysis(Calculation):
     def __new__(cls, system, J=None):
         if J is None:
@@ -109,7 +103,7 @@ class StabilityAnalysis(Calculation):
 #+end_src
 
 ** Classification
-#+begin_src jupyter-python :noweb yes
+#+begin_src jupyter-python :noweb yes :lib yes
 classifications = {
     "saddle": "saddle point", "uniform": "uniform motion",
     "center": "center", "line_unstable": "line of unstable points",
@@ -147,7 +141,7 @@ def stability_classify(det, tr):
 #+end_src
 
 ** Plotting
-#+begin_src jupyter-python :noweb yes
+#+begin_src jupyter-python :noweb yes :lib yes
 def plot_stability_diagram(labels, xmin=-0.1, xmax=0.5, selected_colors=None, points=None, points_label="classification"):
     if points is not None:
         points = np.array(points, dtype=float)

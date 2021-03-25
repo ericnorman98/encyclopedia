@@ -5,89 +5,223 @@
 
 #+call: init()
 
-#+begin_src jupyter-python
-from sympy import *
-from sympy.stats import *
-from pyorg.latex import *
+#+begin_src jupyter-python :lib yes
+from encyclopedia.statistics import *
+from encyclopedia.likelihood_function import *
 #+end_src
 
 #+RESULTS:
 
+#+begin_src jupyter-python :lib yes
+h, f, g = symbols('h f g', cls=Function)
+theta = symbols('theta')
+phi = Function('phi')
+def bayesian_inference(prior_dist, likli_dist, x, parameter, V, N):
+    prior = LEq(g(parameter), density(prior_dist))(parameter)
+    i = Idx('i', N)
+    likli = LEq(f(LGiven(x, theta)), likelihood(likli_dist, x, i, parameter, N)(parameter).rhs)
+    prili_subs = [(prior.lhs, prior.rhs), (likli.lhs, likli.rhs)]
 
-* Bayesian inference
-#+begin_src jupyter-python
-H, E = symbols('H E')
-bayesian_eq = LEq(Probability(H, condition=E), (Probability(E, condition=H)*Probability(H))/Probability(E))
-bayesian_eq
+    replace_prili = lambda e: e.replace(*prili_subs[0]).replace(*prili_subs[1])
+    phi_int = LCalculation(
+        Integral(prior.lhs*likli.lhs, theta),
+        replace_prili,
+        lambda e: e.subs(V).doit().simplify()
+    ).steps(phi(theta))
+
+    posterior = LCalculation(
+        LSubsStep(h(LGiven(theta, x)), (prior.lhs*likli.lhs)/phi(theta)),
+        replace_prili
+    ).steps(h(LGiven(theta, x)))
+
+    new_mean = LCalculation(
+        Integral(theta*posterior.lhs, (theta, -oo, oo)),
+        lambda e: e.replace(posterior.lhs, posterior[1]),
+        replace_prili,
+        lambda e: e.subs(phi(theta), phi_int.rhs).subs(V).doit().simplify()
+    ).steps(mu)
+
+    new_var = LCalculation(
+        Integral((theta-mu)**2*posterior.lhs, (theta, -oo, oo)),
+        lambda e: e.replace(posterior.lhs, posterior[1]),
+        replace_prili,
+        lambda e: e.subs(phi(theta), phi_int.rhs).subs(V).subs(mu, new_mean[-1]).doit().simplify()
+    ).steps(sigma**2)
+
+    return LArray(
+        prior,
+        likli,
+        phi_int,
+        posterior,
+        new_mean,
+        new_var,
+        LEq(sigma, sqrt(new_var[-1]))
+    )
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}P[H]=P[E] P[H] P[E]^{-1}\end{equation}
+# [goto error]
+: ---------------------------------------------------------------------------
+: NameError                                 Traceback (most recent call last)
+: <ipython-input-2-dd1f1abdb08e> in <module>
+: ----> 1 h, f, g = symbols('h f g', cls=Function)
+:       2 theta = symbols('theta')
+:       3 phi = Function('phi')
+:       4 def bayesian_inference(prior_dist, likli_dist, parameter, V, N=N):
+:       5     prior = LEq(g(parameter), density(prior_dist))(parameter)
+:
+: NameError: name 'symbols' is not defined
 :END:
 
-** Example
-Suppose we have two jars of green and red marbles. Jar 1 has 10 green and 30 red
-marbles, while jar 2 has 20 of each. If you pick a jar at random, then a marble
-at random. The marble turns out to be a red one. How probable is it that you
-picked it from jar 1?
+* Bayesian inference
+#+begin_src jupyter-python
+phi_int = LEq(Function('phi'), Lambda(x, Integral(f(LGiven(x,theta))*g(theta), theta)))
+phi_sum = LEq(Function('phi'), Lambda(x, Sum(f(LGiven(x,theta))*g(theta), (theta, -oo, oo))))
 
-The possible hypotheses is,
+LEq(h(LGiven(theta, x)), (f(LGiven(x, theta))*g(theta))/phi_int(x).lhs)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}h{\left(\theta|x \right)}=\frac{g{\left(\theta \right)} f{\left(x|\theta \right)}}{\phi{\left(x \right)}}\end{equation}
+:END:
 
 #+begin_src jupyter-python
-H1, H2, m, J1, J2 = symbols('H_1 H_2 m J1 J2')
-class LContains(Expr):
-    def _latex(self, printer):
-        return f"{printer._print(self.args[0])}\\in {printer._print(self.args[1])}"
-
-    def doit(self):
-        return Contains(*self.args)
-LCases(
-    LColon(H1, "\\text{picked marble is from jar 1}"),
-    LColon(H2, "\\text{picked marble is from jar 2}")
-)
+Latex({
+    f(LGiven(x, theta)): "likelihood function",
+    g(theta): "prior",
+}).replace(LEq, LColon)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{cases}
-H_{1}:\mathtt{\text{\textbackslashtext\{picked marble is from jar 1\}}}\\
-H_{2}:\mathtt{\text{\textbackslashtext\{picked marble is from jar 2\}}}
+f{\left(x|\theta \right)}:\mathtt{\text{likelihood function}}\\
+g{\left(\theta \right)}:\mathtt{\text{prior}}
 \end{cases}\end{equation}
 :END:
 
-and the evidence is,
 #+begin_src jupyter-python
-LColon(E, "\\text{picked a red marble}")
+phi_int(x)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}E:\mathtt{\text{\textbackslashtext\{picked a red marble\}}}\end{equation}
+\begin{equation}\phi{\left(x \right)}=\int g{\left(\theta \right)} f{\left(x|\theta \right)}\, d\theta\end{equation}
 :END:
 
 #+begin_src jupyter-python
-PH1 = Probability(H1)
-PH2 = Probability(H2)
-PEH1 = Probability(E, condition=H1)
-PEH2 = Probability(E, condition=H2)
-PE = Probability(E)
-V = {
-    PH1: 1/2,
-    PH2: 1/2,
-    PEH1: 30/40,
-    PEH2: 20/40,
-}
-#+end_src
-
-#+RESULTS:
-
-#+begin_src jupyter-python
-bayes_ex = (PEH1 * PH1) / (PEH1 * PH1 + PEH2 * PH2)
-LEq(Probability(H1, condition=E), bayes_ex, bayes_ex.subs(V))
+Latex("posterior", lprop, "likelihood", lcross, "prior")
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}P[H_{1}]=P[E] P[H_{1}] \left(P[E] P[H_{1}] + P[E] P[H_{2}]\right)^{-1}=0.6\end{equation}
+\begin{equation}\mathtt{\text{posterior}}\propto\mathtt{\text{likelihood}}\times\mathtt{\text{prior}}\end{equation}
+:END:
+
+If no knowledge of $\theta$, model [[file:20210315181942-prior_distribution.org][prior distribution]] $g(\theta)$ with the [[file:20210315095843-uniform_distribution.org][uniform
+distribution]]. In this case, given $g(\theta)$ is constant, we get
+$h(\theta|x)\propto f(x|\theta)$ so all the posterior knowledge is from the
+[[file:20210314225324-likelihood_function.org][likelihood function]].
+
+** Example
+#+begin_src jupyter-python
+m, v = symbols('m v')
+V = {
+    m: 100,
+    v: 15,
+    x: 130,
+    sigma: 10
+}
+prior_dist = Normal('G', m, v)
+likli_dist = Normal('Z', theta, sigma)
+inference = bayesian_inference(prior_dist, likli_dist, theta, V)
+inference[0]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}g{\left(\theta \right)}=\frac{\sqrt{2} e^{- \frac{\left(- m + \theta\right)^{2}}{2 v^{2}}}}{2 \sqrt{\pi} v}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+inference[1]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}f{\left(x|\theta \right)}=\frac{\sqrt{2} e^{- \frac{\left(- \theta + x\right)^{2}}{2 \sigma^{2}}}}{2 \sqrt{\pi} \sigma}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+inference[2]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+\phi{\left(\theta \right)}&=\int\limits_{-\infty}^{\infty} g{\left(\theta \right)} f{\left(x|\theta \right)}\, d\theta=\\
+&=\int\limits_{-\infty}^{\infty} \frac{e^{- \frac{\left(- \theta + x\right)^{2}}{2 \sigma^{2}}} e^{- \frac{\left(- m + \theta\right)^{2}}{2 v^{2}}}}{2 \pi \sigma v}\, d\theta=\\
+&=\frac{\sqrt{26}}{130 \sqrt{\pi} e^{\frac{18}{13}}}
+\end{aligned}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+inference[3]
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+h{\left(\theta|x \right)}&=\frac{g{\left(\theta \right)} f{\left(x|\theta \right)}}{\phi{\left(\theta \right)}}=\\
+&=\frac{e^{- \frac{\left(- \theta + x\right)^{2}}{2 \sigma^{2}}} e^{- \frac{\left(- m + \theta\right)^{2}}{2 v^{2}}}}{2 \pi \sigma v \phi{\left(\theta \right)}}
+\end{aligned}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+inference[4].evalf()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+\mu&=\int\limits_{-\infty}^{\infty} \theta h{\left(\theta|x \right)}\, d\theta=\\
+&=\int\limits_{-\infty}^{\infty} \frac{\theta g{\left(\theta \right)} f{\left(x|\theta \right)}}{\phi{\left(\theta \right)}}\, d\theta=\\
+&=\int\limits_{-\infty}^{\infty} \frac{\theta e^{- \frac{\left(- \theta + x\right)^{2}}{2 \sigma^{2}}} e^{- \frac{\left(- m + \theta\right)^{2}}{2 v^{2}}}}{2 \pi \sigma v \phi{\left(\theta \right)}}\, d\theta=\\
+&=120.769230769231
+\end{aligned}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+inference[5].evalf()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+\sigma^{2}&=\int\limits_{-\infty}^{\infty} \left(- \mu + \theta\right)^{2} h{\left(\theta|x \right)}\, d\theta=\\
+&=\int\limits_{-\infty}^{\infty} \frac{\left(- \mu + \theta\right)^{2} g{\left(\theta \right)} f{\left(x|\theta \right)}}{\phi{\left(\theta \right)}}\, d\theta=\\
+&=\int\limits_{-\infty}^{\infty} \frac{\left(- \mu + \theta\right)^{2} e^{- \frac{\left(- \theta + x\right)^{2}}{2 \sigma^{2}}} e^{- \frac{\left(- m + \theta\right)^{2}}{2 v^{2}}}}{2 \pi \sigma v \phi{\left(\theta \right)}}\, d\theta=\\
+&=69.2307692307692
+\end{aligned}\end{equation}
+:END:
+
+
+#+begin_src jupyter-python
+inference[6].evalf()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\sigma=8.32050294337844\end{equation}
+:END:
+
+#+begin_src jupyter-python
+(inference[5][-1]/V[v]**2).evalf()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}0.307692307692308\end{equation}
 :END:

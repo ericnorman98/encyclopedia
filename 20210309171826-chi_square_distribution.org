@@ -1,20 +1,25 @@
 #+title: Chi-square distribution
 #+roam_tags: statistics chi_square distribution
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
-
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/chi_square_distribution.py :results silent
-:END:
 
 #+begin_src jupyter-python
 import matplotlib.pyplot as plt
 import numpy as np
-from sympy import *
-from pyorg.latex import *
+from encyclopedia.statistics import *
 #+end_src
 
+#+RESULTS:
+
 * TODO Chi-square distribution
+#+begin_src jupyter-python
+k = Symbol('k', integer=True, positive=True)
+X = ChiSquared('X', k)
+
+X
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}X\end{equation}
+:END:

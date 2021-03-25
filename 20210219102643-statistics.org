@@ -6,16 +6,78 @@
 from sympy import *
 from sympy.stats import *
 from sympy.stats.rv import RandomSymbol
+from sympy.stats.frv_types import *
 from pyorg.latex import *
 import numpy as np
 import matplotlib.pyplot as plt
 #+end_src
 
+#+RESULTS:
+
 #+begin_src jupyter-python :lib yes
-mu, sigma, n, xm, s, x, z, t = symbols('mu sigma n \\bar{x} s x z t')
+mu, sigma, alpha, n, s, x, z, t, xm, x2m, I = symbols('mu sigma alpha n s x z t \\bar{x} \\bar{x^2} I')
+s2 = s**2
+see = LSubscript(s, xm)
+sample = IndexedBase('x')
+i = Idx('i', n)
+f, F = symbols('f F', cls=Function)
 sigma2 = sigma**2
 T = RandomSymbol('T')
 Xm = RandomSymbol('\\bar{X}')
+X = RandomSymbol('X')
+lsample = lambda ibase: LComma(ibase[1], ldots, ibase[n])
+mean = LEq(xm, Sum(sample[i], i)/n)
+squared_mean = LEq(x2m, Sum(sample[i]**2, i)/n)
+var = LEq(s2, Sum((sample[i]-xm)**2, i)/(n-1))
+std = LEq(s, sqrt(s2))
+estim_std_err = LEq(see, s/sqrt(n))
+
+mean_lam = lambdify((x, n), mean.rhs)
+squared_mean_lam = lambdify((x, n), squared_mean.rhs)
+var_lam = lambdify((x, xm, n), var.rhs)
+std_lam = lambdify((x, xm, n), sqrt(var.rhs))
+estim_std_err_lam = lambdify((s, n), estim_std_err.rhs)
 #+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :lib yes
+def calculate_statistics(data):
+    mean_n = mean_lam(data, len(data))
+    std_n = std_lam(data, mean_n, len(data))
+    return {
+        xm: LEq(mean.rhs, Number(mean_n)),
+        x2m: LEq(squared_mean.rhs, Number(squared_mean_lam(data, len(data)))),
+        s2: LEq(var.rhs, Number(var_lam(data, mean_n, len(data)))),
+        s: LEq(std.rhs, Number(std_n)),
+        see: LEq(estim_std_err.rhs, Number(estim_std_err_lam(std_n, len(data)))),
+    }
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+Latex(calculate_statistics([1, 2, 3, 6, 2]))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+\bar{x}=\frac{\sum_{i=0}^{n - 1} {x_{i}}}{n}=2.8\\
+\bar{x^2}=\frac{\sum_{i=0}^{n - 1} {x_{i}}^{2}}{n}=10.8\\
+s^{2}=\frac{\sum_{i=0}^{n - 1} \left(- \bar{x} + {x_{i}}\right)^{2}}{n - 1}=3.7\\
+s=\sqrt{s^{2}}=1.92353840616713\\
+{s}_{\bar{x}}=\frac{s}{\sqrt{n}}=0.860232526704263
+\end{cases}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+data = [1, 2, 3]
+m = mean_lam(data, 3)
+var_lam(data, m, 3)
+#+end_src
+
+#+RESULTS:
+: 1.0
 
 * Statistics

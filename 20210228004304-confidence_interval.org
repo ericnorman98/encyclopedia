@@ -5,22 +5,19 @@
 
 #+call: init()
 
-#+begin_src jupyter-python
-from sympy import *
-from sympy.stats import *
-import matplotlib.pyplot as plt
-import numpy as np
-from pyorg.latex import *
-from matplotlib.animation import FuncAnimation
+#+begin_src jupyter-python :lib yes
 from encyclopedia.statistics import *
 #+end_src
 
-#+RESULTS:
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.animation import FuncAnimation
+#+end_src
 
 * Confidence interval
 #+begin_src jupyter-python :lib yes
 z = symbols('z')
-alpha = symbols('alpha', real=True, positive=True)
 z_f = symbols('z', cls=Function)
 pdf = symbols('\\operatorname{pdf}', cls=Function)
 Z = Normal('Z', 0, 1)
@@ -176,8 +173,12 @@ def calculate_confidence_interval(rv, standardized_rv, parameter):
     ).steps(prob).rdups()
 #+end_src
 
-#+RESULTS:
-
+#+begin_src jupyter-python :lib yes
+def calculate_confidence_interval_num(center, parameter, V):
+    z_alpha_n = z_alpha(alpha/2).subs(V)
+    ci = LPm(center, z_alpha_n.lhs*see)
+    return LEq(LSubscript(I, parameter), ci, ci.subs(V).subs(z_alpha_n.lhs, z_alpha_n.rhs))
+#+end_src
 
 #+begin_src jupyter-python
 calculate_confidence_interval(Xm, (Xm-mu)/(sigma/sqrt(n)), mu)

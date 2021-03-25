@@ -26,6 +26,16 @@ def likelihood(X, x, i, parameter, observations=N):
 #+end_src
 
 #+begin_src jupyter-python :lib yes
+def likelihood_single(X, x, parameter):
+    dens = density(X)
+    if isinstance(dens, BinomialDistribution):
+        dens = dens(x).args[0][0]
+    else:
+        dens = dens(x)
+    return LEq(L, Lambda(parameter, dens))
+#+end_src
+
+#+begin_src jupyter-python :lib yes
 l = Function('l')
 def loglikelihood(X, x, i, parameter, observations=N):
     likl = likelihood(X, x, i, parameter, observations)

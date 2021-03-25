@@ -1,24 +1,17 @@
 #+title: Calculation step
 #+roam_tags:
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/calculation_step.py :results silent
-:END:
-
-** Calculation
-#+begin_src jupyter-python
+* Calculation
+#+begin_src jupyter-python :lib yes
 import matplotlib as plt
 import numpy as np
 from sympy import *
 from pyorg.latex import *
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class CalculationStep(Expr):
     def print(self):
         return self
@@ -27,7 +20,7 @@ class CalculationStep(Expr):
         pass
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class Calculation(CalculationStep):
     def __new__(cls, *args, steps=[]):
         if len(steps) == 0:

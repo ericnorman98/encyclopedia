@@ -1,15 +1,7 @@
 #+title: Stochastic sis model
 #+roam_tags: sis model stochastic population dynamic system
-#+PROPERTY: header-args :tangle encyclopedia/stochastic_sis_model.py
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
-
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/stochastic_sis_model.py :results silent
-:END:
 
 #+begin_src jupyter-python
 import matplotlib.pyplot as plt
@@ -22,6 +14,8 @@ from scipy.optimize import curve_fit
 from scipy.stats import gaussian_kde
 from scipy.stats import norm
 #+end_src
+
+#+RESULTS:
 
 * Stochastic sis model
 The definition of the stochastic version of the sis model is a [[file:20210308084322-markov_chain.org][Markov chain]] and
@@ -45,16 +39,17 @@ nexts = Matrix([
     Lambda(n, n-1),
 ])
 
-LMatColon(nexts, LMatEq(rates_lhs, rates_rhs))
+LArray(rates_lhs, rates_rhs).transpose(LEq)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{array}{l}
-\left( n \mapsto n + 1 \right) : {b_{n}} = \alpha \left(1 - \frac{n}{N}\right) n\\
-\left( n \mapsto n - 1 \right) : {d_{n}} = \beta n
+{b_{n}}=\alpha \left(1 - \frac{n}{N}\right) n\\
+{d_{n}}=\beta n
 \end{array}\end{equation}
 :END:
+
 where $n$ is $I_t$ for simplicity. The expression to the left of the colon
 defines an event and the right side is the rate of the event occurring.
 
@@ -64,18 +59,18 @@ The /master equation/ of the system looks like the following
 rho = symbols('rho', cls=Function)
 Ep, Em, Epm = symbols('E^+ E^- E^{\\pm}')
 master_dt = LEq(rho(n, t+dt), rho(n, t)+dt*((b[n-1]*rho(n-1,t)+d[n+1]*rho(n+1,t))-(b[n]*rho(n, t)+d[n]*rho(n, t))))
-master_eq = LComposeStep(
-    LStep(lambda e: e/dt),
+master_eq = LArray(
+    lambda e: e/dt,
     LSimplifyStep(),
     LSubsStep(rho(n, t+dt)/dt, rho(n, t).diff(t)),
     LSubsStep(rho(n, t)/dt, 0)
-)(master_dt)
-master_eq.factor(rho(n,t))
+).steps(master_dt)[-1]
+master_eq.expand(rho(n,t))#.subs([(rho(n-1,t)*b[n-1],Em*rho(n,t)*b[n]), (rho(n+1,t)*d[n+1],Ep*rho(n,t)*d[n])]).factor(b[n],d[n])
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\frac{d}{d t} \rho{\left(n,t \right)}      =      \left(- {b_{n}} - {d_{n}}\right) \rho{\left(n,t \right)} + \rho{\left(n - 1,t \right)} {b_{n - 1}} + \rho{\left(n + 1,t \right)} {d_{n + 1}}\end{equation}
+\begin{equation}\frac{d}{d t} \rho{\left(n,t \right)}=\rho{\left(n - 1,t \right)} {b_{n - 1}} + \rho{\left(n + 1,t \right)} {d_{n + 1}} - \rho{\left(n,t \right)} {b_{n}} - \rho{\left(n,t \right)} {d_{n}}\end{equation}
 :END:
 
 We can rewrite this equation using /step operators/ like below
@@ -86,7 +81,7 @@ master_step
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\frac{d}{d t} \rho{\left(n,t \right)} = \left(1 - E^{+}\right) \rho{\left(n,t \right)} {b_{n}} + \left(1 - E^{-}\right) \rho{\left(n,t \right)} {d_{n}}\end{equation}
+\begin{equation}\frac{d}{d t} \rho{\left(n,t \right)}=\left(1 - E^{+}\right) \rho{\left(n,t \right)} {b_{n}} + \left(1 - E^{-}\right) \rho{\left(n,t \right)} {d_{n}}\end{equation}
 :END:
 
 To simplify the expansion of the equation, we introduce $\hat{I}=n/N$ and get $b(\hat{I})$
@@ -351,7 +346,7 @@ plt.legend()
 
 ** Efficient simulation
 We can make our simulation more efficient by realizing the similarity of the
-algorithm to the one generating numbers from the exponential distribution. The
+algorithm to the one generating numbers from the [[file:20210315164132-exponential_distribution.org][exponential distribution]]. The
 hypothesis is that we can simply sample from an exponential distribution to get
 the time of the next event instead of simulating the whole system.
 

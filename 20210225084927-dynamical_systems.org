@@ -9,7 +9,7 @@
 :PROPERTIES:
 :header-args: :tangle encyclopedia/dynamical_systems.py :results silent
 :END:
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 from sympy import *
 from pyorg.latex import *
 import matplotlib.pyplot as plt
@@ -18,7 +18,7 @@ from encyclopedia.stability_analysis import SteadyStates, StabilityAnalysis
 from scipy.integrate import solve_ivp
 #+end_src
 
-#+begin_src jupyter-python
+#+begin_src jupyter-python :lib yes
 class DynamicalSystem(Expr):
     def __new__(cls, model_rhs, variables, t, params=[]):
         model_lhs = Matrix([var.diff(t) for var in variables])
@@ -70,7 +70,7 @@ class DynamicalSystem(Expr):
         return StabilityAnalysis(self, **kwargs)
 
     def _latex(self, printer):
-        return printer._print(LMatEq(self._model_lhs, self._model_rhs))
+        return printer._print(LArray(self._model_lhs, self._model_rhs).transpose(LEq))
 #+end_src
 
 * Dynamical systems

@@ -1,74 +1,45 @@
 #+title: Normal distribution
 #+roam_tags: statistics distribution normal
 
-* Setup :noexport:
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210219103418-probability_distribution.org][Probability distribution]]
+
 #+call: init()
-#+call: init-plot-style()
 
 #+begin_src jupyter-python
 import matplotlib.pyplot as plt
 import numpy as np
-from sympy import *
-from pyorg.latex import *
-from sympy.stats import *
+from encyclopedia.statistics import *
 #+end_src
 
 #+RESULTS:
 
 * Normal distribution
-#+begin_src jupyter-python
-mu, sigma, n, xm, s, x, z, t = symbols('mu sigma n \\bar{x} s x z t')
+#+begin_src jupyter-python :lib yes
+X = Normal('X', mu, sigma)
 #+end_src
 
 #+RESULTS:
 
-#+begin_src jupyter-python
-Z = Normal('Z', mu, sigma)
-Zstd = Normal('Z', 0, 1)
-#+end_src
-
-#+RESULTS:
-
-** PDF
-#+begin_src jupyter-python
-phi = symbols('phi', cls=Function)
-phi_f = lambda x: LEq(phi(x), density(Zstd)(x))
-phi_f(x)
+** [[file:20210315170643-probability_density_function.org][Probability density function]]
+#+begin_src jupyter-python :lib yes
+f_X = LEq(f, density(X))
+f_X(x)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\phi{\left(x \right)} = \frac{\sqrt{2} e^{- \frac{x^{2}}{2}}}{2 \sqrt{\pi}}\end{equation}
+\begin{equation}f{\left(x \right)}=\frac{\sqrt{2} e^{- \frac{\left(- \mu + x\right)^{2}}{2 \sigma^{2}}}}{2 \sqrt{\pi} \sigma}\end{equation}
 :END:
 
-#+thumb:
-#+begin_src jupyter-python :results output
-x_n = np.linspace(-5, 5, 200)
-plt.plot(x_n, lambdify(x, phi_f(x).rhs)(x_n))
-plt.title("Normal PDF")
-#+end_src
-
-#+RESULTS:
-[[file:./.ob-jupyter/eeb6a099c37e3c12ddb9908b966250544f50d861.png]]
-
-** CDF
+** [[file:20210315171336-cumulative_density_function.org][Cumulative density function]]
 The definition of the cumulative distribution is using the [[file:20210301091142-error_function.org][error function]].
 #+begin_src jupyter-python
 Phi = symbols('Phi', cls=Function)
-Phi_f = lambda x: LEq(Phi(x), cdf(Zstd)(x))
-Phi_f(x)
+F_X = LEq(F, cdf(X))
+F_X(x)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\Phi{\left(x \right)} = \frac{\operatorname{erf}{\left(\frac{\sqrt{2} x}{2} \right)}}{2} + \frac{1}{2}\end{equation}
+\begin{equation}F{\left(x \right)}=\frac{\operatorname{erf}{\left(\frac{\sqrt{2} \left(- \mu + x\right)}{2 \sigma} \right)}}{2} + \frac{1}{2}\end{equation}
 :END:
-
-#+begin_src jupyter-python :results output
-x_n = np.linspace(-5, 5, 200)
-plt.plot(x_n, lambdify(x, Phi_f(x).rhs)(x_n))
-plt.title("Normal CDF")
-#+end_src
-
-#+RESULTS:
-[[file:./.ob-jupyter/f70cdbc15fc91e0b470c3f408a5bfb6fd993266d.png]]

@@ -1,5 +1,5 @@
 #+title: Estimator
-#+roam_tags: statistics estimator
+#+roam_tags: statistics estimator estimation
 
 - tags :: [[file:20210219102643-statistics.org][Statistics]]
 
@@ -10,44 +10,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sympy import *
 from sympy.stats import *
-from pyorg.latex2 import *
+from pyorg.latex import *
 #+end_src
 
 #+RESULTS:
 
 * TODO Estimator
-#+begin_src jupyter-python
-sigmah = symbols('\\hat{\\sigma}', cls=Function)
-sigma = symbols('sigma')
-i = symbols('i', cls=Idx)
-x = symbols('x', cls=IndexedBase)
-X1 = Normal('X_1', 0, sigma)
-X2 = Normal('X_2', 0, sigma)
 
-estimator = LEq(sigmah(X1, X2)**2, (X1**2+X2**2)/2)
-estimator
-#+end_src
 
-#+RESULTS:
-:RESULTS:
-\begin{equation}\hat{\sigma}^{2}{\left(X_{1},X_{2} \right)}=\frac{X_{1}^{2}}{2} + \frac{X_{2}^{2}}{2}\end{equation}
-:END:
-
-#+begin_src jupyter-python
-LCalculation(
-    LSubsStep(estimator.lhs, estimator.rhs),
-    LExpandStep(),
-    LMapArgsStep(LAdd, LDoitStep()),
-    LDoitStep()
-).steps(Expectation(estimator.lhs))
-#+end_src
-
-#+RESULTS:
-:RESULTS:
-\begin{equation}\begin{aligned}
-E[\hat{\sigma}^{2}{\left(X_{1},X_{2} \right)}]&=E[\frac{X_{1}^{2}}{2} + \frac{X_{2}^{2}}{2}]=\\
-&=\frac{E[X_{1}^{2}]}{2} + \frac{E[X_{2}^{2}]}{2}=\\
-&=\frac{\sigma^{2}}{2} + \frac{\sigma^{2}}{2}=\\
-&=\sigma^{2}
-\end{aligned}\end{equation}
-:END:
