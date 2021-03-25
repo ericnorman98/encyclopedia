@@ -1,0 +1,428 @@
+#+title: Stochastic growth model
+#+roam_tags:
+#+PROPERTY: header-args:jupyter-python :tangle stoch_model.py
+
+#+call: init(theme='light)
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+from sympy import *
+from sympy.stats import *
+from sympy.stats.rv import RandomSymbol
+from pyorg.latex import *
+from scipy.integrate import solve_ivp
+import matplotlib.pyplot as plt
+import numpy as np
+#+end_src
+
+#+RESULTS:
+
+* Stochastic growth model
+If we consider a growth model where a population increases due to births with
+probability $b\delta t$ during time $\delta t$.
+
+| Event               | Action     | Rate                    |
+|---------------------+------------+-------------------------|
+| one new individual  | $n-1\to n$ | $\lambda_{n-1}=b*(n-1)$ |
+| two new individuals | $n-2\to n$ | $\mu_{n-2}=b*(n-2)$     |
+
+** Master equation
+Let $X(t)$ be a random variable that represents the population size at $t$ and
+the change in population size during the small time step $\delta t$ is $\Delta
+X=X(t+\delta t)-X(t)$. The change in probability $\rho(n,t)$ is
+#+begin_src jupyter-python
+b, d, t, p, q = symbols('b d t p q', real=True, positive=True)
+N = symbols('N', integer=True, positive=True)
+n = symbols('n', integer=True, positive=True)
+X = symbols('X', cls=Function, integer=True, positive=True)
+dt = Symbol('\\delta t')
+rho = Function('\\rho')
+dX = Function('\\Delta X')
+N0 = Symbol('N_0')
+Xt = X(lempty, t)
+Xdt = X(lempty, t+dt)
+dX_eq = LEq(dX, Xdt-Xt)
+latex_set_printer(FuncFirstArgBaseLatexPrinter)
+prob_change_calc = LCalculation(
+    Probability(LEq(dX, n)),
+    Probability(LEq(dX, 0))+Probability(LEq(dX, 1))+Probability(LGe(dX, 2)),
+    rho(n, t)*(1-n*b*dt)+rho(n-1,t)*(n-1)*b*dt+rho(n-2,t)
+).steps(rho(n,t+dt))
+prob_change = LEq(rho(n,t+dt), prob_change_calc[-1])
+prob_change_calc
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+\rho_{n}(\delta t + t)&=P[\Delta X=n]=\\
+&=P[\Delta X=0] + P[\Delta X=1] + P[\Delta X\geq 2]=\\
+&=\delta t b \left(n - 1\right) \rho_{n - 1}(t) + \left(- \delta t b n + 1\right) \rho_{n}(t) + \rho_{n - 2}(t)
+\end{aligned}\end{equation}
+:END:
+
+Subtracting $\rho(n,t)$, dividing by $\delta t$ and taking the limit $\delta
+t\to 0$ gives the master equation
+#+begin_src jupyter-python
+master = (((prob_change).expand()-rho(n,t))/dt).expand().subs(rho(n-2,t), 0)
+master = LEq(rho(n,t).diff(t), Limit(master.rhs, dt, 0).doit().factor(rho(n-2,t), rho(n-1,t)))
+master
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d t} \rho_{n}(t)=b \left(- n \rho_{n}(t) + \left(n - 1\right) \rho_{n - 1}(t)\right)\end{equation}
+:END:
+
+Solving this differential equation gives
+#+begin_src jupyter-python
+master_sol = LEq(rho(n,t), (exp(-b*t)*(1-exp(-b*t))**(n-1)))
+master_sol
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\rho_{n}(t)=\left(1 - e^{- b t}\right)^{n - 1} e^{- b t}\end{equation}
+:END:
+
+We can then calculate the expected population size after time $t$ like so
+#+begin_src jupyter-python
+expsum = Sum(n*master_sol.rhs, (n, 0, oo))
+expected_N = LEq(LCarets(n), expsum, expsum.doit().replace(Piecewise, lambda *a: a[0].args[0]).simplify())
+expected_N_lam = lambdify((b, p, t), expected_N.rhs)
+expected_N
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\left<n\right>=\sum_{n=0}^{\infty} n \left(1 - e^{- b t}\right)^{n - 1} e^{- b t}=e^{b t}\end{equation}
+:END:
+
+#+begin_src jupyter-python :exports none
+t_n = np.linspace(0, 100, 10)
+plt.plot(t_n, expected_N_lam(0.1, 0.5, t_n))
+plt.plot(t_n, expected_N_lam(0.1, 1.0, t_n))
+plt.yscale('log')
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/42fabe0836f7a040ae64724d152f384d40986fe2.png]]
+
+** COMMENT DNF
+
+#+begin_src jupyter-python
+V = {
+    b: 0.1,
+    p: 0.5,
+    t: 1,
+    N0: 1,
+}
+master_sol_lam = lambdify((n, t), master_sol.rhs.subs(V), 'numpy')
+t_n = np.linspace(0, 100, 200)
+# p_n_t = lambdify((b, p, t, n), (exp(-(1-p)*b*t)*(1-exp(-p*b*t))**(n-1)))(0.1, 0.5, t_n, 10)
+p_t_n = np.zeros([len(t_n)])
+for i, ti in enumerate(t_n):
+    p_t_n[i] = master_sol_lam(10, ti)
+plt.plot(t_n, p_t_n)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+| <matplotlib.lines.Line2D | at | 0x7f7f87194430> |
+[[file:./.ob-jupyter/f35abe7ba8d956c5f1ffb1ad99b6469a7d6f9f71.png]]
+:END:
+
+#+begin_src jupyter-python
+Nf = Function('N')
+V = {
+    b: 0.1,
+    p: 0.5,
+    t: 1,
+    N0: 1,
+}
+LCalculation(
+    # LVExpectation(Nf(lempty,t)).diff(t),
+    lambda e: e.replace(master_sol.lhs, master_sol.rhs).simplify(),
+    lambda e: e.doit().subs(V).subs(DiracDelta(0), 1).simplify()
+).steps(Sum(n*master_sol.lhs, (n, 1, 100)))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+\sum_{n=1}^{100} n \rho_{n}(t)&=\frac{e^{- b t} e^{b p t} \sum_{n=1}^{100} n \left(1 - e^{- b p t}\right)^{n}}{1 - e^{- b p t}}=\\
+&=1.05127109637602
+\end{aligned}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+DiracDelta(-1)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}0\end{equation}
+:END:
+
+#+begin_src jupyter-python
+Nf = Function('N')
+LEq(LVExpectation(Nf(lempty,t)), LVExpectation(Nf(lempty,t)).diff(t)/b)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\left<N_{}(t)\right>=\frac{\frac{\partial}{\partial t} \left<N_{}(t)\right>}{b}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+LEq(rho(n),r)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+: ---------------------------------------------------------------------------
+: NameError                                 Traceback (most recent call last)
+: <ipython-input-21-7fe4ebf2f9ce> in <module>
+: ----> 1 LEq(rho(n),r)
+:
+: NameError: name 'r' is not defined
+:END:
+
+The change in $\rho(n,t)$ for when the population increases by two looks like
+this,
+#+begin_src jupyter-python
+inc_two = (1-p)*b
+inc_two
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}b \left(1 - p\right)\end{equation}
+:END:
+
+#+begin_src jupyter-python
+no_inc = rho(n)
+no_inc
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\rho_{n}()\end{equation}
+:END:
+
+Now if combine these we get
+#+begin_src jupyter-python
+master = Eq(rho(n).diff(t), inc_one+inc_two-b*no_inc).simplify()
+master
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+: ---------------------------------------------------------------------------
+: NameError                                 Traceback (most recent call last)
+: <ipython-input-24-daadb8abee6d> in <module>
+: ----> 1 master = Eq(rho(n).diff(t), inc_one+inc_two-b*no_inc).simplify()
+:       2 master
+:
+: NameError: name 'inc_one' is not defined
+:END:
+
+#+begin_src jupyter-python
+rho0 = Symbol('\\rho_0')
+master_sol = dsolve(master, rho(n), ics={rho(n).subs(t, 0): exp(N0-n)}).simplify()
+master_sol
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+#+begin_example
+---------------------------------------------------------------------------
+ValueError                                Traceback (most recent call last)
+<ipython-input-25-6da33546644c> in <module>
+      1 rho0 = Symbol('\\rho_0')
+----> 2 master_sol = dsolve(master, rho(n), ics={rho(n).subs(t, 0): exp(N0-n)}).simplify()
+      3 master_sol
+
+~/repos/sympy/sympy/solvers/ode/ode.py in dsolve(eq, func, hint, simplify, ics, xi, eta, x0, n, **kwargs)
+    581         # been solved.
+    582         try:
+--> 583             sol = dsolve_system(eq, funcs=func, ics=ics, doit=True)
+    584             return sol[0] if len(sol) == 1 else sol
+    585         except NotImplementedError:
+
+~/repos/sympy/sympy/solvers/ode/systems.py in dsolve_system(eqs, funcs, t, ics, doit, simplify)
+   2080
+   2081     if funcs is not None and not isinstance(funcs, list):
+-> 2082         raise ValueError(filldedent('''
+   2083             Input to the funcs should be a list of functions.
+   2084         '''))
+
+ValueError:
+Input to the funcs should be a list of functions.
+#+end_example
+:END:
+
+
+#+begin_src jupyter-python
+expect_n = LCalculation(
+    Sum(n*master_sol.lhs, (n, 1, oo)),
+    lambda e: e.replace(master_sol.lhs, master_sol.rhs),
+    lambda e: e.doit().simplify()
+).steps(Expectation(n))
+expect_n
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+n&=\sum_{n=1}^{\infty} n \rho_{n}(t)=\\
+&=\sum_{n=1}^{\infty} n \left(1 - e^{- b p t}\right)^{n - 1} e^{b t \left(p - 1\right)}=\\
+&=\begin{cases} e^{b t \left(3 p - 1\right)} & \text{for}\: e^{- b p t} \left|{e^{b p t} - 1}\right| < 1 \\\frac{e^{2 b p t} \sum_{n=1}^{\infty} \left(-1\right)^{n} n \left(1 - e^{b p t}\right)^{n} e^{- b n p t}}{- e^{b t} + e^{b t \left(p + 1\right)}} & \text{otherwise} \end{cases}
+\end{aligned}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+master_lam = lambdify((b, p, n, rho(n)), master.rhs)
+def master_ode(t, y, b, p, n):
+    # s = 0
+    # for n in range(20):
+    #     s += n*master_lam(b, p, n, *y)
+    return master_lam(b, p, n, *y)#s
+master_lam(0.1, 0.5, 10, 1)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+#+begin_example
+Traceback (most recent call last):
+
+  File "/home/eric/.pyenv/versions/org/lib/python3.8/site-packages/IPython/core/interactiveshell.py", line 3427, in run_code
+    exec(code_obj, self.user_global_ns, self.user_ns)
+
+  File "<ipython-input-27-f1104e21ab5f>", line 1, in <module>
+    master_lam = lambdify((b, p, n, rho(n)), master.rhs)
+
+  File "/home/eric/repos/sympy/sympy/utilities/lambdify.py", line 866, in lambdify
+    c = compile(funcstr, filename, 'exec')
+
+  File "<lambdifygenerated-4>", line 2
+    return (b*(-n*\rho(n, t) + (n - 1)*\rho(n - 1, t)))
+                                                       ^
+SyntaxError: unexpected character after line continuation character
+#+end_example
+:END:
+
+#+begin_src jupyter-python :results output
+sol = solve_ivp(master_ode, (0, 30), [0.0], args=(0.1, 0.5, 10))
+plt.ylim([0, 1])
+plt.plot(sol.t, sol.y[0])
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+# [goto error]
+: ---------------------------------------------------------------------------
+: NameError                                 Traceback (most recent call last)
+: <ipython-input-28-71d0a63cc7c5> in <module>
+: ----> 1 sol = solve_ivp(master_ode, (0, 30), [0.0], args=(0.1, 0.5, 10))
+:       2 plt.ylim([0, 1])
+:       3 plt.plot(sol.t, sol.y[0])
+:
+: NameError: name 'master_ode' is not defined
+:END:
+
+#+begin_src jupyter-python
+Pl = lambdify((b, p, n, N0, t), master_sol.rhs, 'scipy')
+t_n = np.linspace(0, 100, 100)
+Pln = Pl(0.1, 0.5, 2, 1, t_n)
+plt.ylim([0, 1])
+plt.plot(t_n, Pln)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+| <matplotlib.lines.Line2D | at | 0x7f7f87026a00> |
+[[file:./.ob-jupyter/626c450871f57fefc62a906ce21cbd6014cd6cfb.png]]
+:END:
+
+
+\pagebreak
+** Simulation
+We will simulate the process in this section using the Gillespie algorithm with
+an exponential distribution of rate $b n$ for sampling time steps. See Figure
+[[fig:simulations]] for the results.
+#+begin_src jupyter-python :exports none
+react = np.array([1, 2])
+def step_gillespie(b_n, p_n, n, t):
+    dt = -np.log(np.random.random(size=n.shape))/(b_n*n)
+    event = (np.random.random(size=n.shape) > p_n).astype(int)
+    t += dt
+    n += react[event]
+
+n_n = np.ones([10])
+t_n = np.zeros([10])
+step_gillespie(0.1, 0.5, n_n, t_n)
+n_n
+#+end_src
+
+#+RESULTS:
+: array([3., 3., 3., 3., 2., 2., 2., 2., 3., 3.])
+
+
+#+begin_src jupyter-python :exports none
+def run_gillespie(b_n, p_n, N0, steps, trajs):
+    n_n = np.zeros([trajs])+N0
+    t_n = np.zeros([trajs])
+    n_hist = np.zeros([steps, trajs])
+    t_hist = np.zeros([steps, trajs])
+    n_hist[0, :] = N0
+    for i in range(1, steps):
+        step_gillespie(b_n, p_n, n_n, t_n)
+        t_hist[i] = t_n
+        n_hist[i] = n_n
+    return t_hist, n_hist
+#+end_src
+
+#+RESULTS:
+
+#+name: src:fig:simulations
+#+begin_src jupyter-python :noweb yes
+trajs = 1000
+steps = 20000
+N0 = Symbol('N0')
+cases = [{b: 0.1, N0: 1, p: 0.5},{b: 0.1, N0: 1, p: 1.0}]
+# st_hist, sn_hist = run_slow(0.1, 0.5, 1, 0.001, steps, trajs)
+plt.figure(figsize=(8, 4))
+for i, case in enumerate(cases):
+    plt.subplot(1, 2, i+1)
+    plt.title(inline(Latex(case).replace(LCases, LComma)))
+    t_hist, n_hist = run_gillespie(case[b], case[p], case[N0], 20, trajs)
+    plt.plot(t_hist[:, 0], n_hist[:, 0], color=<<color("green")>>, lw=1.0)
+    plt.plot(t_hist[:, 1], n_hist[:, 1], color=<<color("green")>>, lw=1.0, label="example realizations")
+    t_mean = t_hist.mean(axis=1)
+    plt.plot(t_mean, n_hist.mean(axis=1), color=<<color("blue")>>, lw=1.0, label=f"average over {trajs} realizations")
+    t_n = np.linspace(0, t_mean.max())
+    plt.plot(t_n, expected_N_lam(case[b], case[p], t_n), color=<<color("red")>>, label="theoretical")
+    plt.xlabel("$t$")
+    plt.ylabel("$n_t$")
+    # plt.xlim([0, 150])
+    plt.ylim([1, 50])
+    plt.yscale('log')
+    plt.legend()
+#+end_src
+
+#+caption: Simulations of the birth process comparing the numerical and theoretical population size over time.
+#+label: fig:simulations
+#+RESULTS: src:fig:simulations
+[[file:./.ob-jupyter/47522b83e7dc96e8858cc012def3b8762657982e.png]]
+
+
+#+latex: \pagebreak
+#+latex: \appendix
+* Code
+#+include: stoch_model.py src python

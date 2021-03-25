@@ -1,0 +1,568 @@
+#+title: SEIR model
+#+roam_tags:
+#+author: Eric Norman, 19981004-5691
+#+PROPERTY: header-args:jupyter-python :tangle seir_model.py
+
+#+begin_src elisp :exports none
+(setq encyclopedia-theme-current 'light)
+#+end_src
+
+#+RESULTS:
+: light
+
+#+call: init()
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+from sympy import *
+from pyorg.latex import *
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
+#+end_src
+
+#+RESULTS:
+
+* SEIR model
+This is an investigation into the SEIR model for disease spreading. The
+definition of the model dynamics looks like this
+#+begin_src jupyter-python
+s, e, i, r = symbols('s e i r', cls=Function)
+t, beta, gamma, alpha, delta = symbols('t beta gamma alpha delta', real=True, positive=True)
+d = Function('\\partial')
+
+model_dim = LArray(
+    LEq(d(s(t))/d(t), -beta*s(t)*i(t)),
+    LEq(d(e(t))/d(t), beta*s(t)*i(t)-gamma*e(t)),
+    LEq(d(i(t))/d(t), gamma*e(t)-alpha*i(t)),
+    LEq(d(r(t))/d(t), alpha*i(t)),
+)
+
+deps = [s(t), e(t), i(t), r(t)]
+
+model = model_dim.replace(d(t), 1).replace(d, lambda e: e.diff(t))
+model
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{d}{d t} s{\left(t \right)}=- \beta i{\left(t \right)} s{\left(t \right)}\\
+\frac{d}{d t} e{\left(t \right)}=\beta i{\left(t \right)} s{\left(t \right)} - \gamma e{\left(t \right)}\\
+\frac{d}{d t} i{\left(t \right)}=- \alpha i{\left(t \right)} + \gamma e{\left(t \right)}\\
+\frac{d}{d t} r{\left(t \right)}=\alpha i{\left(t \right)}
+\end{array}\end{equation}
+:END:
+
+** Dimensionless system
+To nondimensionalize we choose substitutions like this
+#+begin_src jupyter-python
+sigma, eps, eta, rho = symbols('\\sigma \\epsilon \\eta \\rho', cls=Function)
+tau, A, C, ts = symbols('tau A C t_s', real=True, positive=True)
+nondim = {
+    t: tau*ts,
+    s(t): sigma(tau)*C,
+    e(t): eps(tau)*C,
+    i(t): eta(tau)*C,
+    r(t): rho(tau)*C,
+}
+
+
+Latex(nondim)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+t=t_{s} \tau\\
+s{\left(t \right)}=C \sigma{\left(\tau \right)}\\
+e{\left(t \right)}=C \epsilon{\left(\tau \right)}\\
+i{\left(t \right)}=C \eta{\left(\tau \right)}\\
+r{\left(t \right)}=C \rho{\left(\tau \right)}
+\end{cases}\end{equation}
+:END:
+where $C$ and $t_s$ are the scaling constants.
+
+Substituting into the model gives and dividing by $C/t_s$ gives
+#+begin_src jupyter-python
+nondim_model = LArray(
+    lambda e: e.subs(nondim),
+    lambda e: e.replace(d, lambda e: e.args[0]*d(e.args[1])),
+    lambda e: e/(C/ts)
+).steps(model_dim)[-1].simplify().replace(d(tau), 1).replace(d, lambda e: e.diff(tau))
+nondim_model
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{d}{d \tau} \sigma{\left(\tau \right)}=- C \beta t_{s} \eta{\left(\tau \right)} \sigma{\left(\tau \right)}\\
+\frac{d}{d \tau} \epsilon{\left(\tau \right)}=t_{s} \left(C \beta \eta{\left(\tau \right)} \sigma{\left(\tau \right)} - \gamma \epsilon{\left(\tau \right)}\right)\\
+\frac{d}{d \tau} \eta{\left(\tau \right)}=t_{s} \left(- \alpha \eta{\left(\tau \right)} + \gamma \epsilon{\left(\tau \right)}\right)\\
+\frac{d}{d \tau} \rho{\left(\tau \right)}=\alpha t_{s} \eta{\left(\tau \right)}
+\end{array}\end{equation}
+:END:
+
+Now solve for $\gamma t_s=1$ and $C \beta t_s=1$
+#+begin_src jupyter-python
+Cv, tsv = solve([
+    Eq(gamma*ts, 1),
+    Eq(C*beta*ts, 1),
+], [C, ts])[0]
+LArray(
+    LEq(C, Cv), LEq(ts, tsv)
+)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+C=\frac{\gamma}{\beta}\\
+t_{s}=\frac{1}{\gamma}
+\end{array}\end{equation}
+:END:
+
+Substituting $\gamma t_s=1$ and $C \beta t_s=1$ gives
+#+begin_src jupyter-python
+nondim_model = nondim_model.expand().subs([(gamma*ts, 1), (C*beta*ts, 1)]).simplify()
+nondim_model
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{d}{d \tau} \sigma{\left(\tau \right)}=- \eta{\left(\tau \right)} \sigma{\left(\tau \right)}\\
+\frac{d}{d \tau} \epsilon{\left(\tau \right)}=- \epsilon{\left(\tau \right)} + \eta{\left(\tau \right)} \sigma{\left(\tau \right)}\\
+\frac{d}{d \tau} \eta{\left(\tau \right)}=- \alpha t_{s} \eta{\left(\tau \right)} + \epsilon{\left(\tau \right)}\\
+\frac{d}{d \tau} \rho{\left(\tau \right)}=\alpha t_{s} \eta{\left(\tau \right)}
+\end{array}\end{equation}
+:END:
+
+We can now see that we can describe the system using only the parameter $A=t_s \alpha$ like so
+#+begin_src jupyter-python
+nondim_model = nondim_model.subs(alpha*ts, A)
+nondim_model
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{d}{d \tau} \sigma{\left(\tau \right)}=- \eta{\left(\tau \right)} \sigma{\left(\tau \right)}\\
+\frac{d}{d \tau} \epsilon{\left(\tau \right)}=- \epsilon{\left(\tau \right)} + \eta{\left(\tau \right)} \sigma{\left(\tau \right)}\\
+\frac{d}{d \tau} \eta{\left(\tau \right)}=- A \eta{\left(\tau \right)} + \epsilon{\left(\tau \right)}\\
+\frac{d}{d \tau} \rho{\left(\tau \right)}=A \eta{\left(\tau \right)}
+\end{array}\end{equation}
+:END:
+
+** Steady states
+If we solve the system using an equation solver we get
+#+begin_src jupyter-python
+sumcomps = [Eq(s(t)+e(t)+i(t)+r(t), 1)]
+steady = solve(list(model.apply(lambda e: e.rhs).args)+sumcomps, deps)[0]
+LArray(*map(lambda e: LEq(*e), zip(map(LSteady, symbols('s e i r')), steady)))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+s^{\ast}=1 - r{\left(t \right)}\\
+e^{\ast}=0\\
+i^{\ast}=0\\
+r^{\ast}=r{\left(t \right)}
+\end{array}\end{equation}
+:END:
+
+The solution depends on the number of individuals in the recovered compartment,
+which means we have two cases; we have $t\to \infty \Rightarrow s^{\ast}=1$ or
+$t\to \infty \Rightarrow r^{\ast}=1$.
+
+To analyze exactly how the parameters affects the stability of this steady state
+we will look at the stability matrix by taking the Jacobian
+#+begin_src jupyter-python
+J = Symbol('\\mathbb{J}')
+jac = Matrix(model.apply(lambda e: e.rhs).args).jacobian(deps)
+fixsubs = {
+    s(t): 1-r(t),
+    e(t): 0,
+    i(t): 0,
+    r(t): r(t),
+}
+J_eq = LEq(J, jac.subs(fixsubs))
+J_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\mathbb{J}=\left[\begin{matrix}0 & 0 & - \beta \left(1 - r{\left(t \right)}\right) & 0\\0 & - \gamma & \beta \left(1 - r{\left(t \right)}\right) & 0\\0 & \gamma & - \alpha & 0\\0 & 0 & \alpha & 0\end{matrix}\right]\end{equation}
+:END:
+
+*Case 1 $r(t)\to 1$*
+
+If we calculate the eigenvalues of the stability at the first steady state
+matrix we get
+#+begin_src jupyter-python
+get_eigvals = lambda case, syms: LArray(*map(lambda e: LEq(*e), zip(syms, list(J_eq.rhs.subs(case).eigenvals().keys())))).simplify()
+eigvals1 = get_eigvals({r(t): 1}, symbols('\\lambda_{1\\,3} \\lambda_{2:4}'))
+eigvals2 = get_eigvals({r(t): 0}, symbols('\\lambda_{1:3} \\lambda_{3\\,4}'))
+eigvals1
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\lambda_{1,3}=0\\
+\lambda_{2}=- \gamma\\
+\lambda_{3}=- \alpha
+\end{array}\end{equation}
+:END:
+For this case, we can see that it always will be marginally stable since we have
+zeros and real negative values.
+
+*Case 2 $r(t)\to 0$*
+#+begin_src jupyter-python
+eigvals2
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\lambda_{1}=- \frac{\alpha}{2} - \frac{\gamma}{2} - \frac{\sqrt{\alpha^{2} - 2 \alpha \gamma + 4 \beta \gamma + \gamma^{2}}}{2}\\
+\lambda_{2}=- \frac{\alpha}{2} - \frac{\gamma}{2} + \frac{\sqrt{\alpha^{2} - 2 \alpha \gamma + 4 \beta \gamma + \gamma^{2}}}{2}\\
+\lambda_{3,4}=0
+\end{array}\end{equation}
+:END:
+
+For this case, we can see that the first eigenvalue always will be real
+negative, we can solve for when the second one will be positive like this
+#+begin_src jupyter-python
+solve_gt = LCalculation(
+    lambda e: e*2,
+    lambda e: (e**2).expand(),
+    lambda e: e-gamma**2-alpha**2,
+    lambda e: (e/gamma).simplify(),
+    lambda e: e+2*alpha,
+    lambda e: e/(alpha*4),
+join=limply).steps(LGt(eigvals2[1].rhs.args[0], -Add(*eigvals2[1].rhs.args[1:])))
+solve_gt
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+\frac{\sqrt{\alpha^{2} - 2 \alpha \gamma + 4 \beta \gamma + \gamma^{2}}}{2}>\frac{\alpha}{2} + \frac{\gamma}{2}&\Rightarrow \sqrt{\alpha^{2} - 2 \alpha \gamma + 4 \beta \gamma + \gamma^{2}}>\alpha + \gamma\Rightarrow \\
+&\Rightarrow \alpha^{2} - 2 \alpha \gamma + 4 \beta \gamma + \gamma^{2}>\alpha^{2} + 2 \alpha \gamma + \gamma^{2}\Rightarrow \\
+&\Rightarrow - 2 \alpha \gamma + 4 \beta \gamma>2 \alpha \gamma\Rightarrow \\
+&\Rightarrow - 2 \alpha + 4 \beta>2 \alpha\Rightarrow \\
+&\Rightarrow 4 \beta>4 \alpha\Rightarrow \\
+&\Rightarrow \frac{\beta}{\alpha}>1
+\end{aligned}\end{equation}
+:END:
+see Figure [[fig:bifurcation]] for a bifurcation diagram.
+
+#+name: src:fig:bifurcation
+#+begin_src jupyter-python :results output :noweb yes
+V = {
+    beta: Rational(5,8),
+    gamma: Rational(1/3),
+}
+bifur = float(beta.subs(V))
+alpha_n1 = np.linspace(0, bifur, 100)
+alpha_n2 = np.linspace(bifur, 1, 100)
+eig2lam = lambdify(alpha, eigvals2[1].rhs.subs(V))
+plt.title("Bifurcation at $s^{\\ast}=1$, $r^{\\ast}=0$")
+plt.axhline(0, color=<<color("brightblack4")>>, ls='--', lw=1.0)
+plt.plot(alpha_n1, eig2lam(alpha_n1), color=<<color("green")>>, ls='--', label="$\\alpha/\\beta>1$, unstable")
+plt.plot(alpha_n2, eig2lam(alpha_n2), color=<<color("green")>>, label="$\\alpha/\\beta<1$, marginally stable")
+plt.scatter(bifur, 0, color=<<color("blue")>>, zorder=4, label=inline(LEq(alpha,beta)))
+plt.yticks([0])
+plt.xlabel("$\\alpha$")
+plt.ylabel("$\\operatorname{Re}(\\lambda_2)$")
+plt.legend()
+#+end_src
+
+#+caption: Bifurcation diagram at $s^{\ast}=1$, $r^{\ast}=0$ with parameters $\alpha=1/4$, $\beta=1/8$, $\gamma=1/3$.
+#+attr_latex: scale=0.75
+#+label: fig:bifurcation
+#+RESULTS: src:fig:bifurcation
+[[file:./.ob-jupyter/bd59019d5d173009130768ff6fcd83af02adc30d.png]]
+
+** Long-time limit $s(\infty)$
+To get the long-time limit of $s(t)$, we divide the susceptible with the
+recovered to get the change in $s$ for a small change in $r$.
+#+begin_src jupyter-python
+sr_frac = LEq(
+    lambda e: e.subs(zip(model.lhs.args, model.rhs.args))
+).steps(model.lhs[0]/model.lhs[-1]).replace(LEq, Eq)
+sr_frac
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{\frac{d}{d t} s{\left(t \right)}}{\frac{d}{d t} r{\left(t \right)}} = - \frac{\beta s{\left(t \right)}}{\alpha}\end{equation}
+:END:
+
+Solving the equation gives us the following
+#+begin_src jupyter-python
+s0 = Symbol('s_0')
+r0 = Symbol('r_0')
+sr = Function('sr')
+sr_frac_sol = dsolve(sr_frac, s(t), ics={
+    s(0): s0,
+}).subs(r(0), r0)
+sr_frac_sol
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}s{\left(t \right)} = s_{0} e^{\frac{\beta r_{0}}{\alpha}} e^{- \frac{\beta r{\left(t \right)}}{\alpha}}\end{equation}
+:END:
+
+Using $r_0=0$ we get
+#+begin_src jupyter-python
+sr_frac_sol = sr_frac_sol.subs(r0, 0)
+sr_frac_sol
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}s{\left(t \right)} = s_{0} e^{- \frac{\beta r{\left(t \right)}}{\alpha}}\end{equation}
+:END:
+
+Assuming that exposed and infected limit to $0$ as $t\to\infty$ we can use the following
+#+begin_src jupyter-python
+LCalculation(
+    LEq(s(oo)+r(oo), 1),
+    lambda e: e-s(oo),
+join=limply).steps(LEq(s(t)+e(t)+i(t)+r(t), 1))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+e{\left(t \right)} + i{\left(t \right)} + r{\left(t \right)} + s{\left(t \right)}=1&\Rightarrow r{\left(\infty \right)} + s{\left(\infty \right)}=1\Rightarrow \\
+&\Rightarrow r{\left(\infty \right)}=1 - s{\left(\infty \right)}
+\end{aligned}\end{equation}
+:END:
+
+Substituting this gives
+#+begin_src jupyter-python
+sr_inf_eq = sr_frac_sol.subs(s(t), s(oo)).subs(r(t), 1-s(oo))
+sr_inf_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}s{\left(\infty \right)} = s_{0} e^{- \frac{\beta \left(1 - s{\left(\infty \right)}\right)}{\alpha}}\end{equation}
+:END:
+
+Solving this equation for $s(\infty)$ gives
+#+begin_src jupyter-python
+s_inf = LEq(s(oo), solve(sr_inf_eq.replace(LEq,Eq), s(oo))[0])
+s_inf
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}s{\left(\infty \right)}=- \frac{\alpha W\left(- \frac{\beta s_{0} e^{- \frac{\beta}{\alpha}}}{\alpha}\right)}{\beta}\end{equation}
+:END:
+Where W(z) is the Lambert W function. See Figure [[fig:s_limit]] for a plot over
+this solution and Figure [[fig:sinf_validation]] for a plot comparing this result
+with a numerical simulation.
+
+#+begin_src jupyter-python :exports none
+s0_n = 0.1
+s_inf.rhs.subs(V).subs({r0: 0.0, s0: s0_n})/s0_n
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}- 16.0 \alpha W\left(- \frac{0.0625 e^{- \frac{5}{8 \alpha}}}{\alpha}\right)\end{equation}
+:END:
+
+#+name: src:fig:s_limit
+#+begin_src jupyter-python :results output :noweb yes
+V = {
+    alpha: Rational(1,4),
+    beta: Rational(5,8),
+    gamma: Rational(1,3),
+}
+s_inf_lam = lambdify((s0, r0), re(s_inf.rhs.subs(V)))
+s0_n = np.linspace(0.00001, 1, 200)
+plt.title(inline(V))
+plt.plot(s0_n, s_inf_lam(s0_n, 0)/s0_n, zorder=2)
+plt.xlabel("$s_0$")
+plt.ylabel("$s(\\infty)/s_0$")
+#+end_src
+
+#+caption: A curve showing the ratio of the long-time limit of susceptible and the initial condition.
+#+attr_latex: scale=0.75
+#+label: fig:s_limit
+#+RESULTS: src:fig:s_limit
+[[file:./.ob-jupyter/61bc05b059d928fc697d53c347d3c1e5709aaaef.png]]
+
+** Preventive measures
+We now consider some preventive measures simulated by adjusting the $\beta$
+parameter, you could interpret this reduction as, for example, different
+lock-down strategies. Small values of $\beta$ would correspond to stricter
+measures. We will simulate four values of $\beta$; no preventive measures
+$\beta=5/8$, light measures $\beta=1/2$, moderate $\beta=3/8$ and severe
+$\beta=1/3$. See Figure [[fig:prev_measures_sims]] for the results. As expected, the
+case with no preventive measures has the largest fraction of infected
+individuals. The light and moderate preventive measures both reduce the infected
+proportion, the severe case also reduces it but we can also observe a second
+wave forming after lifting the preventive measures.
+
+The second wave with the severe preventive measures might suggest that it is not
+the most optimal strategy if the goal is to minimize the number of infections.
+
+#+begin_src jupyter-python :exports none
+model_lam = lambdify((s(t), e(t), i(t), r(t), alpha, beta, gamma), model.rhs.args)
+def model_ode(t, y, a, b, g):
+    return model_lam(*y, a, b(t) if callable(b) else b, g)
+model_lam(5, 1, 0, 0, 1/4, 5/8, 1/3)
+#+end_src
+
+#+RESULTS:
+| 0.0 | -0.3333333333333333 | 0.3333333333333333 | 0.0 |
+
+#+begin_src jupyter-python :results silent
+def run_system(t_range, V):
+    sol = solve_ivp(model_ode, t_range, [1-V[delta], V[delta], 0, 0], rtol=1e-7, args=(V[alpha], V[beta], V[gamma]))
+    return sol.t, sol.y.T
+#+end_src
+
+#+begin_src jupyter-python :exports none
+V = {
+    alpha: Rational(1,4),
+    beta: Rational(5,8),
+    gamma: Rational(1,3),
+    delta: 0.0001,
+}
+s0_n = np.linspace(0.00001, 0.999, 50)
+points = np.zeros([len(s0_n)])
+for i, d in enumerate(1-s0_n):
+    V[delta] = d
+    t, y = run_system((0, 100), V)
+    points[i] = y[-1, 0]
+plt.plot(s0_n, points/s0_n)
+plt.xlabel("$s0$")
+plt.ylabel("$s(\\infty)$")
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+: Text(0, 0.5, '$s(\\infty)$')
+[[file:./.ob-jupyter/d62755dbaedd8c9214068d1ff6a871ded7b9d77e.png]]
+:END:
+
+#+begin_src jupyter-python :noweb yes :results silent
+curve_colors = {
+    's': <<color("blue")>>,
+    'e': <<color("orange")>>,
+    'i': <<color("red")>>,
+    'r': <<color("green")>>,
+}
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :noweb yes :results silent
+def plot_system(t, ys, ax=None, compartments=('s', 'e', 'i', 'r'), labels=None, **kwargs):
+    if ax is None:
+        ax = plt.gca()
+    if labels is None:
+        labels = curve_colors.keys()
+    for c, y, l in zip(curve_colors.keys(), ys.T, labels):
+        if c in compartments:
+            if 'color' not in kwargs and 'label' not in kwargs:
+                ax.plot(t, y, color=curve_colors[c], label=c, **kwargs)
+            else:
+                ax.plot(t, y, **kwargs)
+#+end_src
+
+#+begin_src jupyter-python :results silent
+def create_param_change(p_outer, p_inner, t_range):
+    def param(t):
+        return p_inner if t_range[0] <= t <= t_range[1] else p_outer
+    param._latex = lambda *a: f"\\{{{p_outer}, {p_inner}\\}}"
+    return param
+#+end_src
+
+#+begin_src jupyter-python :noweb yes :results silent
+def plot_prev_range(ax, prev_t_range=(30, 135)):
+    ax.axvline(prev_t_range[0], color=<<color("fg-hc")>>, ls='--', zorder=2, lw=1.0, alpha=0.5)
+    ax.axvline(prev_t_range[1], color=<<color("fg-hc")>>, ls='--', zorder=2, lw=1.0, alpha=0.5)
+    ax.fill_between(np.linspace(*prev_t_range), -1, 2, zorder=1, color=<<color("fg")>>, label="duration", alpha=0.5)
+#+end_src
+
+#+begin_src jupyter-python :noweb yes :results silent
+def plot_system_prev(t, y, ax1, ax2, prev_t_range=(30, 135), **kwargs):
+    ax1.set_title("Infected")
+    ax2.set_title("Recovered")
+    ax1.set_ylim([0, 0.2])
+    ax2.set_ylim([0, 1.0])
+    plot_system(t, y, ax=ax1, compartments=('i',), zorder=4, **kwargs)
+    plot_system(t, y, ax=ax2, compartments=('r',), zorder=4, **kwargs)
+    ax1.legend()
+    ax2.legend()
+#+end_src
+
+#+name: src:fig:sinf_validation
+#+begin_src jupyter-python :results output :noweb yes
+V = {
+    alpha: Rational(1,4),
+    beta: Rational(5,8),
+    gamma: Rational(1,3),
+    delta: Rational(1, 10000),
+}
+
+fig, ax = plt.subplots(figsize=(4, 4))
+t, y = run_system((0, 255), V)
+sinf = s_inf.rhs.subs(V).subs({r0: 0, s0: 1-V[delta]})
+ax.axhline(sinf, color=<<color("fg")>>, lw=1.0, ls='--', label=f"$s(\\infty)={latex(LApprox(sinf, sinf.evalf().round(4)))}$")
+plot_system(t, y, ax=ax, lw=1.0, alpha=0.8)
+plt.title(f"Analytical $s(\\infty)$ validation")
+plt.legend()
+#+end_src
+
+#+caption: A plot showing that the analytical solution to $s(\infty)$ aligns with the numerical simulation.
+#+attr_latex: scale=0.75
+#+label: fig:sinf_validation
+#+RESULTS: src:fig:sinf_validation
+[[file:./.ob-jupyter/369b235aa9b89f1aa794e0a645a9ed9ad83a7e5c.png]]
+
+#+name: src:fig:prev_measures_sims
+#+begin_src jupyter-python :results output :noweb yes
+cases = [{
+    alpha: Rational(1,4),
+    beta: create_param_change(Rational(5,8), prev_beta, (30, 135)),
+    gamma: Rational(1,3),
+    delta: 1e-4,
+} for prev_beta in [Rational(5/8), Rational(1/2), Rational(3/8), Rational(1/3)]]
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
+labels = ["none", "light", "moderate", "severe"]
+colors = [<<color("red")>>, <<color("yellow")>>, <<color("green")>>, <<color("blue")>>]
+ax1.set_yticks([0, 0.1, 0.2])
+ax2.set_yticks([0, 0.5, 1.0])
+prev_t_range = (30, 135)
+plot_prev_range(ax1, prev_t_range)
+plot_prev_range(ax2, prev_t_range)
+ax1.set_xticks([0, *prev_t_range, 255])
+ax2.set_xticks([0, *prev_t_range, 255])
+for i, (case, label, color) in enumerate(zip(cases, labels, colors)):
+    t, y = run_system((0, 255), case)
+    plot_system_prev(t, y, ax1, ax2, prev_t_range=prev_t_range, label=label, color=color, lw=1.0)
+plt.suptitle(f"Preventive measures")
+#+end_src
+
+#+caption: A plot of the four cases of preventive measures,
+#+label: fig:prev_measures_sims
+#+RESULTS: src:fig:prev_measures_sims
+[[file:./.ob-jupyter/4a7e46a5d1def781897f413ffe7cf12a79ab8981.png]]
+
+#+latex: \pagebreak
+#+latex: \appendix
+* Code
+#+include: seir_model.py src python

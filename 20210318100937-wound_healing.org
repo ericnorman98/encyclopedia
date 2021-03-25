@@ -1,0 +1,331 @@
+#+title: Wound healing
+#+author: Eric Norman, 19981004-5691
+#+PROPERTY: header-args:jupyter-python :tangle wound_model.py
+
+#+call: init('light)
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+from sympy import *
+from pyorg.latex import *
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import solve_ivp
+latex_set_printer(NoFuncParamsLatexPrinter)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+class Lap2(Function):
+    def _latex(self, printer):
+        expr = printer._print(self.args[0])
+        vars = ''.join([printer._print(a[0] if iterable(a) else a) for a in self.args[1:]])
+        return f"\\nabla_{{{vars}}}^2({expr})"
+
+    def doit(self, **hints):
+        if self.args[0] is Function or len(self.args) <= 2:
+            return Derivative(*self.args).doit(**hints).replace(Derivative, Lap2)
+        else:
+            return self.args[0].diff(self.args[1], 2)+self.args[0].diff(self.args[2], 2)
+#+end_src
+
+#+RESULTS:
+
+* Wound healing
+The model for wound healing looks like this
+#+begin_src jupyter-python
+from sympy.tensor.array.array_derivatives import ArrayDerivative
+n, c, f, m = symbols('n c \\pmb{f} \\pmb{m}', cls=Function)
+x, y = symbols('x y', real=True)
+xx = Symbol('\\pmb{x}')
+rn, ri, rc, K, t = symbols('r_n r_i r_c K t', real=True, positive=True)
+
+diffusion = LEq(Lap2(m(xx, t), xx), Matrix([Lap2(n(x,y,t), x, y), 0]))
+funcs = LEq(f(m(xx, t)), Matrix([
+    rn*n(x,y,t)*(1-n(x,y,t))+ri*(c(x,y,t)/(1+c(x,y,t)))*n(x,y,t)*(1-n(x,y,t)/K),
+    -c(x,y,t)+rc*(c(x,y,t)/(1+c(x,y,t)))*n(x,y,t)
+]))
+deps = LEq(m(xx, t), Matrix([n(x,y,t), c(x,y,t)]))
+Vmodel = {
+    funcs.lhs: funcs.rhs,
+    diffusion.lhs: diffusion.rhs,
+    deps.lhs: deps.rhs
+}
+model = LEq(m(xx, t).diff(t), funcs.lhs+diffusion.lhs)
+expanded_model = model.subs(Vmodel).replace(ArrayDerivative, lambda *a: ArrayDerivative(*a).doit()).replace(LEq, LArray).transpose(LEq)
+expanded_model
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{\partial}{\partial t} n=\frac{r_{i} \left(1 - \frac{n}{K}\right) c n}{c + 1} + r_{n} \left(1 - n\right) n + \nabla_{xy}^2(n)\\
+\frac{\partial}{\partial t} c=\frac{r_{c} c n}{c + 1} - c
+\end{array}\end{equation}
+:END:
+
+** Explanation
+For the /cell concentration/ $n$, we have both reaction and diffusion. The
+diffusion part involves the cell concentration, which makes sense since cells
+usually moves spatially and interacts according to diffusion.
+
+The reaction part of the cell concentration has two terms of logistic growth,
+one of the terms is positive and proportional to the chemical concentration. The
+interpretation of this could be that cells divides more where the chemical is
+present.
+#+begin_src jupyter-python :results output :exports none
+plt.figure(figsize=(8,4), dpi=100)
+n_n = np.linspace(0, 1)
+plt.subplot(1, 2, 1)
+plt.title(f"$(1-n/K)n$, $K=1$")
+plt.plot(n_n, (1-n_n/1)*n_n, label="cell concentration division term")
+plt.legend()
+plt.xticks([0, 1])
+plt.yticks([0, 1.0])
+plt.subplot(1, 2, 2)
+plt.title(f"$(1-n/K)n$, $K=2$")
+plt.plot(n_n, (1-n_n/2)*n_n)
+plt.xticks([0, 1])
+plt.yticks([0, 1.0])
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/667fb842a6b7fbc4975e98ec4a50828c032741e5.png]]
+
+The other term is concentration-inverse proportional to itself, which means that
+this term will contribute to an increase the most when $n=0.5$ then start
+reducing with higher concentrations.
+
+For the /chemical concentration/ $c$ we do not have diffusion but the reaction
+part has two terms, where the $-c$ indicates that the chemical disappears
+proportionally to the concentration. The second term shows an increase in the
+chemical that is proportional to the concentration of cells, where the
+interpretation is that the cells is producing the chemical.
+
+** Steady states
+If we ignore diffusion and find the reaction steady states we find the following
+#+begin_src jupyter-python
+nstar = symbols('n^*_{1:4}')
+cstar = symbols('c^*_{1:4}')
+V = {
+    ri: 1,
+    rc: 1,
+    rn: 0.01,
+    K: 100
+}
+mstar = Matrix([nstar, cstar]).T
+steady_state = solve(funcs.rhs.subs(V), deps.rhs)
+steady_state = LArray(mstar, Matrix(steady_state)).transpose(LEq)
+steady_state
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+n^*_{1}=0.0\\
+c^*_{1}=0.0\\
+n^*_{2}=1.0\\
+c^*_{2}=0.0\\
+n^*_{3}=50.0\\
+c^*_{3}=49.0
+\end{array}\end{equation}
+:END:
+
+We can see that one of the steady states $(n^*_3,c^*_{3})$ is extreme compared
+to the others, both the concentration of cells and concentration of the chemical
+is much higher. This should correspond to the pathological state where the
+keloid scar forms, since we know that healthy concentration of cells corresponds
+to $1.0$.
+
+** Healing a paper cut
+We will now consider a simplification of the model in the case of healing a long
+and thin wound, such that the spacial dimensions reduces to one. We can do this if
+we imagine aligning the x-axis parallel to the wound.
+
+If we also introduce a /wave variable/ $z=x-Ct$, where $C$ is a constant, then
+#+begin_src jupyter-python
+latex_set_printer(PyorgLatexPrinter)
+u,v,w = symbols('u v w', cls=Function)
+C, z = symbols('C z')
+LEq(n(x,0,t), n(x-C*t), n(z))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}n{\left(x,0,t \right)}=n{\left(- C t + x \right)}=n{\left(z \right)}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+LEq(c(x,0,t), c(x-C*t), c(z))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}c{\left(x,0,t \right)}=c{\left(- C t + x \right)}=c{\left(z \right)}\end{equation}
+:END:
+
+If we take the derivative we get
+#+begin_src jupyter-python
+LEq(n(x,0,t).diff(t), Derivative(n(x-C*t), t), -C*n(z).diff(z))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{\partial}{\partial t} n{\left(x,0,t \right)}=\frac{\partial}{\partial t} n{\left(- C t + x \right)}=- C \frac{d}{d z} n{\left(z \right)}\end{equation}
+:END:
+
+Rewriting the model using this we get
+#+begin_src jupyter-python
+one_dim_model = expanded_model.subs([(n(x,y,t).diff(t), -C*n(z).diff(z)),
+                                     (c(x,y,t).diff(t), -C*c(z).diff(z)),
+                                     (n(x,y,t), n(z)),
+                                     (c(x,y,t), c(z))])
+one_dim_model = one_dim_model.replace(Derivative, lambda *a: Derivative(a[0],z))
+one_dim_model = one_dim_model.replace(Lap2, lambda *a: a[0].diff(z, 2))
+one_dim_model
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+- C \frac{d}{d z} n{\left(z \right)}=\frac{r_{i} \left(1 - \frac{n{\left(z \right)}}{K}\right) c{\left(z \right)} n{\left(z \right)}}{c{\left(z \right)} + 1} + r_{n} \left(1 - n{\left(z \right)}\right) n{\left(z \right)} + \frac{d^{2}}{d z^{2}} n{\left(z \right)}\\
+- C \frac{d}{d z} c{\left(z \right)}=\frac{r_{c} c{\left(z \right)} n{\left(z \right)}}{c{\left(z \right)} + 1} - c{\left(z \right)}
+\end{array}\end{equation}
+:END:
+
+To get rid of the diffusion term we introduce a new function $u$ where
+#+begin_src jupyter-python
+LEq(u(z), u(z).diff(z))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}u{\left(z \right)}=\frac{d}{d z} u{\left(z \right)}\end{equation}
+:END:
+
+Taking the derivative gives us
+#+begin_src jupyter-python
+LEq(u(z).diff(z), n(z).diff(z, 2))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d z} u{\left(z \right)}=\frac{d^{2}}{d z^{2}} n{\left(z \right)}\end{equation}
+:END:
+
+Substituting and solving gives us the full system with a dimensionality of 3,
+#+begin_src jupyter-python
+latex_set_printer(NoFuncParamsLatexPrinter)
+one_dim_model_nodiff = LArray(
+    LEq(n(z).diff(z), u(z)),
+    LEq(c(z).diff(z), one_dim_model[1].rhs/-C),
+    LEq(u(z).diff(z), -one_dim_model[0].rhs.subs(n(z).diff(z, 2), C*u(z))),
+)
+one_dim_model_nodiff
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{array}{l}
+\frac{d}{d z} n=u\\
+\frac{d}{d z} c=- \frac{\frac{r_{c} c n}{c + 1} - c}{C}\\
+\frac{d}{d z} u=- C u - \frac{r_{i} \left(1 - \frac{n}{K}\right) c n}{c + 1} - r_{n} \left(1 - n\right) n
+\end{array}\end{equation}
+:END:
+
+** COMMENT Fast concentration approximation
+#+begin_src jupyter-python
+v_eq = LEq(v(z).diff(z), one_dim_model_nodiff[2].rhs.args[1])
+v_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d z} v=- r_{n} \left(1 - n\right) n\end{equation}
+:END:
+
+*** Michaelis
+Assuming $|C|\ll 1$, let
+#+begin_src jupyter-python
+latex_set_printer(PyorgLatexPrinter)
+f = Function('f')
+g = Function('g')
+f_eq = one_dim_model_nodiff[2].rhs.subs(C, 0)
+LEq(u(z).diff(z), f(n(z), c(z)))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d z} u{\left(z \right)}=f{\left(n{\left(z \right)},c{\left(z \right)} \right)}\end{equation}
+:END:
+
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d z} v{\left(z \right)}=- r_{n} \left(1 - n{\left(z \right)}\right) n{\left(z \right)}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+f_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}- \frac{r_{i} \left(1 - \frac{n{\left(z \right)}}{K}\right) c{\left(z \right)} n{\left(z \right)}}{c{\left(z \right)} + 1} - r_{n} \left(1 - n{\left(z \right)}\right) n{\left(z \right)}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+g_eq = one_dim_model_nodiff[1].rhs.subs(C, 1)
+LEq(c(z).diff(z), g(n(z), c(z))/C)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d z} c{\left(z \right)}=\frac{g{\left(n{\left(z \right)},c{\left(z \right)} \right)}}{C}\end{equation}
+:END:
+
+If $|C|\ll 1$ then
+#+begin_src jupyter-python
+Latex(c(z).diff(z), Symbol('\\gg'), 1)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d z} c{\left(z \right)}\gg1\end{equation}
+:END:
+
+#+begin_src jupyter-python
+Latex(LEq(u(z).diff(z), f(n(z), c(z))), lcomma, lquad, LEq(g(u(z), v(z)), 0))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d z} u{\left(z \right)}=f{\left(n{\left(z \right)},c{\left(z \right)} \right)},\quad g{\left(u{\left(z \right)},v{\left(z \right)} \right)}=0\end{equation}
+:END:
+
+Solving $g=0$ for $c(z)$ gives us
+#+begin_src jupyter-python
+c_appr_sol = LEq(c(z), solve(Eq(g_eq, 0), c(z))[1])
+c_appr_sol
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}c{\left(z \right)}=r_{c} n{\left(z \right)} - 1\end{equation}
+:END:
+
+#+begin_src jupyter-python
+LEq(u(z).diff(z), f_eq.subs(c_appr_sol.lhs, c_appr_sol.rhs))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{d}{d z} u{\left(z \right)}=- r_{n} \left(1 - n{\left(z \right)}\right) n{\left(z \right)} - \frac{r_{i} \left(1 - \frac{n{\left(z \right)}}{K}\right) \left(r_{c} n{\left(z \right)} - 1\right)}{r_{c}}\end{equation}
+:END:
+
+#+latex: \pagebreak
+#+latex: \appendix
+* Code
+#+include: wound_model.py src python
