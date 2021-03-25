@@ -25,6 +25,14 @@ publish: publish.el
 	@echo "Publishing..."
 	emacs --batch --load publish.el --funcall ericnorman/publish
 
+tangle: publish.el
+	@echo "Tangling..."
+	emacs --batch --load publish.el --funcall encyclopedia-tangle-files
+
+execute: publish.el
+	@echo "Executing all..."
+	emacs --batch --load publish.el --funcall encyclopedia-execute-files
+
 republish: publish.el
 	@echo "Republishing all files..."
 	emacs --batch --load publish.el --funcall ericnorman/republish

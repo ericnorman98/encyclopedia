@@ -36,7 +36,8 @@
 
 (setq org-confirm-babel-evaluate nil)
 (org-babel-do-load-languages
- 'org-babel-load-languages '((python . t)))
+ 'org-babel-load-languages '((python . t)
+                             (jupyter . t)))
 
 (defun ericnorman/configure (publish-dir)
   (encyclopedia-publish-configure publish-dir)
