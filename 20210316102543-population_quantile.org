@@ -1,0 +1,72 @@
+#+title: Population quantile
+#+roam_tags:
+
+#+call: init()
+
+#+begin_src jupyter-python
+from encyclopedia.statistics import *
+#+end_src
+
+#+RESULTS:
+
+* Population quantile
+A population quantile divides a [[file:20210219103418-probability_distribution.org][Probability distribution]] into intervals, each
+with the same probabilities.
+
+#+begin_src jupyter-python
+p = Symbol('p', real=True)
+Q = LEq(Function('Q'), Lambda(p, LInverse(Function('F')(p))))
+def calculate_quantile(rv):
+    return LCalculation(
+        ,*Q,
+        Lambda(p, LInverse(density(rv)(p))),
+        quantile(rv)
+    )
+Q(p)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}Q{\left(p \right)}=\left(F{\left(p \right)}\right)^{-1}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+X = Normal('X', mu, sigma)
+X_Q = calculate_quantile(X)
+X_Q(0.25).evalf().round(4)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+Q{\left(0.25 \right)}&=\left(F{\left(0.25 \right)}\right)^{-1}=\\
+&=\left(\frac{\sqrt{2} e^{- \frac{\left(0.25 - \mu\right)^{2}}{2 \sigma^{2}}}}{2 \sqrt{\pi} \sigma}\right)^{-1}=\\
+&=\mu - 0.6745 \sigma
+\end{aligned}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+X_Q(0.5)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+Q{\left(0.5 \right)}&=\left(F{\left(0.5 \right)}\right)^{-1}=\\
+&=\left(\frac{\sqrt{2} e^{- \frac{\left(0.5 - \mu\right)^{2}}{2 \sigma^{2}}}}{2 \sqrt{\pi} \sigma}\right)^{-1}=\\
+&=\mu
+\end{aligned}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+X_Q(0.75).evalf().round(4)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+Q{\left(0.75 \right)}&=\left(F{\left(0.75 \right)}\right)^{-1}=\\
+&=\left(\frac{\sqrt{2} e^{- \frac{\left(0.75 - \mu\right)^{2}}{2 \sigma^{2}}}}{2 \sqrt{\pi} \sigma}\right)^{-1}=\\
+&=\mu + 0.6745 \sigma
+\end{aligned}\end{equation}
+:END:

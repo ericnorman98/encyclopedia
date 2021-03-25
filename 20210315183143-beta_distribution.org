@@ -1,0 +1,8 @@
+#+title: Beta distribution
+#+roam_tags: statistics
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210219103418-probability_distribution.org][Probability distribution]]
+
+#+call: init()
+
+* TODO Beta distribution

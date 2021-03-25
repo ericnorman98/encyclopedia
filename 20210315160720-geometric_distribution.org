@@ -1,0 +1,66 @@
+#+title: Geometric distribution
+#+roam_tags: statistics discrete
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210219103418-probability_distribution.org][Probability distribution]]
+
+#+call: init()
+
+#+begin_src jupyter-python :lib yes
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy
+from encyclopedia.statistics import *
+#+end_src
+
+#+RESULTS:
+
+* Geometric distribution
+The geometric distribution gives the probability that the first occurrence of
+success requires $k$ independent trails, each with success probability $p$.
+
+#+begin_src jupyter-python :lib yes
+p = Symbol('p', real=True, positive=True)
+X = Geometric('X', p)
+pmf = density(X)(x)
+replace_piecewise = lambda e: e.replace(Piecewise, lambda *a: a[0][0])
+#+end_src
+
+#+RESULTS:
+
+** [[file:20210315172900-expected_value.org][Expected value]]
+#+begin_src jupyter-python :lib yes
+X_E = LCalculation(
+    lambda e: e.rewrite(Sum),
+    lambda e: replace_piecewise(e.doit()),
+).steps(Expectation(X))
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+X_E
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+E[X]&=\sum_{X=1}^{\infty} X p \left(1 - p\right)^{X - 1}=\\
+&=\frac{1}{p}
+\end{aligned}\end{equation}
+:END:
+
+** [[file:20210315173019-variance.org][Variance]]
+#+begin_src jupyter-python :lib yes
+X_Var = LEq(Variance(X), Variance(X).rewrite(Expectation).doit().simplify())
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+X_Var
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\operatorname{Var}(X)=\frac{1 - p}{p^{2}}\end{equation}
+:END:

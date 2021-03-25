@@ -1,0 +1,24 @@
+#+title: Box plot
+#+roam_tags: statistics
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
+#+call: init()
+
+#+begin_src jupyter-python
+import numpy as np
+import matplotlib.pyplot as plt
+#+end_src
+
+* Box plot
+#+begin_src jupyter-python :results output
+spread = np.random.rand(50) * 100
+center = np.ones(25) * 50
+flier_high = np.random.rand(10) * 100 + 100
+flier_low = np.random.rand(10) * -100
+data = np.concatenate((spread, center, flier_high, flier_low))
+plt.boxplot(data)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/41be8a4386834c9810966d8050fde5ba6ccfdca8.png]]

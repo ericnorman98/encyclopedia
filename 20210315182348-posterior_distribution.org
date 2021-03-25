@@ -1,0 +1,9 @@
+#+title: Posterior distribution
+#+roam_tags: statistics bayesian
+
+- tags :: [[file:20210219100345-bayesian_inference.org][Bayesian inference]]
+
+#+call: init()
+
+* Posterior distribution
+The posterior probability of an event is the conditional probability after the observation of evidence.

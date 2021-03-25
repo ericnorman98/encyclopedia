@@ -1,0 +1,169 @@
+#+title: Method of moments
+#+roam_tags: statistics estimation
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210310162604-estimator.org][Estimator]]
+
+#+call: init()
+
+#+begin_src jupyter-python
+from encyclopedia.statistics import *
+import encyclopedia.confidence_interval as ci
+#+end_src
+
+#+RESULTS:
+
+
+* TODO Method of moments
+The definition of the kth moment of a probability law is
+#+begin_src jupyter-python
+mu = symbols('mu', cls=IndexedBase)
+Xi = RandomSymbol('X_i')
+k = Idx('k')
+i = Idx('i')
+kth_moment = LEq(mu[k], Expectation(X**k))
+kth_moment
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}{\mu_{k}}=E[X^{k}]\end{equation}
+:END:
+where $X$ follows the probability law.
+
+The kth sample moment looks like the following
+#+begin_src jupyter-python
+kth_sample_moment = LEq(LHat(mu[k]), Sum((1/n)*Xi**k, (i, 1, n)))
+kth_sample_moment
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\hat {\mu_{k}}=\sum_{i=1}^{n} \frac{X_{i}^{k}}{n}\end{equation}
+:END:
+
+** Geometric model :example:
+Consider the dataset summarizing an iid-sample $(x_1,\dots,x_n)$ of the hop
+counts for $n$ birds, where
+#+begin_src jupyter-python
+x = IndexedBase('x')
+O = IndexedBase('O')
+i = Idx('i')
+j = Idx('j')
+
+V = {
+    x[i]: Latex("number of hops that bird ", i, " does between flights"),
+    O[j]: LAdd(LSubscript(1, LCurly(LEq(x[1], j))), ldots, LSubscript(1, LCurly(LEq(x[n], j)))),
+    n: 130,
+}
+Latex(V)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+{x_{i}}=\mathtt{\text{number of hops that bird }}i\mathtt{\text{ does between flights}}\\
+{O_{j}}={1}_{\{{x_{1}}=j\}}+\dots +{1}_{\{{x_{n}}=j\}}\\
+n=130
+\end{cases}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+O_n = [48, 31, 20, 9, 6, 5, 4, 2, 1, 1, 2, 1]
+data = [i+1 for i, f in enumerate(O_n) for _ in range(0, f)]
+table = [["Number of hops j", *range(1, 13), "Tot"], None,
+         ["Observed frequency "+latex(O[j], mode='inline'), *O_n, sum(O_n)]]
+table
+#+end_src
+
+#+RESULTS:
+| Number of hops j             |  1 |  2 |  3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | Tot |
+|------------------------------+----+----+----+---+---+---+---+---+---+----+----+----+-----|
+| Observed frequency ${O_{j}}$ | 48 | 31 | 20 | 9 | 6 | 5 | 4 | 2 | 1 |  1 |  2 |  1 | 130 |
+
+We can summarize the statistics like this
+#+begin_src jupyter-python
+stats = calculate_statistics(data)
+Latex(stats).round(4)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases}
+\bar{x}=\frac{\sum_{i=0}^{n - 1} {x_{i}}}{n}=2.7923\\
+\bar{x^2}=\frac{\sum_{i=0}^{n - 1} {x_{i}}^{2}}{n}=13.2077\\
+s^{2}=\frac{\sum_{i=0}^{n - 1} \left(- \bar{x} + {x_{i}}\right)^{2}}{n - 1}=5.4527\\
+s=\sqrt{s^{2}}=2.3351\\
+{s}_{\bar{x}}=\frac{s}{\sqrt{n}}=0.2048
+\end{cases}\end{equation}
+:END:
+
+We can approximate a [[file:20210228004304-confidence_interval.org][confidence interval]] for $\mu$, the mean number of hopes per
+bird
+#+begin_src jupyter-python
+ci.calculate_confidence_interval_num(xm, mu, {
+    alpha: 0.05,
+    xm: stats[xm].rhs,
+    see: stats[see].rhs
+}).evalf().round(4).replace(LEq, LApprox)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}{I}_{\mu}\approx \bar{x}\pm z{\left(0.025 \right)} {s}_{\bar{x}}\approx 2.7923\pm 0.4014\end{equation}
+:END:
+
+If we look at the data histogram, we can see that it approximates a [[file:20210315160720-geometric_distribution.org][Geometric
+distribution]]
+#+begin_src jupyter-python :results output
+plt.figure(figsize=(2, 2))
+plt.hist(data)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/0375ce82dc1fef55d075f49415690a8eb540cc9f.png]]
+
+This means that a bird will hop with probability $1-p$ or fly away with
+probability $p$.
+
+Since the geometric model only has one parameter $\theta=p$, we only need one
+moment equation,
+#+begin_src jupyter-python
+import encyclopedia.geometric_distribution as geo
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+geo.X_E
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+E[X]&=\sum_{X=1}^{\infty} X p \left(1 - p\right)^{X - 1}=\\
+&=\frac{1}{p}
+\end{aligned}\end{equation}
+:END:
+
+If we set $\bar{x}=1/\widetilde{p}$ and solve for $\widetilde{p}$, we get the
+method of moment estimate
+#+begin_src jupyter-python
+pt = LTilde(geo.p)
+equation = LEq(xm, geo.X_E.rhs.subs(geo.p, pt))
+equation
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\bar{x}=\widetilde p^{-1}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+sol = solve(Eq(equation.lhs, equation.rhs), pt)[0]
+LEq(pt, sol, sol.subs({xm: stats[xm].rhs}))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\widetilde p=\frac{1}{\bar{x}}=0.358126721763085\end{equation}
+:END:

@@ -1,0 +1,80 @@
+#+title: Point estimation
+#+roam_tags: statistics point estimation
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210310162604-estimator.org][Estimator]]
+
+#+call: init()
+
+#+begin_src jupyter-python
+from sympy import *
+from sympy.stats import *
+from pyorg.latex import *
+from encyclopedia.statistics import *
+#+end_src
+
+#+RESULTS:
+
+* Point estimation
+We can estimate a population parameter $\theta$ from a random sample
+$(x_1,\dots,x_n)$ by creating a point [[file:20210310162604-estimator.org][estimator]] $\hat{\theta}=g(x_1,\dots,x_n)$.
+
+#+begin_src jupyter-python
+Theta = RandomSymbol('\\Theta')
+theta = symbols('\\theta')
+X = IndexedBase('X')
+g = symbols('g', cls=Function)
+point_estimate = LEq(LHat(Theta), g(X[1], ldots, X[n]))
+point_estimate
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\hat \Theta=g{\left({X_{1}},\dots ,{X_{n}} \right)}\end{equation}
+:END:
+
+The quality of the estimator is the mean square error,
+#+begin_src jupyter-python
+(Expectation(Theta-theta)**2).doit()
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\left(- \theta + E[\Theta]\right)^{2}\end{equation}
+:END:
+
+** Example
+#+begin_src jupyter-python
+sigmah = symbols('\\hat{\\sigma}', cls=Function)
+sigma = symbols('sigma')
+i = symbols('i', cls=Idx)
+x = symbols('x', cls=IndexedBase)
+X1 = Normal('X_1', 0, sigma)
+X2 = Normal('X_2', 0, sigma)
+
+estimator = LEq(sigmah(X1, X2)**2, (X1**2+X2**2)/2)
+estimator
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\hat{\sigma}^{2}{\left(X_{1},X_{2} \right)}=\frac{X_{1}^{2}}{2} + \frac{X_{2}^{2}}{2}\end{equation}
+:END:
+
+#+begin_src jupyter-python
+LCalculation(
+    LSubsStep(estimator.lhs, estimator.rhs),
+    LExpandStep(),
+    LMapArgsStep(LAdd, LDoitStep()),
+    LDoitStep()
+).steps(Expectation(estimator.lhs))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+E[\hat{\sigma}^{2}{\left(X_{1},X_{2} \right)}]&=E[\frac{X_{1}^{2}}{2} + \frac{X_{2}^{2}}{2}]=\\
+&=\frac{E[X_{1}^{2}]}{2} + \frac{E[X_{2}^{2}]}{2}=\\
+&=\frac{\sigma^{2}}{2} + \frac{\sigma^{2}}{2}=\\
+&=\sigma^{2}
+\end{aligned}\end{equation}
+:END:

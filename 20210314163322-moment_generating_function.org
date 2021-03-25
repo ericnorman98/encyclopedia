@@ -1,0 +1,6 @@
+#+title: Moment generating function
+#+roam_tags:
+
+#+call: init()
+
+* TODO Moment generating function

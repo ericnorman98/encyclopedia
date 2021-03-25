@@ -1,0 +1,6 @@
+#+title: Probability mass function
+#+roam_tags:
+
+#+call: init()
+
+* TODO Probability mass function

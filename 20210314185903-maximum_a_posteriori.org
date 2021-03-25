@@ -1,0 +1,8 @@
+#+title: Maximum a posteriori
+#+roam_tags: statistics probability map bayesian bayes estimate
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210219100345-bayesian_inference.org][Bayesian inference]]
+
+#+call: init()
+
+* TODO Maximum a posteriori

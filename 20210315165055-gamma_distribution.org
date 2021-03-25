@@ -1,0 +1,45 @@
+#+title: Gamma distribution
+#+roam_tags: statistics continuous maximum entropy
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210219103418-probability_distribution.org][Probability distribution]]
+
+#+call: init()
+
+#+begin_src jupyter-python
+from encyclopedia.statistics import *
+#+end_src
+
+#+RESULTS:
+
+* Gamma distribution
+In [[file:20210219102643-statistics.org][statistics]] and [[file:20210313082049-probability_theory.org][probability theory]], the gamma distribution is a continuous
+two-parameter family of [[file:20210219103418-probability_distribution.org][probability distributions]]. This family consists of the
+[[file:20210309171826-chi_square_distribution.org][Chi-square distribution]], [[file:20210315164132-exponential_distribution.org][Exponential distribution]] and the [[file:20210315165708-erlang_distribution.org][Erlang distribution]].
+
+#+begin_src jupyter-python
+k = Symbol('k')
+theta = Symbol('theta')
+X = Gamma('X', k, theta)
+#+end_src
+
+** [[file:20210315170643-probability_density_function.org][Probability density function]]
+
+#+begin_src jupyter-python
+pdf = density(X)(x)
+LEq(f(x), pdf)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}f{\left(x \right)}=\frac{\theta^{- k} x^{k - 1} e^{- \frac{x}{\theta}}}{\Gamma\left(k\right)}\end{equation}
+:END:
+
+** [[file:20210315171336-cumulative_density_function.org][Cumulative density function]]
+#+begin_src jupyter-python
+LEq(F(x), pdf.integrate(x))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}F{\left(x \right)}=\frac{k \gamma\left(k, \frac{x}{\theta}\right)}{\Gamma\left(k + 1\right)}\end{equation}
+:END:

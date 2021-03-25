@@ -1,0 +1,11 @@
+#+title: Systematic error
+#+roam_tags: statistics
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
+#+call: init()
+
+* Systematic error
+Systematic errors in observations is predictable as opposed to [[file:20210316070025-random_error.org][random error]]. The
+cause can be due to incorrect methods of measurement or some other interference
+with the experiment.

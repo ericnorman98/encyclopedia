@@ -1,0 +1,6 @@
+#+title: Variance
+#+roam_tags: statistics
+
+#+call: init()
+
+* TODO Variance

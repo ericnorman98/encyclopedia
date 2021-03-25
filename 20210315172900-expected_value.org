@@ -1,0 +1,6 @@
+#+title: Expected value
+#+roam_tags:
+
+#+call: init()
+
+* TODO Expected value

@@ -1,0 +1,20 @@
+#+title: Continuity correction
+#+roam_tags: statistics
+
+- tags :: [[file:20210313082049-probability_theory.org][Probability theory]], [[file:20210219103418-probability_distribution.org][Probability distribution]]
+
+#+call: init()
+
+#+begin_src jupyter-python
+from encyclopedia.statistics import *
+import encyclopedia.standard_normal_distribution as stdnorm
+#+end_src
+
+#+RESULTS:
+
+* Continuity correction
+In [[file:20210313082049-probability_theory.org][probability theory]], a continuity correction is an adjustment made when
+approximating a discrete distribution with a continuous one.
+
+** Binomial :example:
+See /continuity correction/ in [[file:20210315145207-binomial_distribution.org][Binomial distribution]] article.

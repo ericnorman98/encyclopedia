@@ -1,0 +1,10 @@
+#+title: Probability density function
+#+roam_tags: statistics pdf
+
+#+call: init()
+
+* Probability density function
+In [[file:20210313082049-probability_theory.org][probability theory]], the probability density function is a function that
+specifies the probability of a random variable falling within a particular range
+of values. It is not the absolute likelihood for taking a value since that would
+be zero (because of the infinite set of values).

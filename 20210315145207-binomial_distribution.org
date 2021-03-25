@@ -1,0 +1,121 @@
+#+title: Binomial distribution
+#+roam_tags: statistics discrete
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210219103418-probability_distribution.org][Probability distribution]]
+
+#+call: init()
+
+#+begin_src jupyter-python :lib yes
+from encyclopedia.statistics import *
+import encyclopedia.standard_normal_distribution as stdnorm
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy
+#+end_src
+
+#+RESULTS:
+
+* Binomial distribution
+The binomial distribution describes the discrete probability distribution of the
+number of successes in a sequence of $n$ independent experiments, where each
+experiment is a yes/no question. Each outcome is either /success/ with
+probaility $p$ or /failure/ with probability $q=1-p$.
+
+#+begin_src jupyter-python :lib yes
+n = Symbol('n', integer=True, positive=True)
+k = Symbol('k', integer=True, positive=True)
+p = Symbol('p', real=True, positive=True)
+X = Binomial('X', n, p)
+pmf = Lambda(x, density(X)(x).args[0][0])
+replace_piecewise = lambda e: e.replace(Piecewise, lambda *a: a[0][0])
+#+end_src
+
+#+RESULTS:
+
+** [[file:20210315172655-probability_mass_function.org][Probability mass function]]
+#+begin_src jupyter-python :lib yes
+p_X = LEq(Lambda(x, Probability(Eq(X, x))), pmf)
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+LFor(p_X(k), LLe(0,k,n))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}P[X = k]=p^{k} \left(1 - p\right)^{- k + n} {\binom{n}{k}}\quad \mathtt{\text{for}}\quad 0\leq k\leq n\end{equation}
+:END:
+
+** [[file:20210315172900-expected_value.org][Expected value]]
+#+begin_src jupyter-python :lib yes
+X_E = LCalculation(
+    lambda e: e.rewrite(Sum).replace(Piecewise, lambda *a: a[0][0]),
+    lambda e: replace_piecewise(e.doit()).simplify(),
+).steps(Expectation(X))
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+X_E
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+E[X]&=\sum_{k=0}^{n} k p^{k} \left(1 - p\right)^{- k + n} {\binom{n}{k}}=\\
+&=n p
+\end{aligned}\end{equation}
+:END:
+
+** [[file:20210315173019-variance.org][Variance]]
+#+begin_src jupyter-python :lib yes
+X_Var = LCalculation(
+    lambda e: e.rewrite(Expectation),
+    lambda e: replace_piecewise(e.rewrite(Sum)),
+    lambda e: replace_piecewise(e.doit()).simplify(),
+).steps(Variance(X))
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python
+X_Var
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{aligned}
+\operatorname{Var}(X)&=- E[X]^{2} + E[X^{2}]=\\
+&=\sum_{k=0}^{n} k^{2} p^{k} \left(1 - p\right)^{- k + n} {\binom{n}{k}} - \left(\sum_{k=0}^{n} k p^{k} \left(1 - p\right)^{- k + n} {\binom{n}{k}}\right)^{2}=\\
+&=- n p \left(p - 1\right)
+\end{aligned}\end{equation}
+:END:
+
+** [[file:20210315171543-continuity_correction.org][Continuity correction]]
+With a continuity correction, the claim is
+#+begin_src jupyter-python
+LApprox(LEq(Probability(X<=k), Probability(X<k+1)), stdnorm.F_X((k+1/2-n*p)/(sqrt(n*p*(1-p)))).lhs)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}P[X \leq k]=P[X < k + 1]\approx \Phi{\left(\frac{k - n p + 0.5}{\sqrt{n} \sqrt{p} \sqrt{1 - p}} \right)}\end{equation}
+:END:
+
+A rule of thumb is
+#+begin_src jupyter-python
+LIf(LApprox(Function('Bin')(n, p), Function('N')(n*p, sqrt(n*p*(1-p)))), And(n*p>=5, n*(1-p)>=5))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\operatorname{Bin}{\left(n,p \right)}\approx N{\left(n p,\sqrt{n} \sqrt{p} \sqrt{1 - p} \right)}\quad \mathtt{\text{if}}\quad n p \geq 5 \wedge n \left(1 - p\right) \geq 5\end{equation}
+:END:

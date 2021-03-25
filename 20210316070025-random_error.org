@@ -1,0 +1,11 @@
+#+title: Random error
+#+roam_tags: statistics
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
+#+call: init()
+
+* Random error
+Random errors in measurements is unpredictable, as opposed to [[file:20210316065640-systematic_error.org][systematic error]],
+but you can reduce it by for example taking the average of multiple
+measurements.

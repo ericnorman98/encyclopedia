@@ -1,0 +1,33 @@
+#+title: Poisson distribution
+#+roam_tags: statistics discrete
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210219103418-probability_distribution.org][Probability distribution]]
+
+#+call: init()
+
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy
+from sympy import *
+from pyorg.latex import *
+from encyclopedia.statistics import *
+#+end_src
+
+#+RESULTS:
+
+* Poisson distribution
+Probability of a given number of events occurring in a fixed interval of time
+(or space) if they are independent.
+
+#+begin_src jupyter-python
+rate = Symbol('lambda')
+X = Poisson('X', rate)
+pdf = density(X)(x)
+LEq(Probability(LEq(X,x)), pdf)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}P[X=x]=\frac{\lambda^{x} e^{- \lambda}}{x!}\end{equation}
+:END:

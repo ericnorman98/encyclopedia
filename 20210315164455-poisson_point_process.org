@@ -1,0 +1,11 @@
+#+title: Poisson point process
+#+roam_tags: statistics
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
+#+call: init()
+
+* Poisson point process
+The Poisson point process is a random process that describes a set of points
+randomly located in space. Events is independent and occur continuously at a
+constant average rate.

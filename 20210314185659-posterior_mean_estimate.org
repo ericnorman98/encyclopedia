@@ -1,0 +1,6 @@
+#+title: Posterior mean estimate
+#+roam_tags: statistics pme bayes bayesian
+
+#+call: init()
+
+* TODO Posterior mean estimate

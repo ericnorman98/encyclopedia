@@ -1,0 +1,43 @@
+#+title: Categorical data analysis
+#+roam_tags:
+
+#+call: init()
+
+#+begin_src jupyter-python :lib yes
+from encyclopedia.statistics import *
+#+end_src
+
+#+RESULTS:
+
+* Categorical data analysis
+The categorical population distribution is an extension of the Bernoulli
+distribution with multiple possible outcomes. This is the [[file:20210315180516-multinomial_distribution.org][Multinomial
+distribution]].
+
+|         | $b_1$      | $b_2$      | $\dots$ | $b_J$      | Total      |
+| $a_1$   | $\pi_{11}$ | $\pi_{12}$ | $\dots$ | $\pi_{1J}$ | $\pi_{1.}$ |
+| $a_2$   | $\pi_{21}$ | $\pi_{22}$ | $\dots$ | $\pi_{2J}$ | $\pi_{2.}$ |
+| $\dots$ | $\dots$    | $\dots$    | $\dots$ | $\dots$    | $\dots$    |
+| $a_I$   | $\pi_{I1}$ | $\pi_{I2}$ | $\dots$ | $\pi_{IJ}$ | $\pi_{2.}$ |
+| Total   | $\pi_{.1}$ | $\pi_{.2}$ | $\dots$ | $\pi_{.J}$ | 1          |
+
+#+begin_src jupyter-python :lib yes
+prob = IndexedBase('\\pi')
+I, J = symbols('I J', integer=True, positive=True)
+i = Idx('i', I)
+j = Idx('j', J)
+a = IndexedBase('a')
+b = IndexedBase('b')
+A = RandomSymbol('A')
+B = RandomSymbol('B')
+prob_eq = LEq(prob, Probability(LAnd(LEq(A, a[i]), LEq(B, b[i]))))
+prob_eq
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\pi=P[A={a_{i}}\wedge B={b_{i}}]\end{equation}
+:END:
+
+See [[file:20210316122839-chi_square_homogeneity_test.org][Chi-square homogeneity test]] for testing if the two distributions the
+same.

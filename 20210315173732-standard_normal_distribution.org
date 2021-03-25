@@ -1,0 +1,62 @@
+#+title: Standard normal distribution
+#+roam_tags:
+
+#+call: init()
+
+#+begin_src jupyter-python :lib yes
+from encyclopedia.statistics import *
+#+end_src
+
+#+begin_src jupyter-python
+import matplotlib.pyplot as plt
+import numpy as np
+#+end_src
+
+* Standard normal distribution
+#+begin_src jupyter-python :lib yes
+X = Normal('Z', 0, 1)
+#+end_src
+
+#+RESULTS:
+
+** [[file:20210315170643-probability_density_function.org][Probability density function]]
+#+begin_src jupyter-python :lib yes
+f_X = LEq(Function('phi'), density(X))
+f_X(x)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\phi{\left(x \right)}=\frac{\sqrt{2} e^{- \frac{x^{2}}{2}}}{2 \sqrt{\pi}}\end{equation}
+:END:
+
+#+thumb:
+#+begin_src jupyter-python :results output
+x_n = np.linspace(-5, 5, 200)
+plt.plot(x_n, lambdify(x, f_X(x).rhs)(x_n))
+plt.title("Standard Normal PDF")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/96c7b0f819f67f4033d7c6f2cd12924c7585598a.png]]
+
+** [[file:20210315171336-cumulative_density_function.org][Cumulative density function]]
+The definition of the cumulative distribution is using the [[file:20210301091142-error_function.org][error function]].
+#+begin_src jupyter-python :lib yes
+F_X = LEq(Function('Phi'), cdf(X))
+F_X(x)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\Phi{\left(x \right)}=\frac{\operatorname{erf}{\left(\frac{\sqrt{2} x}{2} \right)}}{2} + \frac{1}{2}\end{equation}
+:END:
+
+#+begin_src jupyter-python :results output
+x_n = np.linspace(-5, 5, 200)
+plt.plot(x_n, lambdify(x, F_X(x).rhs)(x_n))
+plt.title("Standard Normal CDF")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/3b924b58d0e992531fa10f981b3d53ea338a21c9.png]]

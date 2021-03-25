@@ -1,0 +1,10 @@
+#+title: Prior distribution
+#+roam_tags: statistics bayesian
+
+- tags :: [[file:20210219100345-bayesian_inference.org][Bayesian inference]]
+
+#+call: init()
+
+* Prior distribution
+The prior distribution is the [[file:20210219103418-probability_distribution.org][probability distribution]] that expresses the belief
+about a quantity before observing evidence.

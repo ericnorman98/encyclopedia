@@ -1,0 +1,38 @@
+#+title: Multinomial distribution
+#+roam_tags: statistics
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210219103418-probability_distribution.org][Probability distribution]]
+
+#+call: init()
+
+#+begin_src jupyter-python :lib
+from encyclopedia.statistics import *
+#+end_src
+
+#+RESULTS:
+
+* Multinomial distribution
+The multinomial distribution is a generalization of the [[file:20210315145207-binomial_distribution.org][binomial distribution]].
+It describes the probability of counts for each side of a k-sided die rolled n
+times. For $n$ independent trials, each of which leads to a success for exactly
+one of $k$ categories, with each category having a given fixed success
+probability. The multinomial distribution gives the probability of any
+particular combination of numbers of successes for the categories.
+
+#+begin_src jupyter-python :lib
+n = Symbol('n', integer=True, positive=True)
+p = IndexedBase('p')
+i = Idx('i')
+X = lambda k: Multinomial('X', n, *[p[i] for i in range(k)])
+#+end_src
+
+** TODO PMF
+#+begin_src jupyter-python :lib
+pmf = lambda k: density(X(k))(x)
+pmf(3)
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\begin{cases} \frac{n! {p_{0}}^{x}}{x!} & \text{for}\: n = x \\0 & \text{otherwise} \end{cases}\end{equation}
+:END:

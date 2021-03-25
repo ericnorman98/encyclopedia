@@ -1,0 +1,12 @@
+#+title: Discrete uniform distribution
+#+roam_tags: statistics
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210219103418-probability_distribution.org][Probability distribution]]
+
+#+call: init()
+
+* Discrete uniform distribution
+The discrete uniform distribution takes on a finite number of values each with
+equal probability.
+
+** TODO PMF

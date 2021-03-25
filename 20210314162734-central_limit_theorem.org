@@ -1,0 +1,13 @@
+#+title: Central limit theorem
+#+roam_tags: statistics
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
+#+call: init()
+
+* Central limit theorem
+Let $X_1,X_2,\dots,X_n$ denote a random sample from the distribution $X$ with
+mean $\mu$ and variance $\sigma^2$. For large $n$, then $\bar{X}$ is
+approximately normal with mean $\mu$ and variance $\sigma^2/n$. For large $n$,
+the random variable $(\bar{X}-\mu)/(\sigma/\sqrt{n})$ is approximately standard
+normal, even if $X$ isn't a normal distribution.

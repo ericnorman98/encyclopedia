@@ -1,0 +1,43 @@
+#+title: Chi-square homogeneity test
+#+roam_tags:
+
+#+call: init()
+
+#+begin_src jupyter-python
+from encyclopedia.statistics import *
+from encyclopedia.hypothesis_test import *
+from encyclopedia.categorical_data_analysis import *
+#+end_src
+
+#+RESULTS:
+
+* Chi-square homogeneity test
+The model is described by $J$ multinomial distributions
+|         | Pop 1    | Pop 2    | $\dots$ | PopJ     | Total    |
+| Cat 1   | $n_{11}$ | $n_{12}$ | $\dots$ | $n_{1J}$ | $n_{1.}$ |
+| Cat 2   | $n_{21}$ | $n_{22}$ | $\dots$ | $n_{2J}$ | $n_{2.}$ |
+| $\dots$ | $\dots$  | $\dots$  | $\dots$ | $\dots$  | $\dots$  |
+| Cat I   | $n_{I1}$ | $n_{I2}$ | $\dots$ | $n_{IJ}$ | $n_{2.}$ |
+| Total   | $n_{.1}$ | $n_{.2}$ | $\dots$ | $n_{.J}$ | 1        |
+
+#+begin_src jupyter-python
+n = IndexedBase('n')
+statistic = LEq(X**2, Sum(Sum(((n[i,j]-n[i,ldot]*n[ldot,j])/n[ldot,ldot])**2/(n[i,ldot]*n[ldot,j]/n[ldot,ldot]), j), i))
+statistic
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}X^{2}=\sum_{\substack{0 \leq j \leq J - 1\\0 \leq i \leq I - 1}} \frac{\left(- {n_{.j}} {n_{i.}} + {n_{ij}}\right)^{2}}{{n_{..}} {n_{.j}} {n_{i.}}}\end{equation}
+:END:
+
+Use [[file:20210309171826-chi_square_distribution.org][Chi-square distribution]] as the null-distribution with the following degrees of freedom
+#+begin_src jupyter-python
+dof = LEq("dof", (I-1)*(J-1))
+dof
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\mathtt{\text{dof}}=\left(I - 1\right) \left(J - 1\right)\end{equation}
+:END:

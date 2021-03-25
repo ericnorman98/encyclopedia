@@ -1,0 +1,8 @@
+#+title: Probability distribution
+#+roam_tags: statistics distribution
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210313082049-probability_theory.org][Probability theory]]
+
+#+call: init()
+
+* Probability Distribution

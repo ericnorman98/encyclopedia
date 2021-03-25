@@ -1,0 +1,8 @@
+#+title: Uniform distribution
+#+roam_tags: statistics distribution
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]]
+
+#+call: init()
+
+* Uniform distribution
