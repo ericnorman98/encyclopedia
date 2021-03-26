@@ -1,0 +1,93 @@
+#+title: Graph neural network
+#+roam_tags:
+
+- tags :: [[file:20210325091024-machine_learning.org][Machine learning]], [[file:20210224212626-graph_theory.org][Graph theory]]
+
+#+call: init()
+
+#+begin_src jupyter-python :results silent
+import os
+import torch
+import torch.nn.functional as F
+import torch_geometric.transforms as T
+from torch_geometric.datasets import Planetoid
+import networkx as nx
+import matplotlib.pyplot as plt
+import sympy as sm
+#+end_src
+
+* Graph neural network
+#+begin_src jupyter-python :results silent
+def visualize(h, color, epoch=None, loss=None):
+    plt.figure(figsize=(7,7))
+    plt.xticks([])
+    plt.yticks([])
+
+    if torch.is_tensor(h):
+        h = h.detach().cpu().numpy()
+        plt.scatter(h[:, 0], h[:, 1], s=140, c=color, cmap="Set2")
+        if epoch is not None and loss is not None:
+            plt.xlabel(f'Epoch: {epoch}, Loss: {loss.item():.4f}', fontsize=16)
+    else:
+        nx.draw_networkx(G, pos=nx.spring_layout(G, seed=42), with_labels=False,
+                         node_color=color, cmap="Set2")
+        plt.show()
+#+end_src
+
+#+begin_src jupyter-python
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device
+#+end_src
+
+#+RESULTS:
+: device(type='cpu')
+
+#+begin_src jupyter-python
+os.path.dirname(os.path.realpath('.'))
+#+end_src
+
+#+RESULTS:
+: /home/eric
+
+#+begin_src jupyter-python
+dataset_name = 'Cora'
+path = os.path.join(os.path.realpath('.'), 'data', dataset_name)
+dataset = Planetoid(path, dataset_name)
+data = dataset[0]
+data
+#+end_src
+
+#+RESULTS:
+: Data(edge_index=[2, 10556], test_mask=[2708], train_mask=[2708], val_mask=[2708], x=[2708, 1433], y=[2708])
+
+#+begin_src jupyter-python
+[
+    ["Dataset info"], None,
+    ["Nodes", data.num_nodes],
+    ["Edges", data.num_edges],
+    ["Training nodes", int(data.train_mask.sum())],
+    ["Validation nodes", int(data.val_mask.sum())],
+    ["Test nodes", int(data.test_mask.sum())],
+]
+#+end_src
+
+#+RESULTS:
+| Dataset info     |       |
+|------------------+-------|
+| Nodes            |  2708 |
+| Edges            | 10556 |
+| Training nodes   |   140 |
+| Validation nodes |   500 |
+| Test nodes       |  1000 |
+
+#+begin_src jupyter-python
+activation = sm.symbols('sigma', cls=sm.Function)
+n, m = sm.symbols('n m', integer=True, positive=True)
+A = sm.MatrixSymbol('A', n, m)
+A
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}A\end{equation}
+:END:
