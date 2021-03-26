@@ -1,0 +1,133 @@
+# -*- org-confirm-babel-evaluate: nil; eval: (add-hook 'after-save-hook (lambda nil (org-babel-lob-ingest "lob.org")) nil t); -*-
+#+TITLE: Lob
+
+#+begin_src elisp :exports none
+(setq encyclopedia-theme-current 'light)
+#+end_src
+
+#+RESULTS:
+: light
+
+* Theme
+#+name: color
+#+begin_src elisp :var name="green" quote="\"" :results raw
+(concat quote (encyclopedia-theme-get-color encyclopedia-theme-current (intern name)) quote)
+#+end_src
+
+#+RESULTS: color
+"#50a14f"
+
+#+name: colorb
+#+begin_src elisp :var name="green" :results raw
+(encyclopedia-theme-get-color encyclopedia-theme-current (intern name))
+#+end_src
+
+#+RESULTS: colorb
+#50a14f
+
+#+name: color-number
+#+begin_src elisp :var name="green" :results raw
+(let ((color (encyclopedia-theme-get-color encyclopedia-theme-current (intern name))))
+  (concat "0x" (substring color 1)))
+#+end_src
+
+#+RESULTS: color-number
+0x50a14f
+0x98be65
+0x50a14f
+0x50a14f
+
+* Initialization
+#+name: init
+#+begin_src elisp :results silent :var theme='dark
+(let* ((slug (encyclopedia-document-slug-extract))
+       (header-args (encyclopedia-babel-get-header-args:jupyter-python slug))
+       (init-plot-src (car (cdr (cdr (assoc 'init-plot-style org-babel-library-of-babel))))))
+  (setq-local org-babel-default-header-args:jupyter-python header-args
+              org-babel-default-inline-header-args:jupyter-python header-args
+              org-babel-default-lob-header-args (list (cons :session slug)
+                                                      (cons :kernel "python")
+                                                      (cons :results "raw drawer")))
+  (save-excursion
+    (setq encyclopedia-theme-current theme)
+    (org-babel-lob-ingest "lob.org")
+    (org-babel-execute:jupyter-python init-plot-src header-args)))
+#+end_src
+
+#+RESULTS: init
+
+#+name: init-plot-style
+#+begin_src jupyter-python :noweb yes :tangle init-plot-style.py :results silent
+import pyorg.plot
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
+from cycler import cycler
+
+plt.rc('text', color=<<color("fg-hc")>>)
+
+# AXES
+plt.rc('axes', titlesize=12)
+plt.rc('axes', labelsize=10)
+plt.rc('axes', edgecolor=<<color("fg-hc")>>)
+plt.rc('axes', labelcolor=<<color("fg-hc")>>)
+plt.rc('axes', linewidth=1)
+plt.rc('axes.spines', top=True)
+plt.rc('axes.spines', right=True)
+plt.rc('axes.spines', bottom=True)
+plt.rc('axes.spines', left=True)
+plt.rc('axes', facecolor=<<color("bg")>>)
+
+plt.rc('axes3d', grid=True)
+
+# GRID
+plt.rc('axes', grid=False)
+plt.rc('grid', alpha=0.7)
+plt.rc('grid', linestyle='--')
+plt.rc('grid', linewidth=0.6)
+
+# LINES
+plt.rc('axes', prop_cycle=cycler('color', [<<color("green")>>, <<color("red")>>, <<color("blue")>>, <<color("magenta")>>, <<color("orange")>>, <<color("violet")>>]))
+plt.rc('lines', linewidth=1.5)
+plt.rc('lines', markeredgewidth=0.0)
+
+# SCATTER PLOT
+plt.rc('scatter', marker='.')
+
+# TICKS
+plt.rc('xtick', labelsize=6)
+plt.rc('xtick', color=<<color("fg-hc")>>)
+plt.rc('xtick', direction='in')
+plt.rc('ytick', labelsize=6)
+plt.rc('ytick', color=<<color("fg-hc")>>)
+plt.rc('ytick', direction='in')
+
+plt.rc('legend', fontsize=8)
+
+# FIGURE OUTPUT
+plt.rc('figure', figsize=(4, 4))
+plt.rc('figure', dpi=200)
+plt.rc('savefig', dpi=200)
+plt.rc('savefig', bbox='tight')
+plt.rc('figure', facecolor=<<color("bg")>>)
+plt.rc('figure', autolayout=True)
+
+def hex_to_rgb(hex_):
+    return (
+        ((hex_>>(8*2))&0xff)/256,
+        ((hex_>>(8*1))&0xff)/256,
+        ((hex_>>(8*0))&0xff)/256,
+    )
+
+N = 256
+FROM = hex_to_rgb(<<color-number("bg")>>)
+TO = hex_to_rgb(<<color-number("green")>>)
+
+vals = np.ones((N, 4))
+vals[:, 0] = np.linspace(FROM[0], 152/256, N)
+vals[:, 1] = np.linspace(FROM[1], 190/256, N)
+vals[:, 2] = np.linspace(FROM[2], 101/256, N)
+green_cmap = ListedColormap(vals)
+#+end_src
+
