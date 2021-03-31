@@ -3,14 +3,22 @@
 
 - tags :: [[file:20210325091024-machine_learning.org][Machine learning]], [[file:20210224212626-graph_theory.org][Graph theory]]
 
-#+call: init()
+#+call: init(theme='dark)
+
+#+RESULTS:
 
 #+begin_src jupyter-python :results silent
 import os
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
+import pytorch_lightning as pl
+from torch.utils.data import DataLoader, random_split
+from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 import torch_geometric.transforms as T
 from torch_geometric.datasets import Planetoid
+import torch_geometric.data as gdata
+import torch_geometric.nn as gnn
 import networkx as nx
 import matplotlib.pyplot as plt
 import sympy as sm
@@ -18,20 +26,14 @@ import sympy as sm
 
 * Graph neural network
 #+begin_src jupyter-python :results silent
-def visualize(h, color, epoch=None, loss=None):
-    plt.figure(figsize=(7,7))
+from sklearn.manifold import TSNE
+def visualize(h, color):
+    z = TSNE(n_components=2).fit_transform(out.detach().cpu().numpy())
+
     plt.xticks([])
     plt.yticks([])
 
-    if torch.is_tensor(h):
-        h = h.detach().cpu().numpy()
-        plt.scatter(h[:, 0], h[:, 1], s=140, c=color, cmap="Set2")
-        if epoch is not None and loss is not None:
-            plt.xlabel(f'Epoch: {epoch}, Loss: {loss.item():.4f}', fontsize=16)
-    else:
-        nx.draw_networkx(G, pos=nx.spring_layout(G, seed=42), with_labels=False,
-                         node_color=color, cmap="Set2")
-        plt.show()
+    plt.scatter(z[:, 0], z[:, 1], s=70, c=color, cmap="Set2")
 #+end_src
 
 #+begin_src jupyter-python
@@ -42,52 +44,506 @@ device
 #+RESULTS:
 : device(type='cpu')
 
-#+begin_src jupyter-python
-os.path.dirname(os.path.realpath('.'))
+#+begin_src jupyter-python :exports none
+dataset_name = 'Cora'
+path = os.path.join(os.path.realpath('.'), 'data', dataset_name)
+path
 #+end_src
 
 #+RESULTS:
-: /home/eric
+: /home/eric/encyclopedia/data/Cora
 
 #+begin_src jupyter-python
-dataset_name = 'Cora'
-path = os.path.join(os.path.realpath('.'), 'data', dataset_name)
-dataset = Planetoid(path, dataset_name)
-data = dataset[0]
-data
+cora_dataset = Planetoid(path, dataset_name, transform=T.NormalizeFeatures())
+cora_data = cora_dataset[0]
+cora_data
+cora_data
 #+end_src
 
 #+RESULTS:
 : Data(edge_index=[2, 10556], test_mask=[2708], train_mask=[2708], val_mask=[2708], x=[2708, 1433], y=[2708])
 
+** Cora dataset
+
 #+begin_src jupyter-python
 [
-    ["Dataset info"], None,
-    ["Nodes", data.num_nodes],
-    ["Edges", data.num_edges],
-    ["Training nodes", int(data.train_mask.sum())],
-    ["Validation nodes", int(data.val_mask.sum())],
-    ["Test nodes", int(data.test_mask.sum())],
+    ["Set", "# of nodes"], None,
+    ["Training", int(cora_data.train_mask.sum())],
+    ["Validation", int(cora_data.val_mask.sum())],
+    ["Test", int(cora_data.test_mask.sum())],
 ]
 #+end_src
 
 #+RESULTS:
-| Dataset info     |       |
-|------------------+-------|
-| Nodes            |  2708 |
-| Edges            | 10556 |
-| Training nodes   |   140 |
-| Validation nodes |   500 |
-| Test nodes       |  1000 |
+| Set        | # of nodes |
+|------------+------------|
+| Training   |        140 |
+| Validation |        500 |
+| Test       |       1000 |
+
+#+begin_src jupyter-python :results silent
+class GraphModel(pl.LightningModule):
+    def training_step(self, data, batch_idx):
+        x_hat = self.forward(data, mode='train')
+        loss = F.cross_entropy(x_hat, data.y[data.train_mask])
+        self.log('train_loss', loss)
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.01, weight_decay=5e-4)
+        return optimizer
+
+    def validation_step(self, data, batch_idx):
+        x_hat = self.forward(data, mode='val')
+        loss = F.cross_entropy(x_hat, data.y[data.val_mask])
+        self.log('val_loss', loss)
+
+    def test_step(self, data, batch_idx):
+        x_hat = self.forward(data, mode='test')
+        pred = x_hat.argmax(dim=1)
+        test_correct = pred == data.y[data.test_mask]
+        test_acc = int(test_correct.sum()) / int(data.test_mask.sum())
+        self.log('test_acc', test_acc)
+#+end_src
+
+#+begin_src jupyter-python :results silent
+class MetricHistoryCallback(pl.callbacks.Callback):
+    def __init__(self, metrics, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.metrics = metrics
+        self.history = {k: [] for k in metrics}
+
+    def on_epoch_end(self, trainer, *args, **kwargs):
+        for metric in self.metrics:
+            m = trainer.callback_metrics.get(metric)
+            if m:
+              self.history[metric].append(m.detach().numpy())
+#+end_src
+
+#+begin_src jupyter-python :results silent
+def train_cora_model(model):
+  history_cb = MetricHistoryCallback(['train_loss', 'val_loss', 'test_acc'])
+  trainer = pl.Trainer(max_epochs=500,
+                      progress_bar_refresh_rate=0,
+                      callbacks=[EarlyStopping(monitor='val_loss', patience=10),
+                                 history_cb])
+  node_data_loader = gdata.DataLoader(cora_dataset, batch_size=1)
+  trainer.fit(model, node_data_loader, node_data_loader)
+  trainer.test(model, test_dataloaders=node_data_loader, verbose=False)
+  return history_cb.history
+#+end_src
 
 #+begin_src jupyter-python
-activation = sm.symbols('sigma', cls=sm.Function)
-n, m = sm.symbols('n m', integer=True, positive=True)
-A = sm.MatrixSymbol('A', n, m)
-A
+def create_results_table(results):
+    train_loss = round(float(results['train_loss'][-1]), 4)
+    val_loss = round(float(results['val_loss'][-1]), 4)
+    test_acc = round(float(results['test_acc'][-1])*100, 4)
+    return [["Training loss", "Validation loss", "Test accuracy"], None,
+            [train_loss, val_loss, f"{test_acc}%"]]
+#+end_src
+
+#+RESULTS:
+
+*** MLP
+#+begin_src jupyter-python :results silent
+def get_mask(data, mode='train'):
+    if mode == 'train':
+        return data.train_mask
+    elif mode == 'val':
+        return data.val_mask
+    elif mode == 'test':
+        return data.test_mask
+    else:
+        raise Exception(f"Unknown forward mode: {mode}")
+
+class MLP(GraphModel):
+    def __init__(self, hidden_channels, num_features, num_classes):
+        super(GraphModel, self).__init__()
+        torch.manual_seed(12345)
+        self.lin1 = nn.Linear(num_features, hidden_channels)
+        self.lin2 = nn.Linear(hidden_channels, num_classes)
+
+    def forward(self, data, mode='train'):
+        mask = get_mask(data, mode)
+        x = data.x
+        x = F.relu(self.lin1(x))
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.lin2(x)
+        return x[mask]
+#+end_src
+
+#+begin_src jupyter-python
+mlp_model = MLP(hidden_channels=16,
+                num_features=cora_dataset.num_features,
+                num_classes=cora_dataset.num_classes)
+mlp_results = train_cora_model(mlp_model)
+print("Done")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+GPU available: False, used: False
+TPU available: False, using: 0 TPU cores
+
+  | Name | Type   | Params
+--------------------------------
+0 | lin1 | Linear | 22.9 K
+1 | lin2 | Linear | 119   
+--------------------------------
+23.1 K    Trainable params
+0         Non-trainable params
+23.1 K    Total params
+0.092     Total estimated model params size (MB)
+Done
+#+end_example
+
+#+begin_src jupyter-python
+create_results_table(mlp_results)
+#+end_src
+
+#+RESULTS:
+| Training loss | Validation loss | Test accuracy |
+|---------------+-----------------+---------------|
+|        0.3318 |          1.2956 |         59.0% |
+
+#+begin_src jupyter-python :results output
+plt.plot(mlp_results['train_loss'], label="Training loss")
+plt.plot(mlp_results['val_loss'], label="Validation loss")
+plt.legend()
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/d4db0b768e16aae70e4b8a0f4c0d9b1b8179cecd.png]]
+
+#+begin_src jupyter-python :results output
+plt.figure(figsize=(8, 4))
+plt.subplot(1, 2, 1)
+mlp_before_model = MLP(hidden_channels=16,
+                       num_features=cora_dataset.num_features,
+                       num_classes=cora_dataset.num_classes)
+mlp_before_model.eval()
+out = mlp_before_model(cora_data, mode='all')
+visualize(out, color=cora_data.y)
+plt.title("Before training")
+plt.subplot(1, 2, 2)
+mlp_model.eval()
+out = mlp_model(cora_data, mode='all')
+visualize(out, color=cora_data.y)
+plt.title("After training")
+plt.suptitle("MLP")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/431a2921cdf8231087cbeace309df8b2dbcc1cfb.png]]
+
+*** GCN
+#+begin_src jupyter-python :results silent
+from torch_geometric.nn import GCNConv
+#+end_src
+
+#+begin_src jupyter-python :results silent
+class GCN(GraphModel):
+    def __init__(self, hidden_channels, num_features, num_classes):
+        super(GCN, self).__init__()
+        torch.manual_seed(12345)
+        self.conv1 = GCNConv(num_features, hidden_channels)
+        self.conv2 = GCNConv(hidden_channels, num_classes)
+
+    def forward(self, data, mode='train'):
+        mask = get_mask(data, mode)
+        x, edge_index = data.x, data.edge_index
+        x = F.relu(self.conv1(x, edge_index))
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.conv2(x, edge_index)
+        return x[mask]
+#+end_src
+
+#+begin_src jupyter-python
+gcn_model = GCN(hidden_channels=16,
+                num_features=cora_dataset.num_features,
+                num_classes=cora_dataset.num_classes)
+gcn_results = train_cora_model(gcn_model)
+print("Done")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+GPU available: False, used: False
+TPU available: False, using: 0 TPU cores
+
+  | Name  | Type    | Params
+----------------------------------
+0 | conv1 | GCNConv | 22.9 K
+1 | conv2 | GCNConv | 119   
+----------------------------------
+23.1 K    Trainable params
+0         Non-trainable params
+23.1 K    Total params
+0.092     Total estimated model params size (MB)
+Done
+#+end_example
+
+#+begin_src jupyter-python
+create_results_table(gcn_results)
+#+end_src
+
+#+RESULTS:
+| Training loss | Validation loss | Test accuracy |
+|---------------+-----------------+---------------|
+|        0.2834 |          0.7948 |         80.2% |
+
+#+begin_src jupyter-python :results output
+plt.plot(gcn_results['train_loss'], label="Training loss")
+plt.plot(gcn_results['val_loss'], label="Validation loss")
+plt.legend()
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/04a8c714983032fa834f873ba91f70929e3453b4.png]]
+
+
+#+begin_src jupyter-python :results output
+plt.figure(figsize=(8, 4))
+plt.subplot(1, 2, 1)
+gcn_before_model = GCN(hidden_channels=16,
+                num_features=cora_dataset.num_features,
+                num_classes=cora_dataset.num_classes)
+gcn_before_model.eval()
+out = gcn_before_model(cora_data, mode='val')
+visualize(out, color=cora_data.y[cora_data.val_mask])
+plt.title("Before training")
+plt.subplot(1, 2, 2)
+gcn_model.eval()
+out = gcn_model(cora_data, mode='val')
+visualize(out, color=cora_data.y[cora_data.val_mask])
+plt.title("After training")
+plt.suptitle("GCNConv")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/0d08dba471fdfaaf857b8567fc5acd8abaed649a.png]]
+
+*** GAT
+#+begin_src jupyter-python :results silent
+from torch_geometric.nn import GATConv
+#+end_src
+
+#+begin_src jupyter-python :results silent
+class GAT(GraphModel):
+    def __init__(self, hidden_channels, num_features, num_classes):
+        super(GAT, self).__init__()
+        torch.manual_seed(12345)
+        self.gat1 = GATConv(num_features, hidden_channels, dropout=0.5, heads=8)
+        self.gat2 = GATConv(8*hidden_channels, hidden_channels, dropout=0.5, heads=1)
+
+    def forward(self, data, mode='train'):
+        mask = get_mask(data, mode)
+        x, edge_index = data.x, data.edge_index
+        x = F.leaky_relu(self.gat1(x, edge_index))
+        x = self.gat2(x, edge_index)
+        return x[mask]
+#+end_src
+
+#+begin_src jupyter-python :results output :exports none
+gat_model = GAT(hidden_channels=16,
+                num_features=cora_dataset.num_features,
+                num_classes=cora_dataset.num_classes)
+gat_results = train_cora_model(gat_model)
+print(f"Done")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+GPU available: False, used: False
+TPU available: False, using: 0 TPU cores
+
+  | Name | Type    | Params
+---------------------------------
+0 | gat1 | GATConv | 183 K 
+1 | gat2 | GATConv | 2.1 K 
+---------------------------------
+185 K     Trainable params
+0         Non-trainable params
+185 K     Total params
+0.744     Total estimated model params size (MB)
+Done
+#+end_example
+
+#+begin_src jupyter-python
+create_results_table(gat_results)
+#+end_src
+#+RESULTS:
+| Training loss | Validation loss | Test accuracy |
+|---------------+-----------------+---------------|
+|        0.5117 |          0.7145 |         81.9% |
+
+#+begin_src jupyter-python :results output
+plt.plot(gat_results['train_loss'], label="Training loss")
+plt.plot(gat_results['val_loss'], label="Validation loss")
+plt.legend()
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/d79dc5cbe455d9eb5db8f5f13ead2b260b8d702f.png]]
+
+
+#+begin_src jupyter-python :results output
+plt.figure(figsize=(8, 4))
+plt.subplot(1, 2, 1)
+gat_before_model = GAT(hidden_channels=16)
+gat_before_model.eval()
+out = gat_before_model(data)
+visualize(out, color=data.y)
+plt.title("Before training")
+plt.subplot(1, 2, 2)
+gat_model.eval()
+out = gat_model(data)
+visualize(out, color=data.y)
+plt.title("After training")
+plt.suptitle("GATConv")
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/fe1449d87e9f37320cc9d0fe11d958b32cfa6bbb.png]]
+
+** Quantum bit dataset
+#+begin_src jupyter-python
+qdata = torch.load('data/graphs.pt')
+test_split = 0.2
+valid_split = 0.1
+test_len = int(len(qdata)*test_split)
+train_len = len(qdata)-test_len
+valid_len = int(train_len*valid_split)
+train_len -= valid_len
+test_set = qdata[:test_len]
+valid_set = qdata[test_len:test_len+valid_len]
+train_set = qdata[test_len+valid_len:]
+
+[
+    ["Set", "# of graphs"], None,
+    ["Training", train_len],
+    ["Validation", valid_len],
+    ["Test", test_len],
+]
+#+end_src
+
+#+RESULTS:
+| Set        | # of graphs |
+|------------+-------------|
+| Training   |        2880 |
+| Validation |         320 |
+| Test       |         800 |
+
+#+begin_src jupyter-python
+test_data_loader = gdata.DataLoader(test_set, batch_size=4)
+i = iter(test_data_loader)
+next(i)
+next(i)
+#+end_src
+
+#+RESULTS:
+: Batch(batch=[32], edge_attr=[278], edge_index=[2, 278], x=[32, 2], y=[4, 4])
+
+#+begin_src jupyter-python :results silent
+from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
+class QModel(pl.LightningModule):
+    def __init__(self, hidden_channels, num_features, num_classes):
+        super(QModel, self).__init__()
+        torch.manual_seed(12345)
+        att_heads = 4
+        self.conv1 = gnn.GraphConv(num_features, hidden_channels)
+        self.bn1 = gnn.BatchNorm(hidden_channels)
+        self.conv2 = gnn.GraphConv(hidden_channels, hidden_channels//2)
+        self.bn2 = gnn.BatchNorm(hidden_channels//2)
+        self.gat1 = gnn.TransformerConv(hidden_channels//2, hidden_channels//2, heads=att_heads, concat=True)
+
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_channels*att_heads//2, hidden_channels//2),
+            nn.Linear(hidden_channels//2, hidden_channels//2),
+            nn.Linear(hidden_channels//2, num_classes))
+
+    def forward(self, data):
+        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
+        x = F.relu(self.conv1(x, edge_index, edge_weight=edge_attr))
+        x1 = torch.cat([gmp(x, batch), gmp(x, batch)], dim=1)
+        x = self.bn1(x)
+        x = F.relu(self.conv2(x, edge_index, edge_weight=edge_attr))
+        x = self.bn2(x)
+        x = F.relu(self.gat1(x, edge_index))
+        x = gap(x, batch)
+
+        x = x + x1
+
+        x = self.mlp(x)
+        x = F.log_softmax(x, dim=1)
+        return x
+
+    def training_step(self, data, batch_idx):
+        x_hat = self.forward(data)
+        loss = F.kl_div(x_hat, data.y)
+        self.log('train_loss', loss)
+        return loss
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.01, weight_decay=5e-4)
+        return optimizer
+
+    def validation_step(self, data, batch_idx):
+        x_hat = self.forward(data)
+        loss = F.kl_div(x_hat, data.y)
+        self.log('val_loss', loss)
+
+    def test_step(self, data, batch_idx):
+        x_hat = self.forward(data)
+        pred = x_hat.argmax(dim=1)
+        targ = data.y.argmax(dim=1)
+        test_correct = pred == targ
+        test_acc = int(test_correct.sum()) / len(data.y)
+        self.log('test_acc', test_acc)
+#+end_src
+
+#+begin_src jupyter-python :results silent
+def train_qbit_model(model):
+  history_cb = MetricHistoryCallback(['train_loss', 'val_loss', 'test_acc'])
+  trainer = pl.Trainer(max_epochs=500,
+                      progress_bar_refresh_rate=0,
+                      callbacks=[EarlyStopping(monitor='val_loss', patience=10),
+                                 history_cb])
+  train_data_loader = gdata.DataLoader(train_set, batch_size=64, shuffle=True, num_workers=4)
+  valid_data_loader = gdata.DataLoader(valid_set, batch_size=64, shuffle=True)
+  test_data_loader = gdata.DataLoader(test_set, batch_size=test_len)
+  trainer.fit(model, train_data_loader, valid_data_loader)
+  trainer.test(model, test_dataloaders=test_data_loader, verbose=False)
+  return history_cb.history
+#+end_src
+
+#+begin_src jupyter-python
+q_model = QModel(hidden_channels=16, num_features=2, num_classes=4).double()
+results = train_qbit_model(q_model)
+create_results_table(results)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}A\end{equation}
+#+begin_example
+GPU available: False, used: False
+TPU available: False, using: 0 TPU cores
+
+  | Name  | Type            | Params
+------------------------------------------
+0 | conv1 | GraphConv       | 80    
+1 | bn1   | BatchNorm       | 32    
+2 | conv2 | GraphConv       | 264   
+3 | bn2   | BatchNorm       | 16    
+4 | gat1  | TransformerConv | 1.2 K 
+5 | mlp   | Sequential      | 372   
+------------------------------------------
+1.9 K     Trainable params
+0         Non-trainable params
+1.9 K     Total params
+0.008     Total estimated model params size (MB)
+#+end_example
+| Training loss | Validation loss | Test accuracy |
+|---------------+-----------------+---------------|
+|         0.092 |          0.2334 |         52.5% |
 :END:
