@@ -194,7 +194,13 @@ TPU available: False, using: 0 TPU cores
 0         Non-trainable params
 23.1 K    Total params
 0.092     Total estimated model params size (MB)
+/home/eric/.pyenv/versions/org/lib/python3.8/site-packages/pytorch_lightning/utilities/distributed.py:52: UserWarning: The dataloader, val dataloader 0, does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` (try 8 which is the number of cpus on this machine) in the `DataLoader` init to improve performance.
+  warnings.warn(*args, **kwargs)
+/home/eric/.pyenv/versions/org/lib/python3.8/site-packages/pytorch_lightning/utilities/distributed.py:52: UserWarning: The dataloader, train dataloader, does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` (try 8 which is the number of cpus on this machine) in the `DataLoader` init to improve performance.
+  warnings.warn(*args, **kwargs)
 Done
+/home/eric/.pyenv/versions/org/lib/python3.8/site-packages/pytorch_lightning/utilities/distributed.py:52: UserWarning: The dataloader, test dataloader 0, does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` (try 8 which is the number of cpus on this machine) in the `DataLoader` init to improve performance.
+  warnings.warn(*args, **kwargs)
 #+end_example
 
 #+begin_src jupyter-python
@@ -204,7 +210,7 @@ create_results_table(mlp_results)
 #+RESULTS:
 | Training loss | Validation loss | Test accuracy |
 |---------------+-----------------+---------------|
-|        0.3318 |          1.2956 |         59.0% |
+|        0.3887 |          1.3027 |         58.9% |
 
 #+begin_src jupyter-python :results output
 plt.plot(mlp_results['train_loss'], label="Training loss")
@@ -213,7 +219,7 @@ plt.legend()
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/d4db0b768e16aae70e4b8a0f4c0d9b1b8179cecd.png]]
+[[file:./.ob-jupyter/127251c0e7d78ba39914b2fd80cadd79c864083d.png]]
 
 #+begin_src jupyter-python :results output
 plt.figure(figsize=(8, 4))
@@ -222,19 +228,55 @@ mlp_before_model = MLP(hidden_channels=16,
                        num_features=cora_dataset.num_features,
                        num_classes=cora_dataset.num_classes)
 mlp_before_model.eval()
-out = mlp_before_model(cora_data, mode='all')
-visualize(out, color=cora_data.y)
+out = mlp_before_model(cora_data, mode='val')
+visualize(out, color=cora_data.y[cora_data.val_mask])
 plt.title("Before training")
 plt.subplot(1, 2, 2)
 mlp_model.eval()
-out = mlp_model(cora_data, mode='all')
-visualize(out, color=cora_data.y)
+out = mlp_model(cora_data, mode='val')
+visualize(out, color=cora_data.y[cora_data.val_mask])
 plt.title("After training")
 plt.suptitle("MLP")
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/431a2921cdf8231087cbeace309df8b2dbcc1cfb.png]]
+:RESULTS:
+# [goto error]
+#+begin_example
+
+ExceptionTraceback (most recent call last)
+<ipython-input-17-0fc2c2f05cec> in <module>
+      5                        num_classes=cora_dataset.num_classes)
+      6 mlp_before_model.eval()
+----> 7 out = mlp_before_model(cora_data, mode='all')
+      8 visualize(out, color=cora_data.y)
+      9 plt.title("Before training")
+
+~/.pyenv/versions/org/lib/python3.8/site-packages/torch/nn/modules/module.py in _call_impl(self, *input, **kwargs)
+    887             result = self._slow_forward(*input, **kwargs)
+    888         else:
+--> 889             result = self.forward(*input, **kwargs)
+    890         for hook in itertools.chain(
+    891                 _global_forward_hooks.values(),
+
+<ipython-input-13-425250e8d5e2> in forward(self, data, mode)
+     17 
+     18     def forward(self, data, mode='train'):
+---> 19         mask = get_mask(data, mode)
+     20         x = data.x
+     21         x = F.relu(self.lin1(x))
+
+<ipython-input-13-425250e8d5e2> in get_mask(data, mode)
+      7         return data.test_mask
+      8     else:
+----> 9         raise Exception(f"Unknown forward mode: {mode}")
+     10 
+     11 class MLP(GraphModel):
+
+Exception: Unknown forward mode: all
+#+end_example
+[[file:./.ob-jupyter/d22cf41526a7edcf96fa7725c5d6182e329ca4e1.png]]
+:END:
 
 *** GCN
 #+begin_src jupyter-python :results silent
@@ -321,7 +363,7 @@ plt.suptitle("GCNConv")
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/0d08dba471fdfaaf857b8567fc5acd8abaed649a.png]]
+[[file:./.ob-jupyter/8e4acb7fc97617815e2585a3d28cff63392e6344.png]]
 
 *** GAT
 #+begin_src jupyter-python :results silent
@@ -366,7 +408,13 @@ TPU available: False, using: 0 TPU cores
 0         Non-trainable params
 185 K     Total params
 0.744     Total estimated model params size (MB)
+/home/eric/.pyenv/versions/org/lib/python3.8/site-packages/pytorch_lightning/utilities/distributed.py:52: UserWarning: The dataloader, val dataloader 0, does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` (try 8 which is the number of cpus on this machine) in the `DataLoader` init to improve performance.
+  warnings.warn(*args, **kwargs)
+/home/eric/.pyenv/versions/org/lib/python3.8/site-packages/pytorch_lightning/utilities/distributed.py:52: UserWarning: The dataloader, train dataloader, does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` (try 8 which is the number of cpus on this machine) in the `DataLoader` init to improve performance.
+  warnings.warn(*args, **kwargs)
 Done
+/home/eric/.pyenv/versions/org/lib/python3.8/site-packages/pytorch_lightning/utilities/distributed.py:52: UserWarning: The dataloader, test dataloader 0, does not have many workers which may be a bottleneck. Consider increasing the value of the `num_workers` argument` (try 8 which is the number of cpus on this machine) in the `DataLoader` init to improve performance.
+  warnings.warn(*args, **kwargs)
 #+end_example
 
 #+begin_src jupyter-python
@@ -384,7 +432,7 @@ plt.legend()
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/d79dc5cbe455d9eb5db8f5f13ead2b260b8d702f.png]]
+[[file:./.ob-jupyter/0cbd6f210e679174388e88517f7891e950a82294.png]]
 
 
 #+begin_src jupyter-python :results output
@@ -404,7 +452,20 @@ plt.suptitle("GATConv")
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/fe1449d87e9f37320cc9d0fe11d958b32cfa6bbb.png]]
+:RESULTS:
+# [goto error]
+: 
+: TypeErrorTraceback (most recent call last)
+: <ipython-input-29-b9a6d10b4ca1> in <module>
+:       1 plt.figure(figsize=(8, 4))
+:       2 plt.subplot(1, 2, 1)
+: ----> 3 gat_before_model = GAT(hidden_channels=16)
+:       4 gat_before_model.eval()
+:       5 out = gat_before_model(data)
+: 
+: TypeError: __init__() missing 2 required positional arguments: 'num_features' and 'num_classes'
+[[file:./.ob-jupyter/d22cf41526a7edcf96fa7725c5d6182e329ca4e1.png]]
+:END:
 
 ** Quantum bit dataset
 #+begin_src jupyter-python
@@ -444,35 +505,60 @@ next(i)
 #+RESULTS:
 : Batch(batch=[32], edge_attr=[278], edge_index=[2, 278], x=[32, 2], y=[4, 4])
 
-#+begin_src jupyter-python :results silent
+#+begin_src jupyter-python
 from torch_geometric.nn import global_mean_pool as gap, global_max_pool as gmp
+class QBlock(nn.Module):
+    def __init__(self, units):
+        super(QBlock, self).__init__()
+        self.conv1 = gnn.GraphConv(units, units)
+        self.bn1 = gnn.BatchNorm(units)
+        self.conv2 = gnn.GraphConv(units, units)
+        self.bn2 = gnn.BatchNorm(units)
+
+    def forward(self, x, batch, edge_index, edge_weight):
+        x1 = x
+        x = F.relu(self.conv1(x, edge_index, edge_weight=edge_weight))
+        x = self.bn1(x)
+        x = F.relu(self.conv2(x, edge_index, edge_weight=edge_weight))
+        x = self.bn2(x)
+        # x = gmp(x, batch)
+        # x = F.relu(self.gat1(x, edge_index))
+        # x = gap(x, batch)
+        return x + x1
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :results silent
 class QModel(pl.LightningModule):
     def __init__(self, hidden_channels, num_features, num_classes):
         super(QModel, self).__init__()
         torch.manual_seed(12345)
-        att_heads = 4
+        att_heads = 5
         self.conv1 = gnn.GraphConv(num_features, hidden_channels)
         self.bn1 = gnn.BatchNorm(hidden_channels)
-        self.conv2 = gnn.GraphConv(hidden_channels, hidden_channels//2)
-        self.bn2 = gnn.BatchNorm(hidden_channels//2)
-        self.gat1 = gnn.TransformerConv(hidden_channels//2, hidden_channels//2, heads=att_heads, concat=True)
+
+        self.qblocks = [QBlock(hidden_channels).double() for _ in range(2)]
+        self.gat1 = gnn.GATConv(hidden_channels, hidden_channels, heads=att_heads)
+        
 
         self.mlp = nn.Sequential(
-            nn.Linear(hidden_channels*att_heads//2, hidden_channels//2),
-            nn.Linear(hidden_channels//2, hidden_channels//2),
-            nn.Linear(hidden_channels//2, num_classes))
+            nn.Linear(hidden_channels*att_heads, hidden_channels//2),
+            nn.Linear(hidden_channels//2, hidden_channels//4),
+            nn.Linear(hidden_channels//4, num_classes))
 
     def forward(self, data):
-        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
-        x = F.relu(self.conv1(x, edge_index, edge_weight=edge_attr))
-        x1 = torch.cat([gmp(x, batch), gmp(x, batch)], dim=1)
+        x, edge_index, edge_weight, batch = data.x, data.edge_index, data.edge_attr, data.batch
+        x = F.relu(self.conv1(x, edge_index, edge_weight=edge_weight))
         x = self.bn1(x)
-        x = F.relu(self.conv2(x, edge_index, edge_weight=edge_attr))
-        x = self.bn2(x)
+        # x1 = x
+        for qblock in self.qblocks:
+            x = qblock(x, batch, edge_index, edge_weight)
+        # x = x + x1
         x = F.relu(self.gat1(x, edge_index))
-        x = gap(x, batch)
+        x = gmp(x, batch)
 
-        x = x + x1
+        # x = x + x1
 
         x = self.mlp(x)
         x = F.log_softmax(x, dim=1)
@@ -529,21 +615,19 @@ create_results_table(results)
 GPU available: False, used: False
 TPU available: False, using: 0 TPU cores
 
-  | Name  | Type            | Params
-------------------------------------------
-0 | conv1 | GraphConv       | 80    
-1 | bn1   | BatchNorm       | 32    
-2 | conv2 | GraphConv       | 264   
-3 | bn2   | BatchNorm       | 16    
-4 | gat1  | TransformerConv | 1.2 K 
-5 | mlp   | Sequential      | 372   
-------------------------------------------
-1.9 K     Trainable params
+  | Name  | Type       | Params
+-------------------------------------
+0 | conv1 | GraphConv  | 80    
+1 | bn1   | BatchNorm  | 32    
+2 | gat1  | GATConv    | 1.5 K 
+3 | mlp   | Sequential | 704   
+-------------------------------------
+2.3 K     Trainable params
 0         Non-trainable params
-1.9 K     Total params
-0.008     Total estimated model params size (MB)
+2.3 K     Total params
+0.009     Total estimated model params size (MB)
 #+end_example
 | Training loss | Validation loss | Test accuracy |
 |---------------+-----------------+---------------|
-|         0.092 |          0.2334 |         52.5% |
+|        0.1511 |          0.2273 |        62.25% |
 :END:
