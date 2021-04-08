@@ -8,11 +8,6 @@
 
 all: republish rsync
 
-graph: publish.el
-	@echo "Graphing..."
-	emacs --batch --load publish.el --funcall ericnorman/build-graph-json
-	@chmod 755 graph.svg
-
 serve: publish.el
 	@echo "Serving..."
 	python -m http.server --directory /var/www/ericnorman
@@ -23,7 +18,7 @@ dev: publish.el
 
 publish: publish.el
 	@echo "Publishing..."
-	emacs --batch --load publish.el --funcall ericnorman/publish
+	emacs --batch --load publish.el --funcall en/publish
 
 tangle: publish.el
 	@echo "Tangling..."
@@ -35,7 +30,7 @@ execute: publish.el
 
 republish: publish.el
 	@echo "Republishing all files..."
-	emacs --batch --load publish.el --funcall ericnorman/republish
+	emacs --batch --load publish.el --funcall en/republish
 
 rsync: publish.el
 	@echo "rsyncing published site to hosting..."

@@ -1,6 +1,6 @@
 # -*- eval: (add-hook 'after-save-hook (lambda nil (org-babel-tangle)) nil t); -*-
 #+TITLE: Encyclopedia
-#+PROPERTY: header-args:elisp :tangle encyclopedia.el :results silent
+#+PROPERTY: header-args:elisp :tangle ~/.emacs.d/lisp/encyclopedia.el :results silent
 #+STARTUP: overview
 
 * Lexical Binding
@@ -155,7 +155,10 @@
 
 * Babel
 #+begin_src elisp
-(org-babel-lob-ingest (concat encyclopedia-root-path "/lob.org"))
+(use-package org
+  :defer t
+  :config
+  (org-babel-lob-ingest (concat encyclopedia-root-path "/lob.org")))
 #+end_src
 
 #+begin_src elisp
@@ -163,7 +166,7 @@
   (list (cons :exports "results")
         (cons :session slug)
         (cons :results "raw")
-        (cons :eval "never-export")
+        (cons :eval "never")
         (cons :pandoc t)
         (cons :async "yes")
         (cons :kernel "python")))
@@ -171,6 +174,16 @@
 
 #+RESULTS:
 : encyclopedia-babel-get-header-args:jupyter-python
+
+** Inline JS
+#+begin_src elisp
+(add-to-list 'org-src-lang-modes '("inline-js" . javascript))
+(defvar org-babel-default-header-args:inline-js
+  '((:results . "html")
+    (:exports . "results")))
+(defun org-babel-execute:inline-js (body _params)
+  (format "<script type=\"text/javascript\">\n%s\n</script>" body))
+#+end_src
 
 * Document
 ** Files
@@ -220,7 +233,6 @@
 
 #+RESULTS:
 | statistics | hypothesis | testing | test | dynamical | systems | population | traveling | waves | diffusion | instability | kuramoto | model | oscillator | synchronisation | fractal | tree | recursion | ricker | map | chaos | graph | theory | erdos | renyi | small | world | network | mandelbrot | set | distribution | normal | henon | attractor | linear | least | squares |
-
 
 ** Backlinks
 #+begin_src elisp
@@ -315,12 +327,95 @@
 #+end_src
 
 #+begin_src elisp
-(org-link-set-parameters
- "video"
- :export 'encyclopedia-export-org-video-link-export)
+(use-package org
+  :config
+  (org-link-set-parameters
+   "video"
+   :export 'encyclopedia-export-org-video-link-export))
+#+end_src
+
+* HTML
+#+begin_src elisp
+(use-package esxml
+  :ensure t)
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-export-template (content info)
+  (concat
+   "<!DOCTYPE html>"
+   (sxml-to-xml
+    `(html (@ (lang "en"))
+           (head
+            (meta (@ (charset "utf-8")))
+            (meta (@ (author "Eric Norman")))
+            (meta (@ (name "viewport") (content "width=device-width, initial-scale=1.0")))
+            (link (@ (rel "stylesheet")
+                     (href "./css/bootstrap.css")))
+            (link (@ (rel "stylesheet")
+                     (href "./css/all.css")))
+            (link (@ (rel "stylesheet")
+                     (href "./css/style.css")))
+            ,(org-html--build-mathjax-config info))
+           (body
+            ,(encyclopedia-html-preamble)
+            (div (@ (class "container")
+                    (id "main"))
+                 ,content))))))
+#+end_src
+
+
+** Preamble
+#+begin_src elisp
+(defun encyclopedia-html-preamble ()
+  (sxml-to-xml
+   `(div (@ (class "container text-center"))
+         (a (@ (href "/"))
+            (img (@ (class "profile")
+                    (src "/img/profile.jpg")))))))
+#+end_src
+** Sitemap
+#+begin_src elisp
+(defun encyclopedia-html-entry-link (file content)
+  (sxml-to-xml
+   `(a (@ (href ,(string-replace ".org" ".html" file)))
+       ,content)))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-html-sitemap-entry (file)
+  (with-temp-buffer
+    (insert-file-contents file)
+    (let* ((title (car (org-roam--extract-titles-title)))
+           (slug (encyclopedia-document-title-to-slug title))
+           (thumb (encyclopedia-document-thumb-extract)))
+      (message (format "%s %s:%s" file thumb (and thumb (file-exists-p thumb))))
+      (if (and thumb (file-exists-p thumb))
+          (sxml-to-xml
+           `(div (@ (class "col-sm-6"))
+                 (div (@ (class "card mb-3"))
+                      (div (@ (class "row g-0"))
+                           (div (@ (class "col-md-4"))
+                                ,(encyclopedia-html-entry-link file `(img (@ (src ,thumb)
+                                                                             (class "card-img-top")))))
+                           (div (@ (class "col-md-8"))
+                                (div (@ (class "card-body"))
+                                     ,(encyclopedia-html-entry-link file `(h5 (@ (class "card-title")) ,title))))))))
+        ""))))
+#+end_src
+
+#+begin_src elisp
+(defun encyclopedia-html-sitemap ()
+  (let ((files (encyclopedia-document-list-documents)))
+    (sxml-to-xml
+     `(div (@ (class "row"))
+           ,(mapconcat #'encyclopedia-html-sitemap-entry
+                       files
+                       "")))))
 #+end_src
 
 * Publish
+
 ** Vars
 #+begin_src elisp
 (defvar encyclopedia-publish-url nil)
@@ -365,108 +460,47 @@ Old tag stuff
 #+end_src
 #+end_comment
 
-** Sitemap
-#+begin_src elisp
-(defun encyclopedia-publish-sitemap-format-entry (entry _style project)
-  "Return string for each ENTRY in PROJECT."
-  (message entry)
-  (with-temp-buffer
-    (insert-file-contents entry)
-    (let* ((title (org-publish-find-title entry project))
-           (slug (encyclopedia-document-title-to-slug title))
-           (thumb (encyclopedia-document-thumb-extract))
-           ;; (tags (encyclopedia-document-get-tags))
-           )
-      (message title)
-      (if (and thumb (file-exists-p thumb))
-          (concat "@@html:<div class=\"sitemap-item "
-                  ;; (mapconcat 'identity tags " ")
-                  "\">@@\n"
-                  "@@html:<div class=\"sitemap-item-thumb\">@@\n"
-                  "[[file:"thumb"]]\n"
-                  "@@html:</div>@@\n"
-                  "@@html:<div class=\"sitemap-item-content\">@@\n"
-                  "[[file:"entry"]["title"]]\n"
-                  "@@html:<div class=\"sitemap-date\">@@\n"
-                  (format-time-string "%d %h %Y"
-                                      (org-publish-find-date entry project))
-                  "@@html:</div>@@\n"
-                  ;; (mapconcat (lambda (tag)
-                  ;;              (format encyclopedia-publish-tag-format tag tag)) tags "")
-                  "@@html:</div>@@\n"
-                  "@@html:</div>@@\n")
-        ""))))
-#+end_src
-
-#+begin_src elisp
-(defun encyclopedia-publish-sitemap-function (title list)
-  (message "Sitemap function")
-  (let (
-        ;; (tags encyclopedia-publish-all-tags)
-        )
-    (concat "#+title: " title "\n\n"
-            ;; "\n#+begin_filtering\n"
-            ;; "Filter tags: @@html:<input type=\"text\" id=\"filter\"><button onclick=\"clearFilter()\">Clear</button>@@"
-            ;; "\n#+end_filtering\n"
-            "\n#+begin_sitemap\n"
-            (mapconcat (lambda (li)
-                         (format "%s" (car li)))
-                       (seq-filter #'car (cdr list))
-                       "")
-            "\n#+end_sitemap\n")))
-#+end_src
-
 ** Configure
 #+begin_src elisp
+(org-export-define-derived-backend 'encyclopedia-html 'html
+  :translate-alist
+  '((template . encyclopedia-export-template)))
+
+(defun encyclopedia-org-html-publish-to-html (plist filename publish-dir)
+  (org-publish-org-to 'encyclopedia-html
+                      filename
+                      ".html"
+                      plist
+                      publish-dir))
+
 (defun encyclopedia-publish-configure (publish-dir)
   (message (concat "Configure encyclopedia publising to " publish-dir))
-  (setq org-export-with-toc nil
-        org-export-with-author t
-        org-export-with-email nil
-        org-export-with-creator nil
+
+  (setq org-babel-default-lob-header-args '((:eval . "never"))
+        org-babel-default-header-args:jupyter-python '((:exports . "results")))
+
+  (setq org-export-babel-evaluate nil
+        org-export-use-babel t
+        org-export-with-broken-links t
+        org-confirm-babel-evaluate nil
         org-export-with-section-numbers nil
-
-        org-html-scripts (concat org-html-scripts)
-        ;; org-html-head encyclopedia-publish-head-extra
-
-        org-html-postamble encyclopedia-publish-postamble-format
-
-        ;; encyclopedia-publish-all-tags (encyclopedia-document-get-tags-files)
-
+        org-html-html5-fancy t
+        org-export-with-toc nil
         org-publish-project-alist
         `(("encyclopedia"
            :components ("encyclopedia-notes" "encyclopedia-static"))
           ("encyclopedia-notes"
            :base-directory ,encyclopedia-root-path
            :base-extension "org"
-           :exclude "index.org\\|setup.org\\|lob.org\\|encyclopedia.org"
+           :exclude "setup.org\\|lob.org\\|encyclopedia.org"
            :publishing-directory ,publish-dir
-           :publishing-function org-html-publish-to-html
+           :publishing-function encyclopedia-org-html-publish-to-html
+           :html-html5-fancy t
+           :html-doctype "html5"
            :recursive t
            :headline-levels 4
            :with-toc nil
-           :html-doctype "html5"
-           :html-html5-fancy t
-           :html-preamble ,encyclopedia-publish-preamble
-           :html-head-include-scripts nil
-           :html-head-include-default-style nil
-           :html-head-extra ,(concat encyclopedia-publish-head-extra
-                                     ;; "<script type=\"application/javascript\">\n"
-                                     ;; "window.tags = ["
-                                     ;; (mapconcat '(lambda (tag) (format "\"%s\"" tag)) encyclopedia-publish-all-tags ",")
-                                     ;; "];\n"
-                                     ;; "</script>"
-                                     )
-           :html-container "section"
-           :htmlized-source nil
-           :auto-sitemap t
-           :exclude "node_modules"
-           :sitemap-title ,encyclopedia-publish-sitemap-title
-           :sitemap-sort-files anti-chronologically
-           :sitemap-format-entry encyclopedia-publish-sitemap-format-entry
-           :sitemap-filename "index.org"
-           :sitemap-function encyclopedia-publish-sitemap-function
-           )
+           :exclude "node_modules")
           ("encyclopedia-static"
            :base-directory ,encyclopedia-root-path
            :base-extension "css\\|js\\|png\\|jpg\\|gif\\|svg\\|svg\\|json\\|mp4"
