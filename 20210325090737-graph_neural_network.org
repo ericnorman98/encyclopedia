@@ -578,6 +578,11 @@ class QModel(pl.LightningModule):
         x_hat = self.forward(data)
         loss = F.kl_div(x_hat, data.y)
         self.log('val_loss', loss)
+        pred = x_hat.argmax(dim=1)
+        targ = data.y.argmax(dim=1)
+        val_correct = pred == targ
+        val_acc = int(val_correct.sum()) / len(data.y)
+        self.log('val_acc', val_acc)
 
     def test_step(self, data, batch_idx):
         x_hat = self.forward(data)
@@ -591,13 +596,13 @@ class QModel(pl.LightningModule):
 #+begin_src jupyter-python :results silent
 def train_qbit_model(model):
   history_cb = MetricHistoryCallback(['train_loss', 'val_loss', 'test_acc'])
-  trainer = pl.Trainer(max_epochs=500,
+  trainer = pl.Trainer(max_epochs=1000,
                       progress_bar_refresh_rate=0,
                       callbacks=[EarlyStopping(monitor='val_loss', patience=10),
                                  history_cb])
   train_data_loader = gdata.DataLoader(train_set, batch_size=64, shuffle=True, num_workers=4)
   valid_data_loader = gdata.DataLoader(valid_set, batch_size=64, shuffle=True)
-  test_data_loader = gdata.DataLoader(test_set, batch_size=test_len)
+  test_data_loader = gdata.DataLoader(test_set, batch_size=test_len, shuffle=False)
   trainer.fit(model, train_data_loader, valid_data_loader)
   trainer.test(model, test_dataloaders=test_data_loader, verbose=False)
   return history_cb.history
@@ -620,14 +625,14 @@ TPU available: False, using: 0 TPU cores
 0 | conv1 | GraphConv  | 80    
 1 | bn1   | BatchNorm  | 32    
 2 | gat1  | GATConv    | 1.5 K 
-3 | mlp   | Sequential | 704   
+3 | mlp   | Sequential | 720   
 -------------------------------------
-2.3 K     Trainable params
+2.4 K     Trainable params
 0         Non-trainable params
-2.3 K     Total params
+2.4 K     Total params
 0.009     Total estimated model params size (MB)
 #+end_example
 | Training loss | Validation loss | Test accuracy |
 |---------------+-----------------+---------------|
-|        0.1511 |          0.2273 |        62.25% |
+|        0.1106 |          0.2599 |         49.0% |
 :END:
