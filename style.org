@@ -1,9 +1,10 @@
 # -*- eval: (add-hook 'after-save-hook (lambda nil (org-babel-tangle)) nil t); -*-
 #+title: Blog Style
-#+PROPERTY: header-args :eval never-export :tangle css/main.css :results silent :exports none :noweb yes
+#+PROPERTY: header-args :eval never-export :exports none :noweb yes
+#+PROPERTY: header-args:css :eval never-export :tangle css/style.css :results silent :exports none :noweb yes 
 #+STARTUP: overview
 
-* Setup :noexport:
+* Setup                                                            :noexport:
 #+name: style-content-width
 #+begin_src config
 800px
@@ -15,41 +16,21 @@ This is just for testing the website styles.
 
 ** Overrides :noexport:
 #+begin_src css :noweb yes
-#org-div-home-and-up {
-    white-space: normal;
-}
-
-,* {
-    box-sizing: border-box;
-}
-
 body {
     font-family: 'monospace', Helvetica, sans-serif;
     background-color: <<colorb("bg")>>;
-    line-height: 1.5;
-    font-size: 18px;
     color: <<colorb("fg")>>;
-    margin: 0;
 }
 
 .MathJax {
     color: <<colorb("fg-hc")>>;
 }
 
-@media (max-width: 799px) {
-    body {
-        padding: 15px;
-        font-size: .95em;
-    }
-}
 h1,
 h2,
 h3,
 h4 {
     color: <<colorb("fg")>>;
-    font-weight: normal;
-    margin: 0;
-    padding: 0;
 }
 h1 b,
 h2 b,
@@ -65,20 +46,6 @@ h3 img,
 h4 img {
     vertical-align: middle;
     border: 0 none;
-}
-h1 {
-    font-size: 42px;
-    margin-top: 40px;
-}
-h2 {
-    margin-top: 60px;
-    position: relative;
-    font-size: 32px;
-}
-h3 {
-    font-size: 22px;
-    margin-top: 40px;
-    font-weight: bold;
 }
 a {
     text-decoration: none;
@@ -114,31 +81,10 @@ code {
 li {
     margin-bottom: 1em;
 }
-img {
-    height: auto;
-}
-@media (max-width: 800px) {
-    img {
-        max-width: 100%;
-    }
-}
 #+end_src
 
 ** Helper classes :noexport:
 #+begin_src css :noweb yes
-img.no-border {
-    border: none;
-}
-img.rounded-border {
-    border-radius: 20px;
-}
-img.black-border {
-    border: 2px solid <<colorb("black")>>;
-}
-img.spaced-border {
-    border: 1px solid <<colorb("brightblack2")>>;
-    padding: 15px;
-}
 .tag {
     background: transparent;
     font-size: 0.8em;
@@ -161,16 +107,6 @@ span.tag {
     text-align: right;
     border-bottom: 1px solid #e2e2e2;
 }
-.pubdate p {
-    display: inline;
-    margin-right: 10px;
-}
-@media (max-width: 800px) {
-    .pubdate {
-        margin-top: 0;
-        text-align: left;
-    }
-}
 .noantialias {
   image-rendering: optimizeSpeed;
   image-rendering: -moz-crisp-edges;
@@ -184,104 +120,28 @@ span.tag {
 
 ** Content :noexport:
 #+begin_src css :noweb yes
-.intro {
-    padding-top: 20px;
-    color: <<colorb("fg")>>;
-    text-align: center;
-}
-.org-info-js_info-navigation {
-    background: #bbb;
-}
-@media (min-width: 800px) {
-    #content,
-    #postamble {
-        margin: 0 auto;
-        max-width: <<style-content-width>> !important;
-        width: <<style-content-width>> !important;
-    }
-}
-#content {
-    margin-top: 10px;
-    text-align: left;
-    font-size: 16px;
-    min-height: 800px;
-}
-/* #content a { */
-/*     color: #<<color-fg-hc>>; */
-/* } */
-#postamble {
-    font-size: 0.8em;
-    line-height: 1.8em;
-    margin-top: 50px;
-    text-align: center;
-    color: #aaa;
-    padding: 15px 0;
-    border-top: 1px solid #e2e2e2;
-}
-#postamble a {
-    color: <<colorb("orange")>>;
-}
-@media (min-width: 800px) {
-    #preamble {
-        width: <<style-content-width>>;
-        margin: 0px auto;
-        position: relative;
-    }
-}
 .profile {
     border-radius: 100%;
     width: 100px;
 }
 #+end_src
 
-** Sitemap :noexport:
+** Cards                                                          :noexport:
 #+begin_src css :noweb yes
-.sitemap {
-    display: flex;
-    flex-direction: column;
-}
-
-.sitemap .sitemap-item {
-    padding: 10px;
-    text-align: left;
-    display: flex;
-    flex-direction: row;
-}
-
-.sitemap .sitemap-item .sitemap-item-thumb {
+.card {
     background-color: <<colorb("bg-alt")>>;
-    width: 220px;
-    height: 220px;
 }
 
-.sitemap .sitemap-item .sitemap-item-content {
-    padding: 8px;
-}
-
-.sitemap .sitemap-item a {
+.card a {
     font-size: 20px;
     color: <<colorb("fg")>>;
 }
-.sitemap .sitemap-item p {
-    font-size: 16px;
-}
-
-.sitemap-item img {
-    width: 220px;
-    height: 220px;
-}
-
-.abstract {
-    text-align: center;
+.sitemap-entry {
 }
 #+end_src
 
 ** Figures
 #+begin_src css :noweb yes
-.figure {
-    padding: 0;
-    text-align: center;
-}
 figure img, figure video, figure .org-svg {
     display: block;
     max-width: 80%;
