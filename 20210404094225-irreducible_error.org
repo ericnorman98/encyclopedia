@@ -1,0 +1,8 @@
+#+title: Irreducible error
+#+roam_tags:
+
+#+call: init()
+
+* TODO Irreducible error
+
+

@@ -1,0 +1,33 @@
+#+title: Confusion matrix
+#+roam_tags:
+
+#+call: init()
+
+* TODO Confusion matrix
+
+|   | 1                   | 0                   |
+|---+---------------------+---------------------|
+| 1 | True positive (TP)  | False negative (NP) |
+| 0 | False positive (FP) | True negative (TN)  |
+
+#+begin_src ditaa :file confusion-matrix.png :cmdline -E
+                      Predicted outcome
+
+                     1                 0
+              +----------------+----------------+
+              |c9B6            |cEB7            |
+              |                |                |
+            1 | True positive  | False negative |
+              |                |                |
+   Actual     |                |                |
+   outcome    +----------------+----------------+
+              |cEB7            |cF66            |
+              |                |                |
+            0 | False positive | True negative  |
+              |                |                |
+              |                |                |
+              +----------------+----------------+
+#+end_src
+
+#+RESULTS:
+[[file:confusion-matrix.png]]

@@ -1,0 +1,10 @@
+#+title: Lagrange multiplier
+#+roam_tags:
+
+- tags :: [[file:20210331115231-optimization.org][Optimization]] 
+
+#+call: init()
+
+* TODO Lagrange multiplier
+
+

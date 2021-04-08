@@ -1,0 +1,8 @@
+#+title: Bias-variance tradeoff
+#+roam_tags:
+
+#+call: init()
+
+* TODO Bias-variance tradeoff
+
+
