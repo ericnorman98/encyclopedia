@@ -1,14 +1,9 @@
 #+title: Traveling waves
 #+roam_tags: dynamical systems population traveling waves
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/traveling_waves.py :results silent
-:END:
+#+RESULTS:
 
 * Traveling waves
 In more realistic prey population models, we can see /traveling-wave solutions/.
@@ -18,7 +13,7 @@ analyze these waves have constant shape and speed.
 #+begin_src jupyter-python :results silent :noweb yes
 from sympy.plotting import plot
 import numpy as np
-from pyorg.latex import *
+from encyclopedia.latex import *
 from sympy import *
 import numba
 import matplotlib.gridspec as gridspec
@@ -58,23 +53,23 @@ dims = {
     q: K/B
 }
 dimless_subs = {v: solve(Eq(lhs, rhs), v)[0] for (lhs, rhs), v in zip(dims.items(), [t, x, n(x, t), r, K])}
-LImply(LValues(dims), LValues(dimless_subs))
+LImplies(Latex(dims), Latex(dimless_subs))
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{cases}
-\tau = A t\\
-\xi = \frac{\sqrt{A} x}{\sqrt{D}}\\
-u{\left(\xi,\tau \right)} = \frac{n{\left(x,t \right)}}{B}\\
-\rho = \frac{r}{A}\\
-q = \frac{K}{B}
-\end{cases} \Rightarrow \begin{cases}
-t = \frac{\tau}{A}\\
-x = \frac{\sqrt{D} \xi}{\sqrt{A}}\\
-n{\left(x,t \right)} = B u{\left(\xi,\tau \right)}\\
-r = A \rho\\
-K = B q
+\tau=A t\\
+\xi=\frac{\sqrt{A} x}{\sqrt{D}}\\
+u{\left(\xi,\tau \right)}=\frac{n{\left(x,t \right)}}{B}\\
+\rho=\frac{r}{A}\\
+q=\frac{K}{B}
+\end{cases}\Rightarrow \begin{cases}
+t=\frac{\tau}{A}\\
+x=\frac{\sqrt{D} \xi}{\sqrt{A}}\\
+n{\left(x,t \right)}=B u{\left(\xi,\tau \right)}\\
+r=A \rho\\
+K=B q
 \end{cases}\end{equation}
 :END:
 
@@ -113,15 +108,15 @@ If we ignore diffusion and solve for $\frac{\partial}{\partial \tau} u(\xi,
 us0, us1, us2 = symbols('u^*_{0:3}')
 sols = solve(model_dimless.rhs.subs(u(xi, tau).diff(xi, 2), 0), u(xi, tau))
 steady_states = {star: sol for star, sol in zip([us0, us1, us2], [sols[0], sols[2], sols[1]])}
-LValues(steady_states)
+Latex(steady_states)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{cases}
-u^*_{0} = 0\\
-u^*_{1} = \frac{q - 1}{2} + \frac{\sqrt{q^{2} \rho + 2 q \rho - 4 q + \rho}}{2 \sqrt{\rho}}\\
-u^*_{2} = \frac{q - 1}{2} - \frac{\sqrt{q^{2} \rho + 2 q \rho - 4 q + \rho}}{2 \sqrt{\rho}}
+u^*_{0}=0\\
+u^*_{1}=\frac{q - 1}{2} + \frac{\sqrt{q^{2} \rho + 2 q \rho - 4 q + \rho}}{2 \sqrt{\rho}}\\
+u^*_{2}=\frac{q - 1}{2} - \frac{\sqrt{q^{2} \rho + 2 q \rho - 4 q + \rho}}{2 \sqrt{\rho}}
 \end{cases}\end{equation}
 :END:
 
@@ -161,15 +156,15 @@ V = {
     q: 8,
     L: 100,
 }
-LValues(V)
+Latex(V)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{cases}
-\rho = 0.5\\
-q = 8\\
-L = 100
+\rho=0.5\\
+q=8\\
+L=100
 \end{cases}\end{equation}
 :END:
 where $L$ is the number of discrete locations individuals can occupy, i.e.
@@ -212,8 +207,8 @@ u0_lms = [lambdify(xi, init_popsize.rhs.subs(case)) for case in initial_cases]
 create_cases_table(initial_cases)
 #+end_src
 
-#+name: tab:init_cases
 #+caption: The three cases of $u_0$ and $\xi_0$.
+#+name: tab:init_cases
 #+RESULTS: src:tab:init_cases
 |   |          $u_{0}$ | $\xi_{0}$ |
 |---+------------------+-----------|
@@ -245,7 +240,7 @@ plt.legend()
 #+attr_latex: :width 0.5\textwidth
 #+caption: A plot of the three initial population sizes used for the simulations.
 #+RESULTS: src:fig:init_populations
-[[file:./.ob-jupyter/3aeba45a69d5bb62391e589b95a21c4230e802fd.png]]
+[[file:./.ob-jupyter/58bc4c44d455311cd30e4083aef089c42ac066e5.png]]
 
 #+begin_src jupyter-python
 model_lm = numba.njit(lambdify((u(xi, tau), u(xi-1, tau), u(xi+1, tau)), model_dimless_disc.rhs.subs(V)))
@@ -342,7 +337,7 @@ plt.yticks([])
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/3846a435bc28e0bb5a26266914ae69095fc371e6.png]]
+[[file:./.ob-jupyter/59848b4f5ea1de79deaf078a32d1230a320d0d21.png]]
 
 #+name: src:fig:wave_velocity1
 #+begin_src jupyter-python :results output :noweb yes
@@ -354,7 +349,7 @@ plot_velocity(50, 200, u0_id=0, color=<<color("green")>>)
 #+attr_latex: :width 0.5\textwidth
 #+caption: The wave velocity calculations for the first case.
 #+RESULTS: src:fig:wave_velocity1
-[[file:./.ob-jupyter/cb504c476e1023c8d75cb1c8dffbef55c5c51376.png]]
+[[file:./.ob-jupyter/2d2896bf73282b5deca2ddb5ac7005e39516122f.png]]
 
 #+name: src:fig:wave_velocity2
 #+begin_src jupyter-python :results output :noweb yes
@@ -366,7 +361,7 @@ plot_velocity(20, 50, u0_id=1, color=<<color("red")>>)
 #+attr_latex: :width 0.5\textwidth
 #+caption: The wave velocity calculations for the second case.
 #+RESULTS: src:fig:wave_velocity2
-[[file:./.ob-jupyter/de8538b77f97f259a16e1c72e5155608d3cbf012.png]]
+[[file:./.ob-jupyter/2b0b0c2121c2d8b2c612bf294636e8fc2082e6b2.png]]
 
 #+name: src:fig:wave_velocity3
 #+begin_src jupyter-python :results output :noweb yes
@@ -378,7 +373,7 @@ plot_velocity(100, 200, u0_id=2, color=<<color("blue")>>)
 #+attr_latex: :width 0.5\textwidth
 #+caption: The wave velocity calculations for the third case.
 #+RESULTS: src:fig:wave_velocity3
-[[file:./.ob-jupyter/49546a926a8d3ce13ee259087ad5f4606f884714.png]]
+[[file:./.ob-jupyter/9c33f502774db612ddd5479bbf96f4b51887e66c.png]]
 
 ** Phase plane
 We can analyse the three cases in the phase plane spanned by $u$ and
@@ -433,7 +428,7 @@ ax1.legend()
 #+name: fig:wave_phase1
 #+caption: The wave profile of the first case (left) and the phase plane spanned by $u$ and $v=du/d\xi$ (right).
 #+RESULTS: src:fig:wave_phase1
-[[file:./.ob-jupyter/7975e33394640251ac8dba6253328a4d0273e272.png]]
+[[file:./.ob-jupyter/7a93c4f6f4fcf924ee16e067216c3f9861957b93.png]]
 
 #+name: src:fig:wave_phase2
 #+begin_src jupyter-python :results output :noweb yes
@@ -450,7 +445,7 @@ ax1.legend()
 #+name: fig:wave_phase2
 #+caption: The wave profile of the second case (left) and the phase plane (right). The phase plane trajectory connects the zero fixed point to the smaller fixed point. It's velocity is negative and travels to the left, this means that it is /unstable/.
 #+RESULTS: src:fig:wave_phase2
-[[file:./.ob-jupyter/4be370bf2e23efa6378d96c709d9b64cae1fba62.png]]
+[[file:./.ob-jupyter/e8ff09ac9f4ea3ae6e08e8b379b6283c6a5dc697.png]]
 
 #+name: src:fig:wave_phase3
 #+begin_src jupyter-python :results output :noweb yes
@@ -467,7 +462,7 @@ ax1.legend()
 #+name: fig:wave_phase3
 #+caption: The wave profile of the third case (left) and the phase plane (right). This is the one that started with a small perturbation from the smaller fixed point and it moved up to the larger one, this means that the lower fixed point is unstable and the larger is stable.
 #+RESULTS: src:fig:wave_phase3
-[[file:./.ob-jupyter/e6633437f4c38158136155df7cf37a5d7b2ddd1b.png]]
+[[file:./.ob-jupyter/3bd3cf060789c2942325f7186c1741c37fbd75c3.png]]
 
 #+begin_src jupyter-python :results output :exports none
 xi_n = np.arange(V[L])
@@ -512,8 +507,8 @@ fanim = FuncAnimation(fig, anim, init_func=anim.init, frames=len(t_n), interval=
 
 #+RESULTS:
 :RESULTS:
-: 2min 26s ± 0 ns per loop (mean ± std. dev. of 1 run, 1 loop each)
-[[file:./.ob-jupyter/f6fef83b6212078f90406192fd4dfecf7088a4bf.png]]
+: 1min 40s ± 0 ns per loop (mean ± std. dev. of 1 run, 1 loop each)
+[[file:./.ob-jupyter/476d55793ad6ff5145c9a6cc1e43210b78a31704.png]]
 :END:
 
 [[video:phase_waves.mp4]]
@@ -566,7 +561,7 @@ plt.legend()
 #+attr_latex: :width 0.5\textwidth
 #+caption: A plot of the initial population size used for the local outbreak.
 #+RESULTS: src:fig:init_popsize_2
-[[file:./.ob-jupyter/82ef0067577927bfcff41a053f7d4a93b5504e36.png]]
+[[file:./.ob-jupyter/d14909d23b7bae01b7f8e7648d0b8814adc62a37.png]]
 
 #+name: src:fig:evolution_plot
 #+begin_src jupyter-python :results output :noweb yes
@@ -590,7 +585,7 @@ plt.savefig("test.png")
 #+name: fig:evolution_plot
 #+caption: A time evolution plot of the local outbreaks, the brightest color is present time and the darker colors is further into the past.
 #+RESULTS: src:fig:evolution_plot
-[[file:./.ob-jupyter/d426add3dfa5f17b1f783648279120c812725baa.png]]
+[[file:./.ob-jupyter/70405e4ef28a853e82b41750fec7c78990c8b9aa.png]]
 
 #+begin_src jupyter-python :results silent :noweb yes
 def plot_system_3d(ax, u0_lm, t_max, vmax=6, zlabel=True, dt=0.5):
@@ -630,5 +625,5 @@ plt.savefig("plot3d.png")
 #+name: fig:evolution_plot_3d
 #+caption: An alternative 3d time evolution plot of the two cases.
 #+RESULTS: src:fig:evolution_plot_3d
-[[file:./.ob-jupyter/8f19b5a12a04906aba50034657f8f0b62e2f1b38.png]]
+[[file:./.ob-jupyter/aa1840d7293fa72765b78d6e086b3d31771c0c4b.png]]
 

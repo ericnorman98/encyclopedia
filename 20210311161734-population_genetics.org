@@ -119,7 +119,3 @@ P[S_{2} = j] \Rightarrow \{\text{expand probability}\} \Rightarrow \\
 \end{array}\end{equation}
 :END:
 
-#+latex: \pagebreak
-#+latex: \appendix
-* Code
-#+include: encyclopedia/population_genetics.py src python

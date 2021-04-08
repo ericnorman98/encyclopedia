@@ -4,9 +4,11 @@
 
 #+call: init()
 
+#+RESULTS:
+
 #+begin_src jupyter-python :lib yes
 from sympy import *
-from pyorg.latex import *
+from encyclopedia.latex import *
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 from cycler import cycler
@@ -16,11 +18,15 @@ from encyclopedia.dynamical_systems import DynamicalSystem
 from encyclopedia.stability_analysis import plot_stability_diagram, stability_classify
 #+end_src
 
+#+RESULTS:
+
 #+begin_src jupyter-python :lib yes
 S, I = symbols('S I', integer=True, positive=True, cls=Function)
 S0, I0, N = symbols('S_0 I_0 N', integer=True, positive=True)
 alpha, beta, t, r0 = symbols('alpha beta t r_0', real=True, positive=True)
 #+end_src
+
+#+RESULTS:
 
 #+begin_src jupyter-python :noweb yes :lib yes
 class DeterministicSISModel(DynamicalSystem):
@@ -42,6 +48,8 @@ class DeterministicSISModel(DynamicalSystem):
         plt.plot(sol.t, y[:, 1], color=<<color("red")>>, label="I deterministic", **kwargs)
 #+end_src
 
+#+RESULTS:
+
 * Deterministic SIS model
 The SIS (Susceptible, Infectious, Susceptible) model is a compartmental model
 for modeling infectious diseases.
@@ -54,8 +62,8 @@ model
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{array}{l}
-\frac{d}{d t} S{\left(t \right)} = - \frac{\alpha I{\left(t \right)} S{\left(t \right)}}{I{\left(t \right)} + S{\left(t \right)}} + \beta I{\left(t \right)}\\
-\frac{d}{d t} I{\left(t \right)} = \frac{\alpha I{\left(t \right)} S{\left(t \right)}}{I{\left(t \right)} + S{\left(t \right)}} - \beta I{\left(t \right)}
+\frac{d}{d t} S{\left(t \right)}=- \frac{\alpha I{\left(t \right)} S{\left(t \right)}}{I{\left(t \right)} + S{\left(t \right)}} + \beta I{\left(t \right)}\\
+\frac{d}{d t} I{\left(t \right)}=\frac{\alpha I{\left(t \right)} S{\left(t \right)}}{I{\left(t \right)} + S{\left(t \right)}} - \beta I{\left(t \right)}
 \end{array}\end{equation}
 :END:
 
@@ -72,7 +80,7 @@ plt.yticks([])
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/3309527409d7f4154b96a824ed499c3844765021.png]]
+[[file:./.ob-jupyter/5953adcb3f2cf732d41500d277fbf3c71c36b410.png]]
 
 #+name: src:fig:simulation
 #+begin_src jupyter-python :results output :noweb yes
@@ -82,7 +90,7 @@ V = {
     alpha: 0.5,
     beta: 0.1
 }
-plt.title(latex(LValues(V, join=LComma), mode='inline'))
+plt.title(inline(Latex(V, join=LComma)))
 model.plot([0, 50], V)
 #+end_src
 
@@ -90,7 +98,7 @@ model.plot([0, 50], V)
 #+attr_latex: scale=0.75
 #+label: fig:simulation
 #+RESULTS: src:fig:simulation
-[[file:./.ob-jupyter/3eda243b06aa520a83c17f475a132438f368abc8.png]]
+[[file:./.ob-jupyter/6307fa470c5ffd05aca5ee7c500ae6be83af2683.png]]
 
 ** Steady states
 To calculate the steady states, we can simplify out expressions by realizing
@@ -99,12 +107,12 @@ that the sum of the two compartments is constant. We will define this as $N$.
 SI_consteq = Eq(S(t)+I(t),N)
 steady_eq_sys = model.rhs.applyfunc(lambda e: Eq(e, 0))
 steady_states_uneval = model.steady_states(add_eqs=[SI_consteq])
-LImply( Eq(model.lhs[0]+model.lhs[1],0), SI_consteq)
+LImplies(Eq(model.lhs[0]+model.lhs[1],0), SI_consteq)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\frac{d}{d t} I{\left(t \right)} + \frac{d}{d t} S{\left(t \right)} = 0 \Rightarrow I{\left(t \right)} + S{\left(t \right)} = N\end{equation}
+\begin{equation}\frac{d}{d t} I{\left(t \right)} + \frac{d}{d t} S{\left(t \right)} = 0\Rightarrow I{\left(t \right)} + S{\left(t \right)} = N\end{equation}
 :END:
 
 Solving for where the
@@ -113,7 +121,7 @@ steady_states_subs = steady_states_uneval()
 steady_states_stars = steady_states_subs()
 Sstar, Istar = steady_states_stars.step.stars
 steady_states = steady_states_stars.value[0]
-LImply(steady_states_uneval, steady_states_stars)
+LImplies(steady_states_uneval, steady_states_stars)
 #+end_src
 
 #+RESULTS:
@@ -121,11 +129,11 @@ LImply(steady_states_uneval, steady_states_stars)
 \begin{equation}\begin{array}{l}
 - \frac{\alpha I{\left(t \right)} S{\left(t \right)}}{I{\left(t \right)} + S{\left(t \right)}} + \beta I{\left(t \right)} = 0\\
 \frac{\alpha I{\left(t \right)} S{\left(t \right)}}{I{\left(t \right)} + S{\left(t \right)}} - \beta I{\left(t \right)} = 0
-\end{array} \Rightarrow \begin{cases}
-{S^{*}_{0}} = N\\
-{I^{*}_{0}} = 0\\
-{S^{*}_{1}} = \frac{N \beta}{\alpha}\\
-{I^{*}_{1}} = \frac{N \left(\alpha - \beta\right)}{\alpha}
+\end{array}\Rightarrow \begin{cases}
+{S^{*}_{0}}=N\\
+{I^{*}_{0}}=0\\
+{S^{*}_{1}}=\frac{N \beta}{\alpha}\\
+{I^{*}_{1}}=\frac{N \left(\alpha - \beta\right)}{\alpha}
 \end{cases}\end{equation}
 :END:
 
@@ -163,7 +171,7 @@ fig.colorbar(im, ax=ax1)
 #+caption: Steady states for the infectives evaluated for every combination of $\alpha$ and $\beta$ in the interval $(0, 2]$. The plot shows that $I(\infty)>0$ when $\alpha>\beta$.
 #+label: fig:param_infect_steady
 #+RESULTS: src:fig:param_infect_steady
-[[file:./.ob-jupyter/28f0138d282322519e621d2e02c911c2bfd3ad5f.png]]
+[[file:./.ob-jupyter/d00bfa27e2470ac6c62fd245f57c1f39078f1a3b.png]]
 
 We can investigate the stability of the system by doing stability analysis, we
 start by calculating the stability matrix
@@ -196,14 +204,14 @@ evaluating the trace and determinant at the fixed point, we get
 stability_analysis_at = stability_analysis_trace_det()
 trace_dets = stability_analysis_at.value
 J = MatrixSymbol('\\mathbb{J}', 2, 2)
-LMatEq([Trace(J), Determinant(J)], trace_dets[0].doit())
+LArray([Trace(J), Determinant(J)], trace_dets[0].doit()).transpose(LEq)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{array}{l}
-\operatorname{tr}\left(\mathbb{J} \right) = \alpha - \beta\\
-\operatorname{det}\left(\mathbb{J}\right) = 0
+\operatorname{tr}\left(\mathbb{J} \right)=\alpha - \beta\\
+\operatorname{det}\left(\mathbb{J}\right)=0
 \end{array}\end{equation}
 :END:
 
@@ -216,7 +224,7 @@ def plot_stability(V, tr, det):
     stability_class = stability_classify(det_n, tr_n)
     plot_stability_diagram(labels=[stability_class],
                         points=[(det_n, tr_n)],
-                        points_label=latex(LValues(V, join=lambda *args: Latex(*args, separator=', ')), mode='inline'))
+                        points_label=inline(Latex(V, join=lcomma)))
     if V[alpha] > V[beta]:
         plt.title("$\\alpha>\\beta$")
     else:
@@ -239,5 +247,5 @@ plot_stability({
 #+end_src
 
 #+RESULTS: src:fig:det_sis_class
-[[file:./.ob-jupyter/0d88777391147a77738031cd437a94244b57e1c3.png]]
+[[file:./.ob-jupyter/29e991ce766d26c22ab35decd032450c94c1bf72.png]]
 

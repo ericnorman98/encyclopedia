@@ -4,14 +4,19 @@
 
 #+call: init()
 
+#+RESULTS:
+
 #+begin_src jupyter-python :lib yes
 from sympy import *
-from pyorg.latex import *
+from encyclopedia.latex import *
 import matplotlib.pyplot as plt
 import numpy as np
 from encyclopedia.calculation_step import CalculationStep, Calculation
 #+end_src
 
+#+RESULTS:
+
+* Lib
 ** Steady states
 #+begin_src jupyter-python :lib yes
 class SystemZeroStep(CalculationStep):

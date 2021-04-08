@@ -1,9 +1,9 @@
 #+title: Mandelbrot set
 #+roam_tags: fractal mandelbrot set recursion
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
+
+#+RESULTS:
 
 * TODO Lib :noexport:
 :PROPERTIES:
@@ -72,9 +72,9 @@ def mandelbrot(w, h, cx, cy, s, max_iter=50):
     return z
 #+END_SRC
 
-#+RESULTS:
 
 #+thumb:
+#+name: src:fig:mandelbrot_img
 #+BEGIN_SRC jupyter-python :results output
 cx = -0.8
 cy = 0.0
@@ -82,11 +82,11 @@ s = 3
 z = mandelbrot(400, 400, cx, cy, s, max_iter=100)
 plt.imshow(z, cmap=green_cmap)
 plt.axis('off')
-plt.savefig(thumb)
 #+END_SRC
 
-#+RESULTS:
-[[file:./.ob-jupyter/5a79f0e43687a789b2bc46c87c19f4ee4eeabb38.png]]
+#+caption: Mandelbrot set
+#+RESULTS: src:fig:mandelbrot_img
+[[file:./.ob-jupyter/052257724057c4342fe8620c1ebafad1ee1ab6b9.png]]
 
 To really see how incredibly complex this structure is, you have to zoom in.
 When zooming in, the number of steps taken for each pixel needs to be increased
@@ -126,13 +126,14 @@ anim.save('mandelbrot.gif')
 
 #+RESULTS:
 :RESULTS:
-: <ipython-input-24-36ac708f9789>:24: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+: <ipython-input-7-36ac708f9789>:24: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
 :   anim = FuncAnimation(fig, animate, frames=steps, init_func=init, interval=20, blit=True)
-: <ipython-input-24-36ac708f9789>:25: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+: <ipython-input-7-36ac708f9789>:25: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
 :   anim.save('mandelbrot.gif')
 : /home/eric/.pyenv/versions/org/lib/python3.8/site-packages/IPython/core/pylabtools.py:132: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
 :   fig.canvas.print_figure(bytes_io, **kw)
-[[file:./.ob-jupyter/50e2cd62063038e6bc6ae9d4848c52fcfe9e81ff.png]]
+[[file:./.ob-jupyter/83b0f0c8f082a9488a62a59fe0e48dd6162e009b.png]]
 :END:
+
 
 [[./mandelbrot.gif]]

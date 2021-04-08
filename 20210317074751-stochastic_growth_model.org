@@ -421,8 +421,3 @@ for i, case in enumerate(cases):
 #+RESULTS: src:fig:simulations
 [[file:./.ob-jupyter/47522b83e7dc96e8858cc012def3b8762657982e.png]]
 
-
-#+latex: \pagebreak
-#+latex: \appendix
-* Code
-#+include: stoch_model.py src python

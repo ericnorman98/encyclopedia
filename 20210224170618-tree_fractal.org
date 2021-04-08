@@ -1,29 +1,9 @@
 #+title: Tree fractal
 #+roam_tags: fractal tree recursion
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/tree_fractal.py :results silent
-:END:
-
-#+begin_src jupyter-python
-from math import pi, cos, sin
-#+end_src
-
-#+begin_src jupyter-python
-def tree(lines, x, y, r, t, depth=8, angle=pi/4, frac=1.4):
-    if depth == 0:
-        return
-    nx = x - r * cos(t)
-    ny = y - r * sin(t)
-    lines.append([(x, y), (nx, ny)])
-    tree(lines, nx, ny, r/frac, t-angle, depth-1, angle)
-    tree(lines, nx, ny, r/frac, t+angle, depth-1, angle)
-#+end_src
+#+RESULTS:
 
 * Tree fractal
 Tree fractals are very easy to create, it is made by recursivly drawing shorter
@@ -39,6 +19,27 @@ from PIL import Image, ImageDraw
 from IPython.display import display
 #+end_src
 
+#+RESULTS:
+
+#+begin_src jupyter-python :lib yes
+from math import pi, cos, sin
+#+end_src
+
+#+RESULTS:
+
+#+begin_src jupyter-python :lib yes
+def tree(lines, x, y, r, t, depth=8, angle=pi/4, frac=1.4):
+    if depth == 0:
+        return
+    nx = x - r * cos(t)
+    ny = y - r * sin(t)
+    lines.append([(x, y), (nx, ny)])
+    tree(lines, nx, ny, r/frac, t-angle, depth-1, angle)
+    tree(lines, nx, ny, r/frac, t+angle, depth-1, angle)
+#+end_src
+
+#+RESULTS:
+
 #+begin_src jupyter-python :results output
 plt.figure()
 # image = Image.new('P', (w, h), (33, 36, 43))
@@ -51,7 +52,7 @@ plt.axis('off')
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/765e0585029ee55cbc2a47c1b62965fd7722a9c0.png]]
+[[file:./.ob-jupyter/e3a4def0e8a4a40b8a4b56a4cd0e4af856b5173e.png]]
 
 #+thumb:
 #+begin_src jupyter-python :exports none :results output :noweb yes
@@ -65,7 +66,7 @@ plt.axis('off')
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/5c280b82a290a0a6506c22f131c3f4fb58eb5d62.png]]
+[[file:./.ob-jupyter/c3a8c108e3f63716f3839e8a68c00f5a67284456.png]]
 
 
 After drawing the trunk, recursivly add branches mirrored to each other at some

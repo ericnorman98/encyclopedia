@@ -5,15 +5,21 @@
 
 #+call: init()
 
+#+RESULTS:
+
 #+begin_src jupyter-python :lib yes
 from encyclopedia.statistics import *
 #+end_src
+
+#+RESULTS:
 
 #+begin_src jupyter-python
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation
 #+end_src
+
+#+RESULTS:
 
 * Confidence interval
 #+begin_src jupyter-python :lib yes
@@ -144,9 +150,10 @@ with open('confidence_z_alpha.html', 'w') as f:
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/6784af4fc592a38ef59bf6a4257ddeb230d5d13d.png]]
+[[file:./.ob-jupyter/c9ffa18dab5e405bb472bf136993c09f4ca13aa3.png]]
 
 #+include: confidence_z_alpha.html export html
+
 
 #+begin_src jupyter-python :lib yes
 def calculate_confidence(standardized_rv, parameter, level):
@@ -173,12 +180,16 @@ def calculate_confidence_interval(rv, standardized_rv, parameter):
     ).steps(prob).rdups()
 #+end_src
 
+#+RESULTS:
+
 #+begin_src jupyter-python :lib yes
 def calculate_confidence_interval_num(center, parameter, V):
     z_alpha_n = z_alpha(alpha/2).subs(V)
     ci = LPm(center, z_alpha_n.lhs*see)
     return LEq(LSubscript(I, parameter), ci, ci.subs(V).subs(z_alpha_n.lhs, z_alpha_n.rhs))
 #+end_src
+
+#+RESULTS:
 
 #+begin_src jupyter-python
 calculate_confidence_interval(Xm, (Xm-mu)/(sigma/sqrt(n)), mu)

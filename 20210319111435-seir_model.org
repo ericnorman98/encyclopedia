@@ -564,5 +564,3 @@ plt.suptitle(f"Preventive measures")
 
 #+latex: \pagebreak
 #+latex: \appendix
-* Code
-#+include: seir_model.py src python

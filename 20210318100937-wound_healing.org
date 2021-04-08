@@ -327,5 +327,3 @@ LEq(u(z).diff(z), f_eq.subs(c_appr_sol.lhs, c_appr_sol.rhs))
 
 #+latex: \pagebreak
 #+latex: \appendix
-* Code
-#+include: wound_model.py src python

@@ -1,9 +1,7 @@
 #+title: Spatial SIR simulation
 #+roam_tags: sir simulation spatial
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
 * Lib :noexport:
 :PROPERTIES:
@@ -210,7 +208,7 @@ with open('sir_infect.html', 'w') as f:
 #+RESULTS:
 [[file:./.ob-jupyter/5cc7aff71d8d43667a046c52765164903512a93b.png]]
 
-#+include: sir_infect.html export html
+# #+include: sir_infect.html export html
 
 ** Recovery
 The last part of the simulation is /recovery/, each infected agent can recover

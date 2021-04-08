@@ -3,12 +3,12 @@
 
 #+call: init()
 
-* Calculation
+* TODO Calculation
 #+begin_src jupyter-python :lib yes
 import matplotlib as plt
 import numpy as np
 from sympy import *
-from pyorg.latex import *
+from encyclopedia.latex import *
 #+end_src
 
 #+begin_src jupyter-python :lib yes

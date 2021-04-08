@@ -3,11 +3,13 @@
 
 #+call: init()
 
+#+RESULTS:
+
 #+begin_src jupyter-python :results silent :noweb yes :lib yes
 from sympy.plotting import plot, plot3d
 import numpy as np
 from sympy import *
-from pyorg.latex import *
+from encyclopedia.latex import *
 import numba
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
@@ -62,7 +64,7 @@ model.subs(Vmodel)
 #+name: eq:model_expanded
 #+RESULTS: src:eq:model_expanded
 :RESULTS:
-\begin{equation}\frac{\partial}{\partial t} \left[\begin{matrix}u{\left(x,y,t \right)}\\v{\left(x,y,t \right)}\end{matrix}\right]  =  \left[\begin{matrix}D_{u} \nabla_{xy}^2(u{\left(x,y,t \right)}) + a - \left(b + 1\right) u{\left(x,y,t \right)} + u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\\D_{v} \nabla_{xy}^2(v{\left(x,y,t \right)}) + b u{\left(x,y,t \right)} - u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
+\begin{equation}\frac{\partial}{\partial t} \left[\begin{matrix}u{\left(x,y,t \right)}\\v{\left(x,y,t \right)}\end{matrix}\right]=\left[\begin{matrix}D_{u} \nabla_{xy}^2(u{\left(x,y,t \right)}) + a - \left(b + 1\right) u{\left(x,y,t \right)} + u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\\D_{v} \nabla_{xy}^2(v{\left(x,y,t \right)}) + b u{\left(x,y,t \right)} - u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
 :END:
 
 but we will use vector notation to simplify later calculations,
@@ -72,7 +74,7 @@ model
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\frac{\partial}{\partial t} \pmb{n}{\left(\pmb{r},t \right)} = \nabla_{\pmb{r}}^2(\mathbb{D} \pmb{n}{\left(\pmb{r},t \right)}) + \pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)}\end{equation}
+\begin{equation}\frac{\partial}{\partial t} \pmb{n}{\left(\pmb{r},t \right)}=\nabla_{\pmb{r}}^2(\mathbb{D} \pmb{n}{\left(\pmb{r},t \right)}) + \pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)}\end{equation}
 :END:
 
 #+begin_src jupyter-python
@@ -81,7 +83,7 @@ deps
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\pmb{n}{\left(\pmb{r},t \right)} = \left[\begin{matrix}u{\left(x,y,t \right)}\\v{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
+\begin{equation}\pmb{n}{\left(\pmb{r},t \right)}=\left[\begin{matrix}u{\left(x,y,t \right)}\\v{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
 :END:
 
 #+begin_src jupyter-python
@@ -90,7 +92,7 @@ diffusion
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\nabla_{\pmb{r}}^2(\mathbb{D} \pmb{n}{\left(\pmb{r},t \right)}) = \left[\begin{matrix}D_{u} \nabla_{xy}^2(u{\left(x,y,t \right)})\\D_{v} \nabla_{xy}^2(v{\left(x,y,t \right)})\end{matrix}\right]\end{equation}
+\begin{equation}\nabla_{\pmb{r}}^2(\mathbb{D} \pmb{n}{\left(\pmb{r},t \right)})=\left[\begin{matrix}D_{u} \nabla_{xy}^2(u{\left(x,y,t \right)})\\D_{v} \nabla_{xy}^2(v{\left(x,y,t \right)})\end{matrix}\right]\end{equation}
 :END:
 
 #+begin_src jupyter-python
@@ -99,7 +101,7 @@ LEq(funcs.lhs, funcs.lhs.subs(deps.lhs, deps.rhs), funcs.rhs)
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)} = \pmb{f}{\left(\left[\begin{matrix}u{\left(x,y,t \right)}\\v{\left(x,y,t \right)}\end{matrix}\right] \right)} = \left[\begin{matrix}a - \left(b + 1\right) u{\left(x,y,t \right)} + u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\\b u{\left(x,y,t \right)} - u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
+\begin{equation}\pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)}=\pmb{f}{\left(\left[\begin{matrix}u{\left(x,y,t \right)}\\v{\left(x,y,t \right)}\end{matrix}\right] \right)}=\left[\begin{matrix}a - \left(b + 1\right) u{\left(x,y,t \right)} + u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\\b u{\left(x,y,t \right)} - u^{2}{\left(x,y,t \right)} v{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
 :END:
 
 #+begin_src jupyter-python
@@ -108,7 +110,7 @@ dims
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\mathbb{D} = \left[\begin{matrix}D_{u} & 0\\0 & D_{v}\end{matrix}\right]\end{equation}
+\begin{equation}\mathbb{D}=\left[\begin{matrix}D_{u} & 0\\0 & D_{v}\end{matrix}\right]\end{equation}
 :END:
 
 ** Steady states
@@ -122,19 +124,19 @@ steady_state
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\pmb{n^*} = \left[\begin{matrix}a\\\frac{b}{a}\end{matrix}\right]\end{equation}
+\begin{equation}\pmb{n^*}=\left[\begin{matrix}a\\\frac{b}{a}\end{matrix}\right]\end{equation}
 :END:
 
 #+begin_src jupyter-python :exports none
 steady_state_dict = {v: s for v, s in zip(deps.rhs, steady_state.rhs)}
-LValues(steady_state_dict)
+Latex(steady_state_dict)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{cases}
-u{\left(x,y,t \right)} = a\\
-v{\left(x,y,t \right)} = \frac{b}{a}
+u{\left(x,y,t \right)}=a\\
+v{\left(x,y,t \right)}=\frac{b}{a}
 \end{cases}\end{equation}
 :END:
 
@@ -151,17 +153,16 @@ V = {
     Du: 1
 }
 Dv_eq = Dv > 1
-LValues(V, Dv_eq)
+Latex(V, Dv_eq)
 #+end_src
 
 #+RESULTS:
 :RESULTS:
 \begin{equation}\begin{cases}
-a = 3\\
-b = 8\\
-D_{u} = 1\\
-D_{v} > 1
-\end{cases}\end{equation}
+a=3\\
+b=8\\
+D_{u}=1
+\end{cases}D_{v} > 1\end{equation}
 :END:
 
 Start by calculating the stability matrix,
@@ -173,7 +174,7 @@ jacobian
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\mathbb{J}{\left(\pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)} \right)} = \left[\begin{matrix}- b + 2 u{\left(x,y,t \right)} v{\left(x,y,t \right)} - 1 & u^{2}{\left(x,y,t \right)}\\b - 2 u{\left(x,y,t \right)} v{\left(x,y,t \right)} & - u^{2}{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
+\begin{equation}\mathbb{J}{\left(\pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)} \right)}=\left[\begin{matrix}- b + 2 u{\left(x,y,t \right)} v{\left(x,y,t \right)} - 1 & u^{2}{\left(x,y,t \right)}\\b - 2 u{\left(x,y,t \right)} v{\left(x,y,t \right)} & - u^{2}{\left(x,y,t \right)}\end{matrix}\right]\end{equation}
 :END:
 
 substitute in fixed point and parameters,
@@ -184,7 +185,7 @@ stabmat
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} = \left[\begin{matrix}b - 1 & a^{2}\\- b & - a^{2}\end{matrix}\right] = \left[\begin{matrix}7 & 9\\-8 & -9\end{matrix}\right]\end{equation}
+\begin{equation}\mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)}=\left[\begin{matrix}b - 1 & a^{2}\\- b & - a^{2}\end{matrix}\right]=\left[\begin{matrix}7 & 9\\-8 & -9\end{matrix}\right]\end{equation}
 :END:
 
 now calculate the eigenvalues to verify that it is stable before taking
@@ -199,7 +200,7 @@ eigenvalues
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\operatorname{eig}{\left(\mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \right)} = \left[\begin{matrix}\lambda_{1}\\\lambda_{2}\end{matrix}\right] = \left[\begin{matrix}-1 - 2 \sqrt{2} i\\-1 + 2 \sqrt{2} i\end{matrix}\right]\end{equation}
+\begin{equation}\operatorname{eig}{\left(\mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \right)}=\left[\begin{matrix}\lambda_{1}\\\lambda_{2}\end{matrix}\right]=\left[\begin{matrix}-1 - 2 \sqrt{2} i\\-1 + 2 \sqrt{2} i\end{matrix}\right]\end{equation}
 :END:
 
 Now we will consider diffusion, start by applying a perturbation from the fixed
@@ -212,7 +213,7 @@ pturb
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\pmb{n}{\left(\pmb{r},t \right)} = \pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)}\end{equation}
+\begin{equation}\pmb{n}{\left(\pmb{r},t \right)}=\pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)}\end{equation}
 :END:
 
 substitution with the perturbation gives us,
@@ -227,7 +228,17 @@ model_pturb
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\frac{\partial}{\partial t} \pmb{n}{\left(\pmb{r},t \right)} = \nabla_{\pmb{r}}^2(\mathbb{D} \pmb{n}{\left(\pmb{r},t \right)}) + \pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)}\end{equation}
+# [goto error]
+: 
+: NameErrorTraceback (most recent call last)
+: <ipython-input-54-4f94c7a57365> in <module>
+: ----> 1 model_pturb = LSteps(model,
+:       2     lambda e: e.subs(pturb.lhs, pturb.rhs),
+:       3     lambda e: e.doit(),
+:       4     lambda e: e.subs(f(pturb.rhs), stabmat.lhs*npt(r, t)),
+:       5 )
+: 
+: NameError: name 'LSteps' is not defined
 :END:
 
 We can now separate variables using the ansatz,
@@ -240,7 +251,7 @@ sep_ansatz
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\delta \pmb{n}{\left(\pmb{r},t \right)} = R{\left(\pmb{r} \right)} T{\left(t \right)} \delta \pmb{n}_0\end{equation}
+\begin{equation}\delta \pmb{n}{\left(\pmb{r},t \right)}=R{\left(\pmb{r} \right)} T{\left(t \right)} \delta \pmb{n}_0\end{equation}
 :END:
 
 substitution gives us,
@@ -256,7 +267,17 @@ model_pturb_sep
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\frac{\partial}{\partial t} \pmb{n}{\left(\pmb{r},t \right)} = \nabla_{\pmb{r}}^2(\mathbb{D} \pmb{n}{\left(\pmb{r},t \right)}) + \pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)}\end{equation}
+# [goto error]
+: 
+: NameErrorTraceback (most recent call last)
+: <ipython-input-56-c41f7a243217> in <module>
+: ----> 1 model_pturb_sep = LSteps(model_pturb[-1],
+:       2     lambda e: e.subs(sep_ansatz.lhs, sep_ansatz.rhs),
+:       3     lambda e: e.doit(),
+:       4     lambda e: LEq(e.lhs/(T(t)*R(r)), e.rhs/(T(t)*R(r))),
+:       5     lambda e: e.simplify(),
+: 
+: NameError: name 'LSteps' is not defined
 :END:
 
 Since the right-hand side no longer depends on $t$, we can assume
@@ -279,41 +300,17 @@ model_pturb_eig
 
 #+RESULTS:
 :RESULTS:
-: LEq(Derivative(\pmb{n}(\pmb{r}, t), t), Lap2(\mathbb{D}*\pmb{n}(\pmb{r}, t), \pmb{r}) + \pmb{f}(\pmb{n}(\pmb{r}, t)))
 # [goto error]
-#+begin_example
----------------------------------------------------------------------------
-AttributeError                            Traceback (most recent call last)
-<ipython-input-63-b679da398190> in <module>
-      5 Keq = LEq(K, stabmat.lhs-dims.lhs*k**2, stabmat.rhs-dims.rhs*k**2)
-      6 print(model_pturb_sep[-1])
-----> 7 model_pturb_eig = LSteps(model_pturb_sep[-1])(
-      8     lambda e: e.subs(T(t).diff(t), T(t)*lam).replace(Lap2, lambda x, *args: -k**2*x),
-      9     lambda e: LEq(e.lhs, e.rhs.factor()),
-
-~/org/pyorg/pyorg/latex.py in __call__(self, *expr)
-    213
-    214     def __call__(self, *expr):
---> 215         return self.transform(*expr)
-    216
-    217     def append(self, other_step):
-
-~/org/pyorg/pyorg/latex.py in transform(self, *args)
-    287                     colargs = [self._indent, expr, *rest]
-    288                 else:
---> 289                     colargs = [self._indent, expr := step(expr)]
-    290             else:
-    291                 colargs = [self._indent, step]
-
-<ipython-input-63-b679da398190> in <lambda>(e)
-      7 model_pturb_eig = LSteps(model_pturb_sep[-1])(
-      8     lambda e: e.subs(T(t).diff(t), T(t)*lam).replace(Lap2, lambda x, *args: -k**2*x),
-----> 9     lambda e: LEq(e.lhs, e.rhs.factor()),
-     10     lambda e: e.subs(Keq.args[1], Keq.lhs),
-     11 )
-
-AttributeError: 'str' object has no attribute 'factor'
-#+end_example
+: 
+: NameErrorTraceback (most recent call last)
+: <ipython-input-57-b679da398190> in <module>
+:       4 K = Symbol('\\mathbb{K}', commutative=False)
+:       5 Keq = LEq(K, stabmat.lhs-dims.lhs*k**2, stabmat.rhs-dims.rhs*k**2)
+: ----> 6 print(model_pturb_sep[-1])
+:       7 model_pturb_eig = LSteps(model_pturb_sep[-1])(
+:       8     lambda e: e.subs(T(t).diff(t), T(t)*lam).replace(Lap2, lambda x, *args: -k**2*x),
+: 
+: NameError: name 'model_pturb_sep' is not defined
 :END:
 
 This gives us an equation for eigenvalues end eigenvectors for our new stability matrix $\mathbb{K}$.
@@ -326,7 +323,7 @@ LEq(tr(K), Keq.rhs.trace().subs(V)<0)
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\operatorname{tr}{\left(\mathbb{K} \right)} = - D_{v} k^{2} - k^{2} - 2 < 0\end{equation}
+\begin{equation}\operatorname{tr}{\left(\mathbb{K} \right)}=- D_{v} k^{2} - k^{2} - 2 < 0\end{equation}
 :END:
 
 we only need to find $\operatorname{det}(\mathbb{K})<0$
@@ -347,10 +344,17 @@ model_pturb_detK
 #+RESULTS:
 :RESULTS:
 : -\mathbb{D}*k**2 + \mathbb{J}(\pmb{f}(\pmb{n^*}))
-\begin{equation}\begin{array}{l}
-\operatorname{det}{\left(\mathbb{K} \right)} = 0 \Rightarrow \\
-\quad \Rightarrow \operatorname{det}{\left(\mathbb{K} \right)} = 0  \Rightarrow
-\end{array}\end{equation}
+# [goto error]
+: 
+: NameErrorTraceback (most recent call last)
+: <ipython-input-59-779fc068cdd9> in <module>
+:       1 k2s = Matrix(symbols('k^2_1 k^2_2'))
+:       2 print(stabmat.lhs-dims.lhs*k**2)
+: ----> 3 model_pturb_detK = LSteps(Eq(det(K), 0))(
+:       4     LSubsStep(K, stabmat.lhs-dims.lhs*k**2),
+:       5     # LStep(lambda e: e.subs(K, stabmat.lhs-dims.lhs*k**2)),
+: 
+: NameError: name 'LSteps' is not defined
 :END:
 
 #+begin_src jupyter-python
@@ -377,18 +381,17 @@ Dv_range_sol
 
 #+RESULTS:
 :RESULTS:
-: 0
 # [goto error]
-: ---------------------------------------------------------------------------
-: TypeError                                 Traceback (most recent call last)
-: <ipython-input-51-73cda4885772> in <module>
+: 
+: NameErrorTraceback (most recent call last)
+: <ipython-input-61-73cda4885772> in <module>
 :       1 Dvc = symbols('D_vc')
-:       2 print(model_pturb_k2s.rhs)
-: ----> 3 k2_sqrt = find_sqrt(model_pturb_k2s.rhs[0])[0]
+: ----> 2 print(model_pturb_k2s.rhs)
+:       3 k2_sqrt = find_sqrt(model_pturb_k2s.rhs[0])[0]
 :       4 k2_sqrt_eq = k2_sqrt>=0
 :       5 Dv_range_sol = LSteps(k2_sqrt_eq,
-:
-: TypeError: 'Zero' object is not subscriptable
+: 
+: NameError: name 'model_pturb_k2s' is not defined
 :END:
 
 We can now calculate $k_c$ if we substitute the solution to $D_{vc}$ into
@@ -407,7 +410,17 @@ k_c_steps
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\operatorname{det}{\left(\mathbb{K} \right)} = 0\end{equation}
+# [goto error]
+: 
+: NameErrorTraceback (most recent call last)
+: <ipython-input-62-3598eab543c9> in <module>
+:       1 kc = symbols('k_c')
+: ----> 2 k_c_steps = LSteps(LEq(det(K), 0),
+:       3     lambda e: e.subs(K, Keq.rhs.subs(V)),
+:       4     lambda e: e.subs(Dv, Dv_c),
+:       5     lambda e: e.replace(det, lambda x: x.det()),
+: 
+: NameError: name 'LSteps' is not defined
 :END:
 
 #+begin_src jupyter-python :noweb yes :results output
@@ -430,21 +443,21 @@ plt.legend()
 :RESULTS:
 # [goto error]
 #+begin_example
----------------------------------------------------------------------------
-NameError                                 Traceback (most recent call last)
-<ipython-input-36-c2950384f5cd> in <module>
-      1 detK_lm = lambdify((Dv, k), Keq.rhs.det().subs(V))
-      2 k_n = np.linspace(0, 2)
-----> 3 Dv_ns = [Dv_c+dx for dx in [-1, 0, 1]]
-      4 detK_ns = [detK_lm(Dv_n, k_n) for Dv_n in Dv_ns]
-      5
 
-<ipython-input-36-c2950384f5cd> in <listcomp>(.0)
+NameErrorTraceback (most recent call last)
+<ipython-input-63-1c9c2b5976ac> in <module>
       1 detK_lm = lambdify((Dv, k), Keq.rhs.det().subs(V))
       2 k_n = np.linspace(0, 2)
 ----> 3 Dv_ns = [Dv_c+dx for dx in [-1, 0, 1]]
       4 detK_ns = [detK_lm(Dv_n, k_n) for Dv_n in Dv_ns]
-      5
+      5 
+
+<ipython-input-63-1c9c2b5976ac> in <listcomp>(.0)
+      1 detK_lm = lambdify((Dv, k), Keq.rhs.det().subs(V))
+      2 k_n = np.linspace(0, 2)
+----> 3 Dv_ns = [Dv_c+dx for dx in [-1, 0, 1]]
+      4 detK_ns = [detK_lm(Dv_n, k_n) for Dv_n in Dv_ns]
+      5 
 
 NameError: name 'Dv_c' is not defined
 #+end_example
@@ -480,7 +493,17 @@ LSteps(Lap2(u(x, y), x, y),
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}\nabla_{xy}^2(u{\left(x,y \right)})\end{equation}
+# [goto error]
+: 
+: NameErrorTraceback (most recent call last)
+: <ipython-input-65-a661e63a0bd0> in <module>
+:       2 model_expanded = model.subs(Vmodel).doit()
+:       3 model_expanded = apply_fd(model_expanded, x, y)
+: ----> 4 LSteps(Lap2(u(x, y), x, y),
+:       5     lambda e: e.doit(),
+:       6     lambda e: apply_fd(e, x, y),
+: 
+: NameError: name 'LSteps' is not defined
 :END:
 
 #+begin_src jupyter-python :exports none
@@ -587,7 +610,7 @@ plt.axis('off')
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/de2f987005b5921510cdf5ae50afa6f8b0caf8e1.png]]
+[[file:./.ob-jupyter/949362910b702294cee4e0570a8e03d06b7a0c70.png]]
 
 #+name: src:fig:simulations_transient
 #+begin_src jupyter-python :results output :eval never-export
@@ -609,7 +632,7 @@ plt.suptitle(f"$t={T_n}$, $\Delta t={dt}$")
 #+name: fig:simulations_transient
 #+caption: Simulations of four values of $D_v$ during transient.
 #+RESULTS: src:fig:simulations_transient
-[[file:./.ob-jupyter/bbab4b543a4705015b77091878e01234a2acc649.png]]
+[[file:./.ob-jupyter/03f1433e8d66c02fd9dea53a6de80cbc88a35eab.png]]
 
 #+name: src:fig:simulations_after
 #+begin_src jupyter-python :results output :noweb yes :eval never-export
@@ -631,7 +654,7 @@ plt.suptitle(f"$t={T_n}$, $\Delta t={dt}$")
 #+name: fig:simulations
 #+caption: Simulations of four values of $D_v$ after transient.
 #+RESULTS: src:fig:simulations_after
-[[file:./.ob-jupyter/52ed65c011255f113fc08f999c5d816c78b49b08.png]]
+[[file:./.ob-jupyter/9b1770331d3539873983bf8006b5d2489016ebb9.png]]
 
 
 #+begin_src jupyter-python :exports none :eval never-export
@@ -669,164 +692,8 @@ anim.save('diffusion_simulation2.mp4')
 
 #+RESULTS:
 :RESULTS:
-: 220 t=2.209999999999997
-# [goto error]
-#+begin_example
----------------------------------------------------------------------------
-KeyboardInterrupt                         Traceback (most recent call last)
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/animation.py in saving(self, fig, outfile, dpi, *args, **kwargs)
-    250         try:
---> 251             yield self
-    252         finally:
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/animation.py in save(self, filename, writer, fps, dpi, codec, bitrate, extra_args, metadata, extra_anim, savefig_kwargs, progress_callback)
-   1144                         frame_number += 1
--> 1145                 writer.grab_frame(**savefig_kwargs)
-   1146
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/animation.py in grab_frame(self, **savefig_kwargs)
-    362         # Save the figure data to the sink, using the frame format and dpi.
---> 363         self.fig.savefig(self._frame_sink(), format=self.frame_format,
-    364                          dpi=self.dpi, **savefig_kwargs)
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/figure.py in savefig(self, fname, transparent, **kwargs)
-   2310
--> 2311         self.canvas.print_figure(fname, **kwargs)
-   2312
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/backend_bases.py in print_figure(self, filename, dpi, facecolor, edgecolor, orientation, format, bbox_inches, pad_inches, bbox_extra_artists, backend, **kwargs)
-   2209             try:
--> 2210                 result = print_method(
-   2211                     filename,
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/backend_bases.py in wrapper(*args, **kwargs)
-   1638
--> 1639         return func(*args, **kwargs)
-   1640
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/backends/backend_agg.py in print_raw(self, filename_or_obj, *args)
-    452     def print_raw(self, filename_or_obj, *args):
---> 453         FigureCanvasAgg.draw(self)
-    454         renderer = self.get_renderer()
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/backends/backend_agg.py in draw(self)
-    406               else nullcontext()):
---> 407             self.figure.draw(self.renderer)
-    408             # A GUI class may be need to update a window using this draw, so
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/artist.py in draw_wrapper(artist, renderer, *args, **kwargs)
-     40
----> 41             return draw(artist, renderer, *args, **kwargs)
-     42         finally:
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/figure.py in draw(self, renderer)
-   1862             self.patch.draw(renderer)
--> 1863             mimage._draw_list_compositing_images(
-   1864                 renderer, self, artists, self.suppressComposite)
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/image.py in _draw_list_compositing_images(renderer, parent, artists, suppress_composite)
-    130         for a in artists:
---> 131             a.draw(renderer)
-    132     else:
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/artist.py in draw_wrapper(artist, renderer, *args, **kwargs)
-     40
----> 41             return draw(artist, renderer, *args, **kwargs)
-     42         finally:
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/cbook/deprecation.py in wrapper(*inner_args, **inner_kwargs)
-    410                 **kwargs)
---> 411         return func(*inner_args, **inner_kwargs)
-    412
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/axes/_base.py in draw(self, renderer, inframe)
-   2746
--> 2747         mimage._draw_list_compositing_images(renderer, self, artists)
-   2748
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/image.py in _draw_list_compositing_images(renderer, parent, artists, suppress_composite)
-    130         for a in artists:
---> 131             a.draw(renderer)
-    132     else:
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/artist.py in draw_wrapper(artist, renderer, *args, **kwargs)
-     40
----> 41             return draw(artist, renderer, *args, **kwargs)
-     42         finally:
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/image.py in draw(self, renderer, *args, **kwargs)
-    640         else:
---> 641             im, l, b, trans = self.make_image(
-    642                 renderer, renderer.get_image_magnification())
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/image.py in make_image(self, renderer, magnification, unsampled)
-    925                 else self.figure.bbox)
---> 926         return self._make_image(self._A, bbox, transformed_bbox, clip,
-    927                                 magnification, unsampled=unsampled)
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/image.py in _make_image(self, A, in_bbox, out_bbox, clip_bbox, magnification, unsampled, round_to_pixel_border)
-    558             # or an RGBA array of re-sampled input
---> 559             output = self.to_rgba(output, bytes=True, norm=False)
-    560             # output is now a correctly sized RGBA array of uint8
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/cm.py in to_rgba(self, x, alpha, bytes, norm)
-    332             x = self.norm(x)
---> 333         rgba = self.cmap(x, alpha=alpha, bytes=bytes)
-    334         return rgba
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/colors.py in __call__(self, X, alpha, bytes)
-    609
---> 610         rgba = lut[xa]
-    611         if not np.iterable(X):
-
-KeyboardInterrupt:
-
-During handling of the above exception, another exception occurred:
-
-CalledProcessError                        Traceback (most recent call last)
-<ipython-input-47-33e11a734a23> in <module>
-     28
-     29 anim = FuncAnimation(fig, animate, init_func=init, frames=steps, interval=20, blit=True)
----> 30 anim.save('diffusion_simulation2.mp4')
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/animation.py in save(self, filename, writer, fps, dpi, codec, bitrate, extra_args, metadata, extra_anim, savefig_kwargs, progress_callback)
-   1143                         progress_callback(frame_number, total_frames)
-   1144                         frame_number += 1
--> 1145                 writer.grab_frame(**savefig_kwargs)
-   1146
-   1147     def _step(self, *args):
-
-~/.pyenv/versions/3.8.5/lib/python3.8/contextlib.py in __exit__(self, type, value, traceback)
-    129                 value = type()
-    130             try:
---> 131                 self.gen.throw(type, value, traceback)
-    132             except StopIteration as exc:
-    133                 # Suppress StopIteration *unless* it's the same exception that
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/animation.py in saving(self, fig, outfile, dpi, *args, **kwargs)
-    251             yield self
-    252         finally:
---> 253             self.finish()
-    254
-    255
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/animation.py in finish(self)
-    352     def finish(self):
-    353         """Finish any processing for writing the movie."""
---> 354         self.cleanup()
-    355
-    356     def grab_frame(self, **savefig_kwargs):
-
-~/.pyenv/versions/org/lib/python3.8/site-packages/matplotlib/animation.py in cleanup(self)
-    388                 "MovieWriter stderr:\n%s", err)
-    389         if self._proc.returncode:
---> 390             raise subprocess.CalledProcessError(
-    391                 self._proc.returncode, self._proc.args, out, err)
-    392
-
-CalledProcessError: Command '['ffmpeg', '-f', 'rawvideo', '-vcodec', 'rawvideo', '-s', '800x800', '-pix_fmt', 'rgba', '-r', '50.0', '-loglevel', 'error', '-i', 'pipe:', '-vcodec', 'h264', '-pix_fmt', 'yuv420p', '-y', 'diffusion_simulation2.mp4']' returned non-zero exit status 255.
-#+end_example
-[[file:./.ob-jupyter/9237dd54faf4b907faded617684b63a45769800d.png]]
+: 990 t=9.909999999999833
+[[file:./.ob-jupyter/5d81fd438c123624a883950816e82a56bd6da6fd.png]]
 :END:
 
 [[video:diffusion_simulation.mp4]]

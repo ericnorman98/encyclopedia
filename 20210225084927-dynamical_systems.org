@@ -1,17 +1,11 @@
 #+title: Dynamical systems
 
-* Setup :noexport:
 #+call: init()
 
-#+call: init-plot-style()
-
-* Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/dynamical_systems.py :results silent
-:END:
+* Lib                                                              :noexport:
 #+begin_src jupyter-python :lib yes
 from sympy import *
-from pyorg.latex import *
+from encyclopedia.latex import *
 import matplotlib.pyplot as plt
 import numpy as np
 from encyclopedia.stability_analysis import SteadyStates, StabilityAnalysis

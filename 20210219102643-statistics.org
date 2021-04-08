@@ -7,7 +7,7 @@ from sympy import *
 from sympy.stats import *
 from sympy.stats.rv import RandomSymbol
 from sympy.stats.frv_types import *
-from pyorg.latex import *
+from encyclopedia.latex import *
 import numpy as np
 import matplotlib.pyplot as plt
 #+end_src
