@@ -1,0 +1,37 @@
+#+title: Canvas
+#+roam_tags:
+#+PROPERTY: header-args :exports results
+
+# #+call: init()
+
+* Canvas
+#+begin_src inline-js :noweb-ref canvas-init :exports none
+let x = 0;
+#+end_src
+
+#+begin_src inline-js :noweb-ref canvas-draw :exports none
+ctx.beginPath();
+ctx.moveTo(x, 0);
+ctx.lineTo(w, h);
+ctx.stroke();
+x += 1;
+x %= w;
+#+end_src
+
+#+begin_src inline-js :noweb yes :eval yes
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
+const w = canvas.width = 512;
+const h = canvas.height = 512;
+<<canvas-init>>
+document.getElementById('main').appendChild(canvas);
+(function loop () {
+    ctx.clearRect(0, 0, w, h);
+    <<canvas-draw>>
+    requestAnimationFrame(loop);
+})()
+#+end_src
+
+
+
+
