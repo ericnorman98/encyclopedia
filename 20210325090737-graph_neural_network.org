@@ -2,16 +2,16 @@
 #+roam_tags:
 #+property: header-args:jupyter-python :tangle graph_neural_network.py
 #+latex_header: \usepackage{fancyvrb}
-#+latex_header: \fvset{frame=single,framesep=2mm,fontfamily=courier,fontsize=\scriptsize,numbers=left,framerule=.3mm,numbersep=1mm,commandchars=\\\{\}}
-#+LATEX_HEADER: \renewenvironment{verbatim}
-#+LATEX_HEADER:  {\SaveVerbatim{cverb}}
-#+LATEX_HEADER:  {\endSaveVerbatim
-#+LATEX_HEADER:   \flushleft\fboxrule=0pt\fboxsep=.5em
-#+LATEX_HEADER:   \colorbox{bgalt}{%
-#+LATEX_HEADER:     \makebox[\dimexpr\linewidth-2\fboxsep][l]{\BUseVerbatim{cverb}}%
-#+LATEX_HEADER:   }
-#+LATEX_HEADER:   \endflushleft
-#+LATEX_HEADER: }
+#+latex_header: \fvset{frame=leftline,framesep=2mm,fontfamily=courier,fontsize=\scriptsize,numbers=left,framerule=.3mm,numbersep=1mm,commandchars=\\\{\}}
+#+latex_header: \renewenvironment{verbatim}
+#+latex_header:  {\SaveVerbatim{cverb}}
+#+latex_header:  {\endSaveVerbatim
+#+latex_header:   \flushleft\fboxrule=0pt\fboxsep=.5em\fvset{frame=leftline}
+#+latex_header:   \colorbox{bgalt}{%
+#+latex_header:     \makebox[\dimexpr\linewidth-2\fboxsep][l]{\BUseVerbatim{cverb}}%
+#+latex_header:   }
+#+latex_header:   \endflushleft
+#+latex_header: }
 
 - tags :: [[file:20210325091024-machine_learning.org][Machine learning]], [[file:20210224212626-graph_theory.org][Graph theory]]
 
@@ -27,6 +27,7 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader, random_split
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from encyclopedia.graph_theory import draw_graph
 import torch_geometric.transforms as T
 from torch_geometric.datasets import Planetoid
 from torch_geometric.nn import GCNConv, GATConv
@@ -35,6 +36,7 @@ import torch_geometric.data as gdata
 import torch_geometric.nn as gnn
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import sympy as sm
 import logging
 import warnings
@@ -203,13 +205,15 @@ class MetricHistoryCallback(pl.callbacks.Callback):
 In the implementation, we begin by defining a function for training a model for
 the Cora dataset, here we use [[https://github.com/PyTorchLightning/pytorch-lightning][PyTorch Lightning]] for the training.
 #+begin_src jupyter-python :results silent :exports code
-def train_cora_model(model, patience=10):
+def train_cora_model(model, patience=10, max_epochs=500):
   history_cb = MetricHistoryCallback(['train_loss', 'val_loss',
                                       'test_acc', 'train_acc', 'val_acc'])
-  trainer = pl.Trainer(max_epochs=500,
+  trainer = pl.Trainer(max_epochs=max_epochs,
                        progress_bar_refresh_rate=0,
                        weights_summary=None,
-                       callbacks=[EarlyStopping(monitor='val_loss', patience=patience),
+                       callbacks=[EarlyStopping(monitor='val_loss',
+                                                mode='min',
+                                                patience=patience),
                                   history_cb])
   node_data_loader = gdata.DataLoader(cora_dataset, batch_size=1)
   print("Training...")
@@ -444,27 +448,26 @@ plot_node_embeddings("GCN", GCN(hidden_channels=16,
 #+RESULTS: src:fig:gcn_node_embed
 [[file:./.ob-jupyter/62f5e2d28b487d14534bb2392bfb17ed5801f066.png]]
 
+#+latex: \pagebreak
 *** Semi-supervised GAT
 We will now try and outperform the previous results by using graph attention networks.
 
-#+begin_src jupyter-python :results silent
+The model we will use looks like this
+#+begin_src jupyter-python :results silent :exports code
 class GAT(GraphModel):
-    def __init__(self, hidden_channels, num_features, num_classes):
+    def __init__(self, hidden_channels, num_features, num_classes, heads=8):
         super(GAT, self).__init__()
-        torch.manual_seed(12345)
-        self.gat1 = GATConv(num_features, hidden_channels, dropout=0.5, heads=8)
-        self.gat2 = GATConv(8*hidden_channels, hidden_channels, dropout=0.5, heads=1)
+        self.gat1 = GATConv(num_features, hidden_channels, dropout=0.6, heads=heads)
+        self.gat2 = GATConv(heads*hidden_channels, hidden_channels, dropout=0.6, heads=1)
 
     def forward_all(self, data):
         x, edge_index, batch = data.x, data.edge_index, data.batch
-        x1 = x
         x = F.leaky_relu(self.gat1(x, edge_index))
         x = self.gat2(x, edge_index)
-        x = torch.cat([x, x1], dim=1)
         return x
 #+end_src
 
-#+begin_src jupyter-python :results output :exports none
+#+begin_src jupyter-python :results output :exports both
 gat_model = GAT(hidden_channels=16,
                 num_features=cora_dataset.num_features,
                 num_classes=cora_dataset.num_classes)
@@ -473,39 +476,46 @@ gat_results = train_cora_model(gat_model)
 
 #+RESULTS:
 #+begin_example
-GPU available: False, used: False
-TPU available: False, using: 0 TPU cores
 Training...
-Epoch 0/500 - train_loss: 7.281, val_loss: 7.282
-Epoch 20/500 - train_loss: 2.847, val_loss: 2.454, train_acc: 0.479, val_acc: 0.310
-Epoch 40/500 - train_loss: 1.948, val_loss: 1.657, train_acc: 0.821, val_acc: 0.798
-Epoch 60/500 - train_loss: 1.559, val_loss: 1.351, train_acc: 0.900, val_acc: 0.800
-Epoch 80/500 - train_loss: 1.145, val_loss: 1.072, train_acc: 0.893, val_acc: 0.796
-Epoch 100/500 - train_loss: 1.035, val_loss: 0.916, train_acc: 0.914, val_acc: 0.792
-Epoch 120/500 - train_loss: 0.958, val_loss: 0.809, train_acc: 0.914, val_acc: 0.806
-Epoch 140/500 - train_loss: 0.898, val_loss: 0.789, train_acc: 0.907, val_acc: 0.786
-Epoch 160/500 - train_loss: 0.973, val_loss: 0.755, train_acc: 0.886, val_acc: 0.798
+Epoch 0/500 - train_loss: 2.773, val_loss: 2.775, train_acc: 0.050, val_acc: 0.016
+Epoch 20/500 - train_loss: 1.624, val_loss: 1.675, train_acc: 0.771, val_acc: 0.740
+Epoch 40/500 - train_loss: 1.064, val_loss: 1.170, train_acc: 0.836, val_acc: 0.808
+Epoch 60/500 - train_loss: 0.777, val_loss: 0.941, train_acc: 0.871, val_acc: 0.804
+Epoch 80/500 - train_loss: 0.805, val_loss: 0.868, train_acc: 0.836, val_acc: 0.786
+Epoch 100/500 - train_loss: 0.584, val_loss: 0.772, train_acc: 0.871, val_acc: 0.804
 Training Complete.
 #+end_example
 
+See Table [[tab:gat_results]] and Figure [[fig:gat_results]] for the results. We can see
+a small but significant improvement over the GCN model which would suggest that
+attention is useful for this task. See Figure [[fig:gat_node_embed]] for the node
+embeddings.
+
+#+name: src:tab:gat_results
 #+begin_src jupyter-python
 create_results_table(gat_results)
 #+end_src
 
-#+RESULTS:
+#+name: tab:gat_results
+#+caption: Final results of the GAT model.
+#+RESULTS: src:tab:gat_results
 | Training loss | Validation loss | Test accuracy |
 |---------------+-----------------+---------------|
-|        0.4731 |          0.7344 |         82.0% |
+|        0.6267 |          0.7408 |         83.3% |
 
+#+name: src:fig:gat_results
 #+begin_src jupyter-python :results output
 plt.figure(figsize=(8, 4))
 plot_results("GAT", gat_results)
 #+end_src
 
-#+RESULTS:
-[[file:./.ob-jupyter/d6af7cd5f48f2bb778c45ac366028f45beb3dab7.png]]
+#+name: fig:gat_results
+#+caption: Loss and accuracy training progress plots for the GAT model.
+#+RESULTS: src:fig:gat_results
+[[file:./.ob-jupyter/91e2e9e5367c0212334e60221ff7911086e63d3b.png]]
 
 
+#+name: src:fig:gat_node_embed
 #+begin_src jupyter-python :results output
 plt.figure(figsize=(8, 4))
 plot_node_embeddings("GAT", GAT(hidden_channels=16,
@@ -513,12 +523,19 @@ plot_node_embeddings("GAT", GAT(hidden_channels=16,
                                 num_classes=cora_dataset.num_classes), gat_model)
 #+end_src
 
-#+RESULTS:
+#+name: fig:gat_node_embed
+#+caption: Node embeddings for the GAT model before and after training.
+#+RESULTS: src:fig:gat_node_embed
 [[file:./.ob-jupyter/87c65c95480a166334186bd2847d247ec071c44b.png]]
 
 ** Quantum bit dataset
+We will now do graph classification using a dataset of simulated measurements of
+a quantum bit memory. See Figure [[fig:qbit_graph_sample]] for a visualization of a
+sample of graphs taken from the training set.
+
 #+begin_src jupyter-python
 qdata = torch.load('data/graphs.pt')
+np.random.shuffle(qdata)
 test_split = 0.2
 valid_split = 0.1
 test_len = int(len(qdata)*test_split)
@@ -544,6 +561,35 @@ train_set = qdata[test_len+valid_len:]
 | Validation |         320 |
 | Test       |         800 |
 
+#+name: src:fig:qbit_graph_sample
+#+begin_src jupyter-python :noweb yes
+plt.figure(figsize=(4, 4))
+for i in range(16):
+    plt.subplot(4, 4, i+1)
+    data = train_set[16+i]
+    plt.title(np.argmax(data.y.tolist()), fontsize=6)
+    plt.axis('off')
+    G = nx.Graph()
+    edges = list(zip(*data.edge_index.tolist(), (data.edge_attr).tolist()))
+    G.add_weighted_edges_from(edges)
+    pos = nx.spring_layout(G)
+    edges,weights = zip(*nx.get_edge_attributes(G,'weight').items())
+    nx.draw_networkx(G, pos=pos,
+            node_size=8,
+            with_labels=False,
+            node_color=<<color("green")>>,
+            edge_color=weights,
+            edge_vmin=0.0,
+            edge_vmax=1.0,
+            edge_cmap=plt.cm.summer)
+    plt.subplots_adjust(hspace=.001)
+#+end_src
+
+#+name: fig:qbit_graph_sample
+#+caption: A sample of graphs from the training set.
+#+RESULTS: src:fig:qbit_graph_sample
+[[file:./.ob-jupyter/2f0daf1c6bb1d7f1c077d265ec08591d58a6f870.png]]
+
 #+begin_src jupyter-python :exports none
 test_data_loader = gdata.DataLoader(test_set, batch_size=4)
 i = iter(test_data_loader)
@@ -552,7 +598,7 @@ next(i)
 #+end_src
 
 #+RESULTS:
-: Batch(batch=[32], edge_attr=[278], edge_index=[2, 278], ptr=[5], x=[32, 2], y=[4, 4])
+: Batch(batch=[30], edge_attr=[262], edge_index=[2, 262], ptr=[5], x=[30, 2], y=[4, 4])
 
 #+begin_src jupyter-python
 class QBlock(nn.Module):
@@ -594,8 +640,8 @@ class QModel(pl.LightningModule):
 
         self.mlp = nn.Sequential(
             nn.Linear(hidden_channels*4+2, hidden_channels),
-            nn.Linear(hidden_channels, hidden_channels//2),
-            nn.Linear(hidden_channels//2, num_classes)
+            nn.Linear(hidden_channels, hidden_channels),
+            nn.Linear(hidden_channels, num_classes)
         )
 
     def calculate_accuracy(self, x_hat, y):
@@ -665,13 +711,13 @@ def train_qbit_model(model):
   history_cb = MetricHistoryCallback(['train_loss', 'val_loss',
                                       'train_acc', 'val_acc', 'test_acc'],
                                      epochs_per_print=2)
-  trainer = pl.Trainer(max_epochs=23,
+  trainer = pl.Trainer(max_epochs=100,
                        progress_bar_refresh_rate=0,
                        weights_summary=None,
                        callbacks=[EarlyStopping(monitor='val_loss', mode='min', patience=10),
                                   history_cb])
   train_data_loader = gdata.DataLoader(train_set, batch_size=256, shuffle=True, num_workers=4)
-  valid_data_loader = gdata.DataLoader(valid_set, batch_size=256, shuffle=True)
+  valid_data_loader = gdata.DataLoader(valid_set, batch_size=valid_len, shuffle=True)
   test_data_loader = gdata.DataLoader(test_set, batch_size=test_len)
   print("Training...")
   trainer.fit(model, train_data_loader, valid_data_loader)
@@ -681,7 +727,7 @@ def train_qbit_model(model):
 #+end_src
 
 #+begin_src jupyter-python
-q_model = QModel(hidden_channels=16, num_features=2, num_classes=4).double()
+q_model = QModel(hidden_channels=64, num_features=2, num_classes=4).double()
 results = train_qbit_model(q_model)
 #+end_src
 
@@ -690,18 +736,30 @@ results = train_qbit_model(q_model)
 GPU available: False, used: False
 TPU available: False, using: 0 TPU cores
 Training...
-Epoch 0/23 - train_loss: 0.308, val_loss: 0.335, train_acc: 0.469, val_acc: 0.119
-Epoch 2/23 - train_loss: 0.208, val_loss: 0.435, train_acc: 0.609, val_acc: 0.146
-Epoch 4/23 - train_loss: 0.125, val_loss: 0.259, train_acc: 0.781, val_acc: 0.672
-Epoch 6/23 - train_loss: 0.138, val_loss: 0.249, train_acc: 0.812, val_acc: 0.564
-Epoch 8/23 - train_loss: 0.108, val_loss: 0.173, train_acc: 0.875, val_acc: 0.740
-Epoch 10/23 - train_loss: 0.097, val_loss: 0.174, train_acc: 0.828, val_acc: 0.715
-Epoch 12/23 - train_loss: 0.097, val_loss: 0.178, train_acc: 0.828, val_acc: 0.680
-Epoch 14/23 - train_loss: 0.117, val_loss: 0.193, train_acc: 0.828, val_acc: 0.734
-Epoch 16/23 - train_loss: 0.122, val_loss: 0.183, train_acc: 0.812, val_acc: 0.711
-Epoch 18/23 - train_loss: 0.125, val_loss: 0.203, train_acc: 0.781, val_acc: 0.635
-Epoch 20/23 - train_loss: 0.080, val_loss: 0.178, train_acc: 0.859, val_acc: 0.740
-Epoch 22/23 - train_loss: 0.112, val_loss: 0.170, train_acc: 0.828, val_acc: 0.752
+Epoch 0/100 - train_loss: 0.332, val_loss: 0.415, train_acc: 0.266, val_acc: 0.222
+Epoch 2/100 - train_loss: 0.303, val_loss: 0.333, train_acc: 0.359, val_acc: 0.353
+Epoch 4/100 - train_loss: 0.250, val_loss: 0.329, train_acc: 0.438, val_acc: 0.406
+Epoch 6/100 - train_loss: 0.201, val_loss: 0.251, train_acc: 0.641, val_acc: 0.559
+Epoch 8/100 - train_loss: 0.140, val_loss: 0.185, train_acc: 0.703, val_acc: 0.706
+Epoch 10/100 - train_loss: 0.169, val_loss: 0.204, train_acc: 0.625, val_acc: 0.666
+Epoch 12/100 - train_loss: 0.121, val_loss: 0.164, train_acc: 0.859, val_acc: 0.762
+Epoch 14/100 - train_loss: 0.125, val_loss: 0.129, train_acc: 0.797, val_acc: 0.788
+Epoch 16/100 - train_loss: 0.124, val_loss: 0.127, train_acc: 0.828, val_acc: 0.788
+Epoch 18/100 - train_loss: 0.121, val_loss: 0.137, train_acc: 0.781, val_acc: 0.775
+Epoch 20/100 - train_loss: 0.122, val_loss: 0.118, train_acc: 0.766, val_acc: 0.816
+Epoch 22/100 - train_loss: 0.121, val_loss: 0.117, train_acc: 0.844, val_acc: 0.806
+Epoch 24/100 - train_loss: 0.154, val_loss: 0.113, train_acc: 0.734, val_acc: 0.831
+Epoch 26/100 - train_loss: 0.095, val_loss: 0.144, train_acc: 0.844, val_acc: 0.778
+Epoch 28/100 - train_loss: 0.103, val_loss: 0.116, train_acc: 0.844, val_acc: 0.803
+Epoch 30/100 - train_loss: 0.098, val_loss: 0.126, train_acc: 0.828, val_acc: 0.819
+Epoch 32/100 - train_loss: 0.148, val_loss: 0.135, train_acc: 0.781, val_acc: 0.803
+Epoch 34/100 - train_loss: 0.140, val_loss: 0.111, train_acc: 0.781, val_acc: 0.816
+Epoch 36/100 - train_loss: 0.131, val_loss: 0.124, train_acc: 0.797, val_acc: 0.797
+Epoch 38/100 - train_loss: 0.117, val_loss: 0.122, train_acc: 0.875, val_acc: 0.806
+Epoch 40/100 - train_loss: 0.118, val_loss: 0.130, train_acc: 0.828, val_acc: 0.803
+Epoch 42/100 - train_loss: 0.154, val_loss: 0.108, train_acc: 0.781, val_acc: 0.828
+Epoch 44/100 - train_loss: 0.111, val_loss: 0.115, train_acc: 0.797, val_acc: 0.841
+Epoch 46/100 - train_loss: 0.101, val_loss: 0.133, train_acc: 0.812, val_acc: 0.803
 Training complete.
 #+end_example
 
@@ -712,7 +770,7 @@ create_results_table(results)
 #+RESULTS:
 | Training loss | Validation loss | Test accuracy |
 |---------------+-----------------+---------------|
-|         0.112 |          0.1501 |       80.125% |
+|        0.1014 |          0.1277 |        80.25% |
 
 #+begin_src jupyter-python
 plt.figure(figsize=(8, 4))
@@ -720,7 +778,7 @@ plot_results("Q-bit", results)
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/220bb402ad146427d6bdb66f97a219b8553753fe.png]]
+[[file:./.ob-jupyter/af8b6cabf89d23ce399d6f22de2e04f0a300aba2.png]]
 
 #+latex: \appendix
 * Code
