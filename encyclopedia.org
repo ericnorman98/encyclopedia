@@ -296,6 +296,19 @@
 (add-hook 'org-export-before-processing-hook 'encyclopedia-export-org-export-preprocessor)
 #+end_src
 
+#+begin_src elisp
+(defun encyclopedia-export-latex-filter-orglinks (text backend info)
+  "Remove org document links in LaTeX export."
+  (when (org-export-derived-backend-p backend 'latex)
+    (setq my-latex-filter-output text)
+    (replace-regexp-in-string "\\\\href{.*\\.org}{\\(.*\\)}" "\\\\emph{\\1}" text)))
+#+end_src
+
+#+begin_src elisp
+(add-to-list 'org-export-filter-link-functions
+             'encyclopedia-export-latex-filter-orglinks)
+#+end_src
+
 ** Latex
 #+begin_src elisp
 (defun encyclopedia-export-latex-generate-headers (theme)
