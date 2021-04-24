@@ -1,0 +1,6 @@
+#+title: Graph convolution
+#+roam_tags:
+
+#+call: init()
+
+* TODO Graph convolution

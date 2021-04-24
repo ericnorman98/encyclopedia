@@ -1,0 +1,92 @@
+#+title: Quadratic discriminant analysis
+#+latex_header: \DeclareMathOperator*{\argmax}{argmax}
+#+roam_alias: QDA
+#+roam_tags: QDA
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210419074723-classification.org][Classification]]
+
+#+call: init()
+
+#+begin_src jupyter-python :results silent
+from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
+import numpy as np
+from scipy.stats import multivariate_normal
+from encyclopedia.classification import plot_data
+#+end_src
+
+#+begin_src jupyter-python
+from sympy import *
+from sympy.stats import *
+k=2
+sigma = MatrixSymbol('Sigma', 2, 2)
+x = MatrixSymbol('X', 2, 100)
+(1/sqrt((2*pi)**(k)*det(sigma))*exp(Rational(-1, 2)*x.transpose()*(sigma.inv()*x)))
+#+end_src
+
+#+RESULTS:
+:RESULTS:
+\begin{equation}\frac{e^{- \frac{1}{2} X^{T} \Sigma^{-1} X}}{2 \pi \sqrt{\left|{\Sigma}\right|}}\end{equation}
+:END:
+
+* Quadratic discriminant analysis
+Quadratic discriminant analysis (QDA) is similar to [[file:20210404092213-linear_discriminant_analysis.org][LDA]] in that it also assumes
+that the observations is normally distributed as follows
+\begin{equation}
+p(\pmb{x}|i)\sim N(\pmb{\mu}_i, \pmb{\Sigma}_i)
+\end{equation}
+where $\pmb{\mu_i}\in \mathbb{R}^p$ is the mean vector for class i and
+$\pmb{\Sigma}_i\in \mathbb{R}^{p\times p}$ is the covariance matrix.
+
+The classification rule would look like this
+\begin{equation}
+c(\pmb{x})=\argmax_{1\le i\le K}N(\pmb{x}|\pmb{\mu}_i, \pmb{\Sigma}_i)p(i)
+\end{equation}
+
+** Optimal data :example:
+#+begin_src jupyter-python :results silent
+def generate_data(K, p, n):
+    mus = np.zeros([K, p])
+    for i in range(K):
+        a = i*2*np.pi/K
+        mus[i, 0] = np.cos(a)
+        mus[i, 1] = np.sin(a)
+
+    cov = np.tile(np.eye(p).reshape([1, p, p]), [K, 1, 1])*0.2
+    X = np.zeros([K, n//K, p])
+    for i in range(K):
+        X[i] = np.random.multivariate_normal(mus[i], cov[i], size=n//K)
+    X = np.concatenate(X)
+    np.random.shuffle(X) # now we don't know the labels from the simulation
+    return X, mus, cov
+#+end_src
+
+#+begin_src jupyter-python :results silent
+def reconstruct_labels(K, n, mus, cov, X):
+    # Reconstruct labels from the classification rule
+    priors = 1/(np.ones(K)*K)
+    posterior = np.zeros([K, n])
+    for i in range(K):
+        dev = X - mus[i]
+        maha = np.sum(np.square(np.dot(dev, np.linalg.inv(cov[i]))), axis=-1)
+        liklihood = -0.5 * (K * np.log(2*np.pi) + np.log(np.linalg.det(cov[i])) + maha)
+        posterior[i] = liklihood*priors[i]
+    y = np.argmax(posterior, axis=0)
+    return y
+#+end_src
+
+#+begin_src jupyter-python
+K = 3
+n = 50*K
+p = 2
+
+X, mus, cov = generate_data(K, p, n)
+y = reconstruct_labels(K, n, mus, cov, X)
+clf = QuadraticDiscriminantAnalysis()
+clf.fit(X, y)
+
+plt.title("QDA")
+plot_data(X, y, clf)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/a5f6a29921d73bff73514f5df66a64560b823c86.png]]
