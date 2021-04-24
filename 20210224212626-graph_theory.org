@@ -21,9 +21,9 @@ def draw_dense_graph(G, pos, alpha=0.1, width=0.2, node_size=4):
     nx.draw_networkx_nodes(G, pos=pos, node_size=node_size, node_color=<<color("green")>>)
     nx.draw_networkx_edges(G, pos=pos, width=width, alpha=alpha, edge_color=<<color("brightblack4")>>)
 
-def draw_graph(G, pos):
-    nx.draw_networkx_nodes(G, pos=pos, node_size=8, node_color=<<color("green")>>)
-    nx.draw_networkx_edges(G, pos=pos, width=0.8, alpha=0.4, edge_color=<<color("brightblack4")>>)
+def draw_graph(G, pos, alpha=0.8, width=0.8, node_size=8):
+    nx.draw_networkx_nodes(G, pos=pos, node_size=node_size, node_color=<<color("green")>>)
+    nx.draw_networkx_edges(G, pos=pos, width=width, alpha=alpha, edge_color=<<color("brightblack4")>>)
 
 def degree_hist(G):
     dist = [d for n, d in G.degree()]
@@ -31,6 +31,18 @@ def degree_hist(G):
 #+end_src
 
 * Graph theory
+Graph theory studies a mathematical object known as /graphs/, it is a general
+framework for describing relations between objects. The representation of the
+relations are in the form of /edges/ and the objects is the /nodes/.
+
+** TODO Representations
+A representation of a graph can take multiple forms. The most common
+representation is a set of node pairs.
+
+1. Node tuples
+2. Adjacency matrix
+3. Edge
+
 ** COMMENT Graph diameter
 #+begin_src python
 def maximum_path_length(A):
