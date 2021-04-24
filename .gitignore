@@ -2,6 +2,9 @@
 .idea
 *.log
 tmp/
+__pycache__/
+css/
+images/
 
 *.html
 
@@ -11,3 +14,9 @@ index.org
 *.pdf
 .auctex-auto
 _minted*
+
+*.gif
+*.png
+*.py
+*.mp4
+*.npy
