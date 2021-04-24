@@ -1,0 +1,3 @@
+[submodule "video_frame_prediction"]
+	path = video_frame_prediction
+	url = ./video_frame_prediction/
