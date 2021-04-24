@@ -155,10 +155,7 @@
 
 * Babel
 #+begin_src elisp
-(use-package org
-  :defer t
-  :config
-  (org-babel-lob-ingest (concat encyclopedia-root-path "/lob.org")))
+(org-babel-lob-ingest (concat encyclopedia-root-path "/lob.org"))
 #+end_src
 
 #+begin_src elisp
@@ -352,16 +349,15 @@
 #+end_src
 
 #+begin_src elisp
-(use-package org
-  :config
-  (org-link-set-parameters
-   "video"
-   :export 'encyclopedia-export-org-video-link-export))
+(org-link-set-parameters
+  "video"
+  :export 'encyclopedia-export-org-video-link-export)
 #+end_src
 
 * HTML
 #+begin_src elisp
 (use-package esxml
+  :straight t
   :ensure t)
 #+end_src
 
@@ -447,43 +443,8 @@
 #+end_src
 
 #+begin_src elisp
-(defvar encyclopedia-publish-preamble "
-<div id=\"org-div-home-and-up\">
-<div class=\"intro\">
-<a href=\"/\">
-  <img class=\"profile\" src=\"/images/profile.jpg\" alt=\"Me\"/>
-</a>
-<div>
-</div>
-")
-#+end_src
-
-#+begin_src elisp
-(defvar encyclopedia-publish-postamble-format (concat "<p class=\"postamble\">Last Updated %C.</p>\n"
-                                                      "<script type=\"application/javascript\" src=\"/js/main.js\"></script>"))
-#+end_src
-
-#+begin_src elisp
-(defvar encyclopedia-publish-head-extra "
-<link rel=\"stylesheet\" type=\"text/css\" href=\"/css/main.css\">
-<link rel=\"icon\" type=\"image/png\" href=\"/images/icon.png\" />")
-#+end_src
-
-#+begin_src elisp
 (defvar encyclopedia-publish-sitemap-title "Encyclopedia")
 #+end_src
-
-Old tag stuff
-#+begin_comment
-#+begin_src elisp
-(defvar encyclopedia-publish-tag-format "@@html:<span class=\"tag badge\" onclick=\"addFilter('%s')\">@@%s@@html:</span>@@")
-#+end_src
-#+end_comment
-#+begin_comment
-#+begin_src elisp
-(defvar encyclopedia-publish-all-tags '())
-#+end_src
-#+end_comment
 
 ** Configure
 #+begin_src elisp
