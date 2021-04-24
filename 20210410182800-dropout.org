@@ -1,0 +1,6 @@
+#+title: Dropout
+#+roam_tags:
+
+#+call: init()
+
+* TODO Dropout

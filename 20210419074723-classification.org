@@ -1,0 +1,50 @@
+#+title: Classification
+#+roam_tags:
+
+#+call: init()
+
+#+RESULTS:
+
+#+begin_src jupyter-python :results silent :lib yes
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+#+end_src
+
+* Classification
+#+begin_src jupyter-python :results silent :lib yes
+def mix_colors(mix):
+  mix_items = sorted(mix.items())
+  weight_tot = sum(mix.values())
+  rgb = [int(sum([int(k[1+2*i:1+2*(i+1)], 16)*v for k, v in mix_items]) / weight_tot) for i in range(3)]
+  return "#" + "".join([f"{c:02x}" for c in rgb])
+#+end_src
+
+#+begin_src jupyter-python :noweb yes
+mix_colors({<<color("green")>>: 0.5, <<color("bg")>>: 0.5})
+#+end_src
+
+#+RESULTS:
+: #60754c
+
+#+begin_src jupyter-python :results silent :noweb yes :lib yes
+def plot_data(X, y, clf, res=400, pad=0.1):
+    xmin, ymin = np.min(X, axis=0)-pad
+    xmax, ymax = np.max(X, axis=0)+pad
+    plt.xlim([xmin, xmax])
+    plt.ylim([ymin, ymax])
+    xx, yy = np.meshgrid(np.linspace(xmin, xmax, res),
+                         np.linspace(ymin, ymax, res))
+
+    colors = [<<color("green")>>, <<color("blue")>>, <<color("orange")>>, <<color("magenta")>>]
+    cmap = ListedColormap(colors)
+    cmap_dark = ListedColormap([mix_colors({color: 0.8, <<color("bg")>>: 0.2}) for color in colors])
+
+    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
+    Z = Z.reshape(xx.shape)
+    pcol = plt.pcolormesh(xx, yy, Z, cmap=cmap_dark, shading='auto')
+    plt.xticks([])
+    plt.yticks([])
+
+    plt.scatter(X[:, 0], X[:, 1], c=y, lw=0.4, s=64, edgecolors=<<color("bg")>>, cmap=cmap)
+#+end_src

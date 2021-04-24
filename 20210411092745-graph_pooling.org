@@ -1,0 +1,6 @@
+#+title: Graph pooling
+#+roam_tags:
+
+#+call: init()
+
+* TODO Graph pooling

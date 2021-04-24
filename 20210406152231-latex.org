@@ -352,6 +352,14 @@ class LCarets(Expr):
     def _latex(self, printer):
         return f"\\left<{printer._print(self.args[0])}\\right>"
 
+class LSet(Expr):
+    def _latex(self, printer):
+        return f"\\left\\{{{','.join([printer._print(arg) for arg in self.args])}\\right\\}}"
+
+class LArgmax(Expr):
+    def _latex(self, printer):
+        return f"\\operatorname{{argmax}}_{{{printer._print(self.args[0])}}}{{{printer._print(self.args[1])}}}"
+
 class LUnaryOperation(Latex):
     def __new__(cls, arg, join=None):
         return Latex.__new__(cls, arg, join=join)
@@ -422,6 +430,9 @@ class LEquality(LRelational):
 class LColon(LBinaryOperation):
     join = lcolon
 
+class LQuad(LBinaryOperation):
+    join = lquad
+
 class LApprox(LBinaryOperation):
     join = lapprox
 
@@ -491,7 +502,7 @@ class LCalculation(LBinaryOperation):
         if len(self) > 2:
             return printer._print(LAligned(
                 Latex(self[0], lamp, self._join, self[1]), self._join, lbreak,
-                *self[2:-1].apply(lambda e: Latex(lamp, self._join, e, self._join, lbreak)),
+                ,*self[2:-1].apply(lambda e: Latex(lamp, self._join, e, self._join, lbreak)),
                 lamp, self._join, self[-1]
             ))
         else:
@@ -563,6 +574,11 @@ class LCases(LEnvironment):
     name = 'cases'
     def __new__(cls, *args, join=lnewline):
         return LEnvironment.__new__(cls, *args, name=cls.name, env_join=lbreak, join=join)
+
+class LPiecewise(LEnvironment):
+    name = 'cases'
+    def __new__(cls, *args, join=lnewline):
+        return LEnvironment.__new__(cls, *args, name=cls.name, env_join=lempty, join=join)
 
 class LAligned(LEnvironment):
     name = 'aligned'

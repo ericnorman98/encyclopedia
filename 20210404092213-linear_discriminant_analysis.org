@@ -1,8 +1,73 @@
 #+title: Linear discriminant analysis
-#+roam_tags:
+#+roam_alias: LDA
+#+roam_tags: LDA
 
 #+call: init()
 
+#+begin_src jupyter-python :results silent
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn import datasets
+import numpy as np
+from scipy.stats import multivariate_normal
+from encyclopedia.classification import plot_data
+#+end_src
+
 * Linear discriminant analysis
+Linear discriminant analysis (LDA) is a method to find a linear combination of
+features that can separate data into classes.
 
+** Optimal data :example:
+#+begin_src jupyter-python :results silent
+def generate_data(K, p, n):
+    mus = np.zeros([K, p])
+    for i in range(K):
+        a = i*2*np.pi/K
+        mus[i, 0] = np.cos(a)
+        mus[i, 1] = np.sin(a)
 
+    cov = np.tile(np.eye(p).reshape([1, p, p]), [K, 1, 1])*0.2
+    X = np.zeros([K, n//K, p])
+    for i in range(K):
+        X[i] = np.random.multivariate_normal(mus[i], cov[i], size=n//K)
+    X = np.concatenate(X)
+    np.random.shuffle(X) # now we don't know the labels from the simulation
+    return X, mus, cov
+#+end_src
+
+#+begin_src jupyter-python :results silent
+def reconstruct_labels(K, n, mus, cov, X):
+    # Reconstruct labels from the classification rule
+    posterior = np.zeros([K, n])
+    priors = K/np.ones(K)
+    for i in range(K):
+        rv = multivariate_normal(mus[i], cov[i])
+        posterior[i] = rv.pdf(X)*priors[i]
+    y = np.argmax(posterior, axis=0)
+    return y
+#+end_src
+
+#+begin_src jupyter-python
+n = 100
+K = 4
+p = 2
+
+X, mus, cov = generate_data(K, p, n)
+y = reconstruct_labels(K, n, mus, cov, X)
+clf = QuadraticDiscriminantAnalysis()
+clf.fit(X, y)
+
+plot_data(X, y, clf)
+#+end_src
+
+** TODO Iris dataset :example:
+#+begin_src jupyter-python
+data = datasets.load_iris()
+X = data.data[:, :2]
+y = data.target
+lda = LinearDiscriminantAnalysis()
+lda.fit(X, y)
+lda.predict([])
+#+end_src
+
+#+RESULTS:
+: LinearDiscriminantAnalysis()

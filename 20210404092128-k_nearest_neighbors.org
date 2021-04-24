@@ -1,8 +1,97 @@
 #+title: k-nearest neighbors
+#+latex_header: \DeclareMathOperator*{\argmax}{argmax}
+#+latex_header: \usepackage{bbm}
 #+roam_tags:
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210419074723-classification.org][Classification]]
 
 #+call: init()
 
-* TODO k-nearest neighbors
+#+RESULTS:
 
+#+begin_src jupyter-python :results silent
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn import neighbors, datasets
+from matplotlib.colors import ListedColormap
+from encyclopedia.classification import plot_data
+#+end_src
 
+* k-nearest neighbors
+The k-nearest neighbor algorithm is a data-based method for classification. The
+goal is to find /k/ predictors in the training set that are closest to the input
+and then classifying by majority vote.
+
+\begin{equation}
+\operatorname{N_{k}}{\left(\pmb{x} \right)}=\left\{{\pmb{x}_{{i_{1}}}},\dots ,{\pmb{x}_{{i_{k}}}}\right\}
+\end{equation}
+
+The classification rule looks like this
+
+\begin{equation}
+\hat c(\pmb{x})=\argmax_{1\le i\le K} \frac{1}{k}\sum_{\pmb{x}_l\in N_k(\pmb{x})}\mathbbm{1}(i_l=i)
+\end{equation}
+
+** Optimal data :example:
+#+begin_src jupyter-python :results silent
+def generate_data(k):
+    X = []
+    y = []
+    spread = 0.04
+    for i in range(3):
+        for j in range(3):
+            xx = i/3
+            yy = j/3
+            l = (j+i)%2
+            N = k+1
+            for kk in range(N):
+                dist = spread
+                a = (2*np.pi/N)*kk+np.pi/2
+                X.append((xx+dist*np.cos(a), yy+dist*np.sin(a)))
+                y.append(l)
+    X = np.array(X)
+    n = len(X)
+    y = np.array(y)
+    return X, y, n
+#+end_src
+
+#+begin_src jupyter-python :results output :noweb yes
+for k in range(1, 5):
+    plt.subplot(2, 2, k)
+    plt.title(f"k={k}")
+    X, y, n = generate_data(k)
+    clf = neighbors.KNeighborsClassifier(k)
+    clf.fit(X, y)
+    plot_data(X, y, clf, res=50, pad=0.15)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/891985a06688479bcc080e436bff17af0270294d.png]]
+
+** Iris dataset :example:
+#+begin_src jupyter-python :results output :noweb yes
+data = datasets.load_iris()
+X = data.data[:, :2]
+y = data.target
+k = 5
+res = 100
+
+xmin, ymin = X.min(axis=0)
+xmax, ymax = X.max(axis=0)
+xx, yy = np.meshgrid(np.linspace(xmin, xmax, res),
+                     np.linspace(ymin, ymax, res))
+
+clf = neighbors.KNeighborsClassifier(k)
+clf.fit(X, y)
+
+cmap = ListedColormap([<<color("green")>>, <<color("blue")>>, <<color("orange")>>])
+
+Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
+Z = Z.reshape(xx.shape)
+plt.contourf(xx, yy, Z, cmap=cmap, alpha=0.6, levels=2)
+
+plt.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/a098daeeaaca280fa36a4916d91efbccd8164686.png]]
