@@ -32,11 +32,6 @@
 
 #+RESULTS: color-number
 0x98be65
-0x50a14f
-0x98be65
-0x50a14f
-0x50a14f
-
 
 * Initialization
 #+name: init
@@ -48,10 +43,10 @@
               org-babel-default-inline-header-args:jupyter-python header-args
               org-babel-default-lob-header-args (list (cons :session slug)
                                                       (cons :kernel "python")
-                                                      (cons :results "raw drawer")))
+                                                      (cons :results "silent")))
   (save-excursion
     (setq encyclopedia-theme-current theme)
-    (org-babel-lob-ingest "lob.org")
+    (org-babel-lob-ingest "~/encyclopedia/lob.org")
     (org-babel-execute:jupyter-python init-plot-src header-args)))
 #+end_src
 
