@@ -29,6 +29,9 @@
 (use-package jupyter
   :ensure t)
 
+(use-package esxml
+  :ensure t)
+
 (require 'ox)
 (require 'ox-publish)
 (require 'ox-html)

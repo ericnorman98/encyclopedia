@@ -356,12 +356,6 @@
 
 * HTML
 #+begin_src elisp
-(use-package esxml
-  :straight t
-  :ensure t)
-#+end_src
-
-#+begin_src elisp
 (defun encyclopedia-export-template (content info)
   (concat
    "<!DOCTYPE html>"
