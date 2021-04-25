@@ -1,0 +1,10 @@
+#+title: Eric's Encyclopedia
+
+* Eric's Encyclopedia
+
+#+begin_src elisp :results html :eval yes :exports results
+(encyclopedia-html-sitemap)
+#+end_src
+
+
+
