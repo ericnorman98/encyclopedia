@@ -357,19 +357,20 @@
 #+begin_src elisp
 (defun encyclopedia-export-latex-generate-headers (theme backend)
   (let-alist (encyclopedia-theme-get-theme theme)
-    (concat "#+LATEX_HEADER: \\usepackage{pagecolor}\n"
-            "#+LATEX_HEADER: \\usepackage[parfill]{parskip}\n"
-            "#+LATEX_HEADER: \\usepackage[margin=2cm]{geometry}\n"
-            "#+LATEX_HEADER: \\usepackage{xcolor}\n"
-            (concat "#+LATEX_HEADER: \\definecolor{bg}{HTML}{"(substring .bg 1)"}\n"
-                    "#+LATEX_HEADER: \\definecolor{bgalt}{HTML}{"(substring .bg-alt 1)"}\n"
-                    "#+LATEX_HEADER: \\definecolor{fgg}{HTML}{"(substring .fg 1)"}\n"
-                    "#+LATEX_HEADER: \\definecolor{fgalt}{HTML}{"(substring .fg-alt 1)"}\n"
-                    "#+LATEX_HEADER: \\definecolor{white}{HTML}{"(substring .fg-hc 1)"}\n")
-            (if (equal theme 'dark) "#+LATEX_HEADER: \\usemintedstyle{monokai}\n" "")
-            "#+LATEX_HEADER: \\setminted[python]{linenos, bgcolor=bgalt}\n"
-            "#+LATEX_HEADER: \\pagecolor{bg}\n"
-            "#+LATEX_HEADER: \\color{white}\n"
+    (concat (if (or (equal backend 'latex) (equal backend 'beamer))
+                (concat "#+LATEX_HEADER: \\usepackage{pagecolor}\n"
+                        "#+LATEX_HEADER: \\usepackage[parfill]{parskip}\n"
+                        "#+LATEX_HEADER: \\usepackage[margin=2cm]{geometry}\n"
+                        "#+LATEX_HEADER: \\usepackage{xcolor}\n"
+                        (concat "#+LATEX_HEADER: \\definecolor{bg}{HTML}{"(substring .bg 1)"}\n"
+                                "#+LATEX_HEADER: \\definecolor{bgalt}{HTML}{"(substring .bg-alt 1)"}\n"
+                                "#+LATEX_HEADER: \\definecolor{fgg}{HTML}{"(substring .fg 1)"}\n"
+                                "#+LATEX_HEADER: \\definecolor{fgalt}{HTML}{"(substring .fg-alt 1)"}\n"
+                                "#+LATEX_HEADER: \\definecolor{white}{HTML}{"(substring .fg-hc 1)"}\n")
+                        (if (equal theme 'dark) "#+LATEX_HEADER: \\usemintedstyle{monokai}\n" "")
+                        "#+LATEX_HEADER: \\setminted[python]{linenos, bgcolor=bgalt}\n"
+                        "#+LATEX_HEADER: \\pagecolor{bg}\n"
+                        "#+LATEX_HEADER: \\color{white}\n"))
             (if (equal backend 'beamer)
                 (concat "#+LATEX_HEADER: \\setbeamercolor{normal text}{fg=fgg,bg=bg}\n"
                         "#+LATEX_HEADER: \\setbeamercolor{frametitle}{fg=white}\n"
