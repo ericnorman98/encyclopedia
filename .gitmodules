@@ -1,3 +1,9 @@
 [submodule "video_frame_prediction"]
 	path = video_frame_prediction
 	url = ./video_frame_prediction/
+[submodule "q_learning_tetris"]
+	path = q_learning_tetris
+	url = ./q_learning_tetris/
+[submodule "ecs"]
+	path = ecs
+	url = git@github.com:ericnorman98/ecs.git
