@@ -413,11 +413,13 @@
             (meta (@ (author "Eric Norman")))
             (meta (@ (name "viewport") (content "width=device-width, initial-scale=1.0")))
             (link (@ (rel "stylesheet")
-                     (href "./css/bootstrap.css")))
+                     (href "/css/bootstrap.css")))
             (link (@ (rel "stylesheet")
-                     (href "./css/all.css")))
+                     (href "/css/all.css")))
             (link (@ (rel "stylesheet")
-                     (href "./css/style.css")))
+                     (href "/css/code.css")))
+            (link (@ (rel "stylesheet")
+                     (href "/css/style.css")))
             ,(org-html--build-mathjax-config info))
            (body
             ,(encyclopedia-html-preamble)
@@ -511,6 +513,8 @@
         org-export-with-broken-links t
         org-confirm-babel-evaluate nil
         org-export-with-section-numbers nil
+        org-html-htmlize-output-type 'css
+        org-src-fontify-natively t
         org-html-html5-fancy t
         org-export-with-toc nil
         org-publish-project-alist
@@ -523,6 +527,7 @@
            :publishing-directory ,publish-dir
            :publishing-function encyclopedia-org-html-publish-to-html
            :html-html5-fancy t
+           :htmlized-source t
            :html-doctype "html5"
            :recursive t
            :headline-levels 4
@@ -530,7 +535,7 @@
            :exclude "node_modules")
           ("encyclopedia-static"
            :base-directory ,encyclopedia-root-path
-           :base-extension "css\\|js\\|png\\|jpg\\|gif\\|svg\\|svg\\|json\\|mp4"
+           :base-extension "css\\|mjs\\|js\\|png\\|jpg\\|gif\\|svg\\|svg\\|json\\|mp4"
            :publishing-directory ,publish-dir
            :exclude "node_modules"
            :recursive t
