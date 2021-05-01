@@ -155,7 +155,10 @@
 
 * Babel
 #+begin_src elisp
-(org-babel-lob-ingest (concat encyclopedia-root-path "/lob.org"))
+(defun encyclopedia-babel-lob-ingest ()
+  (interactive)
+  (org-babel-lob-ingest (concat encyclopedia-root-path "/lob.org")))
+(encyclopedia-babel-lob-ingest)
 #+end_src
 
 #+begin_src elisp
