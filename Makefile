@@ -14,7 +14,7 @@ serve: publish.el
 
 dev: publish.el
 	@echo "Starting development..."
-	while true; do ls ./*.* | entr -p make publish; done
+	while true; do ls ./**/*.* ./*.* | entr -p make publish; done
 
 publish: publish.el
 	@echo "Publishing..."
