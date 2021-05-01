@@ -175,6 +175,23 @@
 #+RESULTS:
 : encyclopedia-babel-get-header-args:jupyter-python
 
+#+begin_src elisp
+(defun encyclopedia-babel-session-init:jupyter-python (&optional theme)
+  (interactive)
+  (let* ((slug (encyclopedia-document-slug-extract))
+         (header-args (encyclopedia-babel-get-header-args:jupyter-python slug))
+         (init-plot-src (car (cdr (cdr (assoc 'init-plot-style org-babel-library-of-babel))))))
+    (setq-local org-babel-default-header-args:jupyter-python header-args
+                org-babel-default-inline-header-args:jupyter-python header-args
+                org-babel-default-lob-header-args (list (cons :session slug)
+                                                        (cons :kernel "python")
+                                                        (cons :results "silent")))
+    (save-excursion
+      (setq encyclopedia-theme-current (or theme 'dark))
+      (encyclopedia-babel-lob-ingest)
+      (org-babel-execute:jupyter-python init-plot-src header-args))))
+#+end_src
+
 ** Inline JS
 #+begin_src elisp
 (add-to-list 'org-src-lang-modes '("inline-js" . javascript))
