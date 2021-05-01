@@ -142,12 +142,12 @@ span.tag {
 
 ** Figures
 #+begin_src css :noweb yes
-figure img, figure video, figure .org-svg {
+figure img, figure video, figure .org-svg, figure canvas {
     display: block;
     max-width: 80%;
     margin: 0 auto;
 }
-.figure img, .figure video, .figure .org-svg {
+.figure img, .figure video, .figure .org-svg, .figure canvas {
     display: block;
     max-width: 80%;
     margin: 0 auto;
