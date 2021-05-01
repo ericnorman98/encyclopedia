@@ -32,10 +32,12 @@
 (use-package esxml
   :ensure t)
 
+(require 'org)
 (require 'ox)
 (require 'ox-publish)
 (require 'ox-html)
 (require 'encyclopedia)
+(require 'htmlize)
 
 (setq make-backup-files nil)
 
@@ -47,7 +49,7 @@
 (setq encyclopedia-theme-current 'dark)
 (setq encyclopedia-publish-url "https://ericnorman.net")
 (setq encyclopedia-publish-sitemap-title "Eric's Encyclopedia")
-
+(add-to-list 'org-src-lang-modes '("jupyter-python" . python))
 
 (defun en/configure (publish-dir)
   (encyclopedia-publish-configure publish-dir)
