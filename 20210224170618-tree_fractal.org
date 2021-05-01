@@ -41,18 +41,17 @@ def tree(lines, x, y, r, t, depth=8, angle=pi/4, frac=1.4):
 #+RESULTS:
 
 #+begin_src jupyter-python :results output
-plt.figure()
-# image = Image.new('P', (w, h), (33, 36, 43))
-# draw = ImageDraw.Draw(image)
+plt.figure(figsize=(2, 2))
 lines = []
-tree(lines, 0, 0, 100, -pi/2, angle=pi/4, depth=1)
+tree(lines, 0, 0, 1, -pi/2, angle=pi/4, depth=2, frac=2.0)
 plt.gca().add_collection(mc.LineCollection(lines))
-plt.xlim([-1, 1])
+plt.gca().autoscale()
+plt.gca().set_aspect(1)
 plt.axis('off')
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/e3a4def0e8a4a40b8a4b56a4cd0e4af856b5173e.png]]
+[[file:./.ob-jupyter/1873315e992a9fbd255db6a498f7f4719d04b2c8.png]]
 
 #+thumb:
 #+begin_src jupyter-python :exports none :results output :noweb yes
@@ -97,4 +96,4 @@ with open('tree_anim.html', 'w') as f:
     f.write(anim.to_jshtml())
 #+end_src
 
-#+include: tree_anim.html export html
+# #+include: tree_anim.html export html

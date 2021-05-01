@@ -1,14 +1,9 @@
 #+title: Ricker map
 #+roam_tags: dynamical systems ricker map fractal chaos
 
-* Setup :noexport:
 #+call: init()
-#+call: init-plot-style()
 
-* TODO Lib :noexport:
-:PROPERTIES:
-:header-args: :tangle encyclopedia/ricker_map.py :results silent
-:END:
+#+RESULTS:
 
 * Ricker map
 The Ricker map is a population model that can describe populations of fish in a
@@ -20,7 +15,7 @@ import matplotlib.pyplot as plt
 import pyorg.plot as plot
 import numpy as np
 import pandas as pd
-from pyorg.latex import *
+from encyclopedia.latex import *
 from sympy import *
 from ddeint import ddeint
 from scipy.integrate import odeint
@@ -37,7 +32,7 @@ rickermap
 
 #+RESULTS:
 :RESULTS:
-\begin{equation}{\eta}_{\tau + 1} = R e^{- \alpha {\eta}_{\tau}} {\eta}_{\tau}\end{equation}
+\begin{equation}{\eta_{\tau + 1}} = R e^{- \alpha {\eta_{\tau}}} {\eta_{\tau}}\end{equation}
 :END:
 
 where $\eta_{\tau}$ is the number of adults in generation $\tau$. $R$ is
@@ -66,6 +61,7 @@ def map_steps(map_next, steps, x0, *params):
     return tau_n, np.array([x0] + [x := map_next(x, *params) for _ in range(steps-1)])
 #+end_src
 
+#+name: src:fig:map_steps
 #+BEGIN_SRC jupyter-python :noweb yes :results output
 plt.figure(figsize=(4, 4))
 N0_n = 900
@@ -79,14 +75,10 @@ plt.title(f"$R={R_n}$")
 plt.plot(tau_n, eta_n, lw=0.8)
 #+END_SRC
 
-#+RESULTS:
-[[file:./.ob-jupyter/b569b911f062d0ca6654748d6f21b8e1621e1361.png]]
-
 #+attr_latex: :width 0.5\textwidth
-#+RESULTS:
+#+RESULTS: src:fig:map_steps
+[[file:./.ob-jupyter/cad3700224c79c0b738f209eb259eb3ba62f488f.png]]
 
-#+attr_latex: :width 0.5\textwidth
-#+RESULTS:
 
 ** Bifurcation diagram
 We can make a plot of the bifurcations in this system by plotting the last 100
@@ -108,7 +100,7 @@ plt.ylabel("$\\eta_{\\tau}$")
 #+END_SRC
 
 #+RESULTS:
-[[file:./.ob-jupyter/1effa461dce1beb50ffeea92155b6c35037f898a.png]]
+[[file:./.ob-jupyter/b095140f1743b4af4bae01add3a1a197ad84c541.png]]
 
 #+thumb:
 #+BEGIN_SRC jupyter-python :noweb yes :results output :exports none
@@ -128,10 +120,10 @@ plt.yticks([])
 #+END_SRC
 
 #+RESULTS:
-[[file:./.ob-jupyter/c6ca1573ba0eaf164897f8144f29025d8537836c.png]]
+[[file:./.ob-jupyter/0c05ee30ac3a1e178239276890db1ca80ef84619.png]]
 
 
-#+BEGIN_SRC jupyter-python :noweb yes
+#+BEGIN_SRC jupyter-python :noweb yes :exports none
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
 N0_n = 900
 alpha_n = 0.01
@@ -172,6 +164,11 @@ plt.close(fig)
 print("DONE")
 #+END_SRC
 
+#+RESULTS:
+: DONE
+
+[[video:rickermap_plot.mp4]]
+
 ** n-point cycles
 We can find the number of n-point cycles by running the model beyond the
 transient and taking the last n /unique/ points. See Figure [[fig:npoint_cycles]]
@@ -203,7 +200,7 @@ for i, R_n in enumerate(Rs_n):
 #+name: fig:npoint_cycles
 #+caption: Four plots of a 1, 2, 3, and 4-point cycles from the model.
 #+RESULTS: src:fig:npoint_cycles
-[[file:./.ob-jupyter/05279c2c87fde9ab26c58140fbeb7f8a39c09429.png]]
+[[file:./.ob-jupyter/ab154c6e91f5e9b7c60c6b8c1a1217f33fecb399.png]]
 
 
 ** Finding bifurcations numerically
@@ -262,7 +259,7 @@ rs = plot_rs(max_n, Rs_n, steps)
 #+caption: A plot showing $R_1$ and $R_2$ values of the first two bifurcations.
 #+name: fig:r1r2
 #+RESULTS: src:fig:r1r2
-[[file:./.ob-jupyter/0dcb114e2f410d74440f8bab704bb191b4b6520e.png]]
+[[file:./.ob-jupyter/383b8ff2bb0006aae1a38089b77ca08d6818d799.png]]
 
 
 
@@ -284,7 +281,7 @@ infR = plot_rs(max_n, Rs_n, steps, label=False)
 #+name: fig:roo
 #+attr_latex: :width 0.8\textwidth
 #+RESULTS: src:fig:roo
-[[file:./.ob-jupyter/ac584c45117c9a15f54595bb4ea6b63fabd14597.png]]
+[[file:./.ob-jupyter/5a065f0591f96a90d67999cf3672bc495e1a8b56.png]]
 
 #+srcname: src:fig:rs_limit_plot
 #+begin_src jupyter-python :results output :noweb yes
@@ -304,4 +301,4 @@ plt.ylabel("$R$")
 #+name: fig:rs_limit_plot
 #+caption: A plot of the $R_n$ values, we can see that the limit $R_{\infty}$ is around $14.766$.
 #+RESULTS: src:fig:rs_limit_plot
-[[file:./.ob-jupyter/8910ffdf1c4c9d7380e37439291d07377947cd91.png]]
+[[file:./.ob-jupyter/2d4ceeb2a6efd58ef04a09125eaadf90bd6028cc.png]]

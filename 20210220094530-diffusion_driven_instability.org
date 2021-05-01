@@ -218,27 +218,21 @@ pturb
 
 substitution with the perturbation gives us,
 #+begin_src jupyter-python
-model_pturb = LSteps(model,
+model_pturb = LCalculation(
     lambda e: e.subs(pturb.lhs, pturb.rhs),
     lambda e: e.doit(),
     lambda e: e.subs(f(pturb.rhs), stabmat.lhs*npt(r, t)),
-)
+).steps(model)
 model_pturb
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-# [goto error]
-: 
-: NameErrorTraceback (most recent call last)
-: <ipython-input-54-4f94c7a57365> in <module>
-: ----> 1 model_pturb = LSteps(model,
-:       2     lambda e: e.subs(pturb.lhs, pturb.rhs),
-:       3     lambda e: e.doit(),
-:       4     lambda e: e.subs(f(pturb.rhs), stabmat.lhs*npt(r, t)),
-:       5 )
-: 
-: NameError: name 'LSteps' is not defined
+\begin{equation}\begin{aligned}
+\frac{\partial}{\partial t} \pmb{n}{\left(\pmb{r},t \right)}=\nabla_{\pmb{r}}^2(\mathbb{D} \pmb{n}{\left(\pmb{r},t \right)}) + \pmb{f}{\left(\pmb{n}{\left(\pmb{r},t \right)} \right)}&=\frac{\partial}{\partial t} \left(\pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)}\right)=\nabla_{\pmb{r}}^2(\mathbb{D} \left(\pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)}\right)) + \pmb{f}{\left(\pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)} \right)}=\\
+&=\frac{\partial}{\partial t} \delta \pmb{n}{\left(\pmb{r},t \right)} = \mathbb{D} \nabla_{\pmb{r}}^2(\delta \pmb{n}{\left(\pmb{r},t \right)}) + \pmb{f}{\left(\pmb{n^*} + \delta \pmb{n}{\left(\pmb{r},t \right)} \right)}=\\
+&=\frac{\partial}{\partial t} \delta \pmb{n}{\left(\pmb{r},t \right)} = \mathbb{D} \nabla_{\pmb{r}}^2(\delta \pmb{n}{\left(\pmb{r},t \right)}) + \delta \pmb{n}{\left(\pmb{r},t \right)} \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)}
+\end{aligned}\end{equation}
 :END:
 
 We can now separate variables using the ansatz,
@@ -256,28 +250,23 @@ sep_ansatz
 
 substitution gives us,
 #+begin_src jupyter-python
-model_pturb_sep = LSteps(model_pturb[-1],
+model_pturb_sep = LCalculation(
     lambda e: e.subs(sep_ansatz.lhs, sep_ansatz.rhs),
     lambda e: e.doit(),
     lambda e: LEq(e.lhs/(T(t)*R(r)), e.rhs/(T(t)*R(r))),
     lambda e: e.simplify(),
-)
+).steps(model_pturb[-1])
 model_pturb_sep
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-# [goto error]
-: 
-: NameErrorTraceback (most recent call last)
-: <ipython-input-56-c41f7a243217> in <module>
-: ----> 1 model_pturb_sep = LSteps(model_pturb[-1],
-:       2     lambda e: e.subs(sep_ansatz.lhs, sep_ansatz.rhs),
-:       3     lambda e: e.doit(),
-:       4     lambda e: LEq(e.lhs/(T(t)*R(r)), e.rhs/(T(t)*R(r))),
-:       5     lambda e: e.simplify(),
-: 
-: NameError: name 'LSteps' is not defined
+\begin{equation}\begin{aligned}
+\frac{\partial}{\partial t} \delta \pmb{n}{\left(\pmb{r},t \right)} = \mathbb{D} \nabla_{\pmb{r}}^2(\delta \pmb{n}{\left(\pmb{r},t \right)}) + \delta \pmb{n}{\left(\pmb{r},t \right)} \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)}&=\frac{\partial}{\partial t} R{\left(\pmb{r} \right)} T{\left(t \right)} \delta \pmb{n}_0 = \mathbb{D} \nabla_{\pmb{r}}^2(R{\left(\pmb{r} \right)} T{\left(t \right)} \delta \pmb{n}_0) + R{\left(\pmb{r} \right)} T{\left(t \right)} \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0=\\
+&=R{\left(\pmb{r} \right)} \frac{d}{d t} T{\left(t \right)} \delta \pmb{n}_0 = \mathbb{D} T{\left(t \right)} \nabla_{\pmb{r}}^2(R{\left(\pmb{r} \right)}) \delta \pmb{n}_0 + R{\left(\pmb{r} \right)} T{\left(t \right)} \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0=\\
+&=\frac{\frac{d}{d t} T{\left(t \right)} \delta \pmb{n}_0}{T{\left(t \right)}}=\frac{\mathbb{D} T{\left(t \right)} \nabla_{\pmb{r}}^2(R{\left(\pmb{r} \right)}) \delta \pmb{n}_0 + R{\left(\pmb{r} \right)} T{\left(t \right)} \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0}{R{\left(\pmb{r} \right)} T{\left(t \right)}}=\\
+&=\frac{\frac{d}{d t} T{\left(t \right)} \delta \pmb{n}_0}{T{\left(t \right)}}=\frac{\mathbb{D} \nabla_{\pmb{r}}^2(R{\left(\pmb{r} \right)}) \delta \pmb{n}_0}{R{\left(\pmb{r} \right)}} + \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0
+\end{aligned}\end{equation}
 :END:
 
 Since the right-hand side no longer depends on $t$, we can assume
@@ -289,28 +278,21 @@ lam, lam1, lam2 = symbols('\\lambda \\lambda_1 \\lambda_2')
 det = symbols('det', cls=Function, real=True)
 K = Symbol('\\mathbb{K}', commutative=False)
 Keq = LEq(K, stabmat.lhs-dims.lhs*k**2, stabmat.rhs-dims.rhs*k**2)
-print(model_pturb_sep[-1])
-model_pturb_eig = LSteps(model_pturb_sep[-1])(
+model_pturb_eig = LCalculation(
     lambda e: e.subs(T(t).diff(t), T(t)*lam).replace(Lap2, lambda x, *args: -k**2*x),
     lambda e: LEq(e.lhs, e.rhs.factor()),
     lambda e: e.subs(Keq.args[1], Keq.lhs),
-)
+).steps(model_pturb_sep[-1])
 model_pturb_eig
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-# [goto error]
-: 
-: NameErrorTraceback (most recent call last)
-: <ipython-input-57-b679da398190> in <module>
-:       4 K = Symbol('\\mathbb{K}', commutative=False)
-:       5 Keq = LEq(K, stabmat.lhs-dims.lhs*k**2, stabmat.rhs-dims.rhs*k**2)
-: ----> 6 print(model_pturb_sep[-1])
-:       7 model_pturb_eig = LSteps(model_pturb_sep[-1])(
-:       8     lambda e: e.subs(T(t).diff(t), T(t)*lam).replace(Lap2, lambda x, *args: -k**2*x),
-: 
-: NameError: name 'model_pturb_sep' is not defined
+\begin{equation}\begin{aligned}
+\frac{\frac{d}{d t} T{\left(t \right)} \delta \pmb{n}_0}{T{\left(t \right)}}=\frac{\mathbb{D} \nabla_{\pmb{r}}^2(R{\left(\pmb{r} \right)}) \delta \pmb{n}_0}{R{\left(\pmb{r} \right)}} + \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0&=\lambda \delta \pmb{n}_0=- \mathbb{D} k^{2} \delta \pmb{n}_0 + \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \delta \pmb{n}_0=\\
+&=\lambda \delta \pmb{n}_0=- \left(\mathbb{D} k^{2} - \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)}\right) \delta \pmb{n}_0=\\
+&=\lambda \delta \pmb{n}_0=\mathbb{K} \delta \pmb{n}_0
+\end{aligned}\end{equation}
 :END:
 
 This gives us an equation for eigenvalues end eigenvectors for our new stability matrix $\mathbb{K}$.
@@ -329,32 +311,25 @@ LEq(tr(K), Keq.rhs.trace().subs(V)<0)
 we only need to find $\operatorname{det}(\mathbb{K})<0$
 #+begin_src jupyter-python
 k2s = Matrix(symbols('k^2_1 k^2_2'))
-print(stabmat.lhs-dims.lhs*k**2)
-model_pturb_detK = LSteps(Eq(det(K), 0))(
+model_pturb_detK = LCalculation(
     LSubsStep(K, stabmat.lhs-dims.lhs*k**2),
-    # LStep(lambda e: e.subs(K, stabmat.lhs-dims.lhs*k**2)),
-    # LStep(lambda e: e.subs(stabmat.lhs-dims.lhs*k**2, stabmat.rhs-dims.rhs*k**2)),
-    # LStep(lambda e: e.replace(det, Determinant).doit()),
-    # LStep(lambda e: LEq(k2s, Matrix(solve(e, k**2))))
-)
+    # lambda e: e.subs(K, stabmat.lhs-dims.lhs*k**2),
+    lambda e: e.subs(stabmat.lhs-dims.lhs*k**2, stabmat.rhs-dims.rhs*k**2),
+    lambda e: e.replace(det, Determinant).doit(),
+    lambda e: LEq(k2s, Matrix(solve(e, k**2)))
+).steps(Eq(det(K), 0))
 model_pturb_k2s = model_pturb_detK[-1]
 model_pturb_detK
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-: -\mathbb{D}*k**2 + \mathbb{J}(\pmb{f}(\pmb{n^*}))
-# [goto error]
-: 
-: NameErrorTraceback (most recent call last)
-: <ipython-input-59-779fc068cdd9> in <module>
-:       1 k2s = Matrix(symbols('k^2_1 k^2_2'))
-:       2 print(stabmat.lhs-dims.lhs*k**2)
-: ----> 3 model_pturb_detK = LSteps(Eq(det(K), 0))(
-:       4     LSubsStep(K, stabmat.lhs-dims.lhs*k**2),
-:       5     # LStep(lambda e: e.subs(K, stabmat.lhs-dims.lhs*k**2)),
-: 
-: NameError: name 'LSteps' is not defined
+\begin{equation}\begin{aligned}
+\operatorname{det}{\left(\mathbb{K} \right)} = 0&=\operatorname{det}{\left(- \mathbb{D} k^{2} + \mathbb{J}{\left(\pmb{f}{\left(\pmb{n^*} \right)} \right)} \right)} = 0=\\
+&=\operatorname{det}{\left(\left[\begin{matrix}- D_{u} k^{2} + 7 & 9\\-8 & - D_{v} k^{2} - 9\end{matrix}\right] \right)} = 0=\\
+&=D_{u} D_{v} k^{4} + 9 D_{u} k^{2} - 7 D_{v} k^{2} + 9 = 0=\\
+&=\left[\begin{matrix}k^{2}_{1}\\k^{2}_{2}\end{matrix}\right]=\left[\begin{matrix}\frac{- 9 D_{u} + 7 D_{v} - \sqrt{81 D_{u}^{2} - 162 D_{u} D_{v} + 49 D_{v}^{2}}}{2 D_{u} D_{v}}\\\frac{- 9 D_{u} + 7 D_{v} + \sqrt{81 D_{u}^{2} - 162 D_{u} D_{v} + 49 D_{v}^{2}}}{2 D_{u} D_{v}}\end{matrix}\right]
+\end{aligned}\end{equation}
 :END:
 
 #+begin_src jupyter-python
@@ -367,13 +342,12 @@ def find_sqrt(expr):
 Solve for when $k_{\pm}^2$ is real by finding where the square root is real,
 #+begin_src jupyter-python
 Dvc = symbols('D_vc')
-print(model_pturb_k2s.rhs)
 k2_sqrt = find_sqrt(model_pturb_k2s.rhs[0])[0]
 k2_sqrt_eq = k2_sqrt>=0
-Dv_range_sol = LSteps(k2_sqrt_eq,
-    lambda e: LBiOp(Dv, solveset(e.subs(V), Dv, domain=Interval(1, oo)), separator='\\in'),
-    lambda e: LBiOp(Dvc, e.rhs.args[0].evalf(), separator='\\approx'),
-)
+Dv_range_sol = LCalculation(
+    lambda e: LIn(Dv, solveset(e.subs(V), Dv, domain=Interval(1, oo))),
+    lambda e: LApprox(Dvc, e.rhs.args[0].evalf()),
+).steps(k2_sqrt_eq)
 Dv_range = Dv_range_sol[1]
 Dv_c = Dv_range.rhs.args[0]
 Dv_range_sol
@@ -381,46 +355,34 @@ Dv_range_sol
 
 #+RESULTS:
 :RESULTS:
-# [goto error]
-: 
-: NameErrorTraceback (most recent call last)
-: <ipython-input-61-73cda4885772> in <module>
-:       1 Dvc = symbols('D_vc')
-: ----> 2 print(model_pturb_k2s.rhs)
-:       3 k2_sqrt = find_sqrt(model_pturb_k2s.rhs[0])[0]
-:       4 k2_sqrt_eq = k2_sqrt>=0
-:       5 Dv_range_sol = LSteps(k2_sqrt_eq,
-: 
-: NameError: name 'model_pturb_k2s' is not defined
+\begin{equation}\begin{aligned}
+81 D_{u}^{2} - 162 D_{u} D_{v} + 49 D_{v}^{2} \geq 0&=D_{v}\in\left[\frac{36 \sqrt{2}}{49} + \frac{81}{49}, \infty\right)=\\
+&=D_{vc}\approx 2.69207527031493
+\end{aligned}\end{equation}
 :END:
 
 We can now calculate $k_c$ if we substitute the solution to $D_{vc}$ into
 $\operatorname{det}(\mathbb{K})=0$,
 #+begin_src jupyter-python
 kc = symbols('k_c')
-k_c_steps = LSteps(LEq(det(K), 0),
+k_c_steps = LCalculation(
     lambda e: e.subs(K, Keq.rhs.subs(V)),
     lambda e: e.subs(Dv, Dv_c),
     lambda e: e.replace(det, lambda x: x.det()),
     lambda e: LEq(kc, solve(e.lhs, k)[1]),
-)
+).steps(LEq(det(K), 0))
 k_c = k_c_steps[-1].rhs
 k_c_steps
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-# [goto error]
-: 
-: NameErrorTraceback (most recent call last)
-: <ipython-input-62-3598eab543c9> in <module>
-:       1 kc = symbols('k_c')
-: ----> 2 k_c_steps = LSteps(LEq(det(K), 0),
-:       3     lambda e: e.subs(K, Keq.rhs.subs(V)),
-:       4     lambda e: e.subs(Dv, Dv_c),
-:       5     lambda e: e.replace(det, lambda x: x.det()),
-: 
-: NameError: name 'LSteps' is not defined
+\begin{equation}\begin{aligned}
+\operatorname{det}{\left(\mathbb{K} \right)}=0&=\operatorname{det}{\left(\left[\begin{matrix}7 - k^{2} & 9\\-8 & - D_{v} k^{2} - 9\end{matrix}\right] \right)}=0=\\
+&=\operatorname{det}{\left(\left[\begin{matrix}7 - k^{2} & 9\\-8 & - k^{2} \left(\frac{36 \sqrt{2}}{49} + \frac{81}{49}\right) - 9\end{matrix}\right] \right)}=0=\\
+&=\frac{36 \sqrt{2} k^{4}}{49} + \frac{81 k^{4}}{49} - \frac{36 \sqrt{2} k^{2}}{7} - \frac{18 k^{2}}{7} + 9=0=\\
+&=k_{c}=\frac{\sqrt{7 + 14 \sqrt{2}}}{\sqrt{4 \sqrt{2} + 9}}
+\end{aligned}\end{equation}
 :END:
 
 #+begin_src jupyter-python :noweb yes :results output
@@ -440,28 +402,7 @@ plt.legend()
 #+end_src
 
 #+RESULTS:
-:RESULTS:
-# [goto error]
-#+begin_example
-
-NameErrorTraceback (most recent call last)
-<ipython-input-63-1c9c2b5976ac> in <module>
-      1 detK_lm = lambdify((Dv, k), Keq.rhs.det().subs(V))
-      2 k_n = np.linspace(0, 2)
-----> 3 Dv_ns = [Dv_c+dx for dx in [-1, 0, 1]]
-      4 detK_ns = [detK_lm(Dv_n, k_n) for Dv_n in Dv_ns]
-      5 
-
-<ipython-input-63-1c9c2b5976ac> in <listcomp>(.0)
-      1 detK_lm = lambdify((Dv, k), Keq.rhs.det().subs(V))
-      2 k_n = np.linspace(0, 2)
-----> 3 Dv_ns = [Dv_c+dx for dx in [-1, 0, 1]]
-      4 detK_ns = [detK_lm(Dv_n, k_n) for Dv_n in Dv_ns]
-      5 
-
-NameError: name 'Dv_c' is not defined
-#+end_example
-:END:
+[[file:./.ob-jupyter/c825db59709345cf2f97f7fbf18184037a68d4bb.png]]
 
 ** Simulation
 We will now simulate this system for some values of $D_v$ to see what effect it
@@ -485,25 +426,18 @@ The discretized Laplacian looks like the following,
 h = symbols('h')
 model_expanded = model.subs(Vmodel).doit()
 model_expanded = apply_fd(model_expanded, x, y)
-LSteps(Lap2(u(x, y), x, y),
+LCalculation(
     lambda e: e.doit(),
     lambda e: apply_fd(e, x, y),
-)
+).steps(Lap2(u(x, y), x, y))
 #+end_src
 
 #+RESULTS:
 :RESULTS:
-# [goto error]
-: 
-: NameErrorTraceback (most recent call last)
-: <ipython-input-65-a661e63a0bd0> in <module>
-:       2 model_expanded = model.subs(Vmodel).doit()
-:       3 model_expanded = apply_fd(model_expanded, x, y)
-: ----> 4 LSteps(Lap2(u(x, y), x, y),
-:       5     lambda e: e.doit(),
-:       6     lambda e: apply_fd(e, x, y),
-: 
-: NameError: name 'LSteps' is not defined
+\begin{equation}\begin{aligned}
+\nabla_{xy}^2(u{\left(x,y \right)})&=\frac{\partial^{2}}{\partial x^{2}} u{\left(x,y \right)} + \frac{\partial^{2}}{\partial y^{2}} u{\left(x,y \right)}=\\
+&=- 4 u{\left(x,y \right)} + u{\left(x,y - 1 \right)} + u{\left(x,y + 1 \right)} + u{\left(x - 1,y \right)} + u{\left(x + 1,y \right)}
+\end{aligned}\end{equation}
 :END:
 
 #+begin_src jupyter-python :exports none
@@ -610,7 +544,7 @@ plt.axis('off')
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/949362910b702294cee4e0570a8e03d06b7a0c70.png]]
+[[file:./.ob-jupyter/42dd78d5f0fb15f31b53fec171767f556acba224.png]]
 
 #+name: src:fig:simulations_transient
 #+begin_src jupyter-python :results output :eval never-export
