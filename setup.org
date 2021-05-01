@@ -1,15 +1,2 @@
-#+OPTIONS: broken-links:t
-#+LATEX_HEADER: \usepackage[parfill]{parskip}
-#+LATEX_HEADER: \usepackage[margin=2cm]{geometry}
-#+LATEX_HEADER: \usepackage{xcolor}
-#+HTML_LINK_HOME: index.html
-
-#+BIND: org-export-filter-verbatim-functions (tmp-f-latex-filter-orglinks)
-#+BEGIN_SRC emacs-lisp :exports none :results silent
-(defun tmp-f-latex-filter-orglinks (text backend info)
-  "Remove org document links in LaTeX export."
-  (when (org-export-derived-backend-p backend 'latex)
-    (setq my-latex-filter-output text)
-    (replace-regexp-in-string "\\\\href{.*\\.org}{\\(.*\\)}" "\\1" text)))
-#+END_SRC
-
+#+latex_header: \DeclareMathOperator*{\argmax}{argmax}
+#+latex_header: \DeclareMathOperator*{\argmin}{argmin}
