@@ -386,12 +386,11 @@
   (let ((ext (file-name-extension path)))
     (cond
      ((eq 'html backend)
-      (concat "<div class=\"figure\">"
-              "<video autoplay loop>"
-              "<source type=\"video/"ext"\" src=\""path"\" />"
-              "</video>"
-              "</div>"))
-     ;; fall-through case for everything else
+      (sxml-to-xml
+       `(figure
+         (video (@ (autoplay "") (loop "") (style "min-width: 200px"))
+                (source (@ (type ,(concat "video/"ext))
+                           (src ,path)))))))
      (t
       path))))
 #+end_src
