@@ -175,6 +175,13 @@ details summary {
 
 #+end_src
 
+** Src blocks
+#+begin_src css :noweb yes
+.org-src-container .src {
+    background-color: <<colorb("bg-alt")>>;
+    padding: 10px;
+}
+#+end_src
 ** Inputs
 #+begin_src css :noweb yes
 .animation-slider {
