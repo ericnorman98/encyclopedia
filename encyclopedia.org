@@ -199,7 +199,34 @@
   '((:results . "html")
     (:exports . "results")))
 (defun org-babel-execute:inline-js (body _params)
-  (format "<script type=\"text/javascript\">\n%s\n</script>" body))
+  (let ((id (nth 4 (org-babel-get-src-block-info))))
+    (sxml-to-xml
+     `(div (@ (id ,id)
+              (style "text-align: center"))
+           (script (@ (type "module"))
+                   ,(concat "const container = document.getElementById('"id"');\n"
+                            body))))))
+
+#+end_src
+
+** ECS
+#+begin_src elisp
+(add-to-list 'org-src-lang-modes '("ecs" . json))
+(defvar org-babel-default-header-args:ecs
+  '((:results . "html")
+    (:exports . "results")))
+(defun org-babel-execute:ecs (body _params)
+  (let ((id (nth 4 (org-babel-get-src-block-info))))
+    (sxml-to-xml
+     `(div (@ (id ,id)
+              (style "text-align: center"))
+           (script (@ (type "module"))
+                   ,(concat "import * as Canvas from './src/canvas.js';\n"
+                            "const container = document.getElementById('"id"');\n"
+                            "Canvas.builder()"
+                            ".withParent(container)"
+                            ".withBlueprint("body").build().start();"))))))
+
 #+end_src
 
 * Document
