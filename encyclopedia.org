@@ -223,7 +223,7 @@
            (script (@ (type "module"))
                    ,(concat "import * as Canvas from './src/canvas.js';\n"
                             "const container = document.getElementById('"id"');\n"
-                            "Canvas.builder()"
+                            "Canvas.builder('"id"')"
                             ".withParent(container)"
                             ".withBlueprint("body").build().start();"))))))
 
