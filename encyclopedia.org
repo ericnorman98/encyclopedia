@@ -166,7 +166,7 @@
   (list (cons :exports "results")
         (cons :session slug)
         (cons :results "raw")
-        (cons :eval "never")
+        (cons :eval "no-export")
         (cons :pandoc t)
         (cons :async "yes")
         (cons :kernel "python")))
