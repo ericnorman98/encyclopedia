@@ -1,0 +1,22 @@
+#+title: Entropy regularization
+#+roam_tags:
+
+- tags :: [[file:20210519112507-reinforcement_learning.org][Reinforcement learning]]
+
+#+call: init()
+
+* Entropy regularization
+In [[file:20210519112507-reinforcement_learning.org][reinforcement learning]], a common problem is that the agent can get stuck in a
+local optima. This is usually solved by adding some randomness to the action
+selection process to encourage exploration in the environment.
+
+[[file:20210519112624-policy_gradient_methods.org][Policy gradient methods]] use a probability distribution over the actions to
+select, which means that decreasing the certainty, or equivalently increasing
+the entropy, of this distribution will encourage more exploration. To increase
+the entropy, you can calculate the entropy of the action distribution according
+to Equation \ref{eq:Entropy} and adding the negative entropy to the loss
+function.
+
+\begin{equation}\label{eq:Entropy}
+    H(X)=-\sum_{x\in X}P(x)\log{P(x)}
+\end{equation}
