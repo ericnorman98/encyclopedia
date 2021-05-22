@@ -366,6 +366,8 @@
                                 "#+LATEX_HEADER: \\definecolor{bgalt}{HTML}{"(substring .bg-alt 1)"}\n"
                                 "#+LATEX_HEADER: \\definecolor{fgg}{HTML}{"(substring .fg 1)"}\n"
                                 "#+LATEX_HEADER: \\definecolor{fgalt}{HTML}{"(substring .fg-alt 1)"}\n"
+                                "#+LATEX_HEADER: \\definecolor{green}{HTML}{"(substring .green 1)"}\n"
+                                "#+LATEX_HEADER: \\definecolor{blue}{HTML}{"(substring .blue 1)"}\n"
                                 "#+LATEX_HEADER: \\definecolor{white}{HTML}{"(substring .fg-hc 1)"}\n")
                         (if (equal theme 'dark) "#+LATEX_HEADER: \\usemintedstyle{monokai}\n" "")
                         "#+LATEX_HEADER: \\setminted[python]{linenos, bgcolor=bgalt}\n"
@@ -377,6 +379,9 @@
                         "#+LATEX_HEADER: \\setbeamercolor{title}{fg=white}\n"
                         "#+LATEX_HEADER: \\setbeamercolor{navigation symbols}{fg=white,bg=bg}\n"
                         "#+LATEX_HEADER: \\setbeamercolor{navigation symbols dimmed}{fg=white,bg=bg}\n"
+                        "#+LATEX_HEADER: \\setbeamertemplate{itemize item}{\\color{green}$\\blacktriangleright$}\n"
+                        "#+LATEX_HEADER: \\setbeamertemplate{itemize subitem}{\\color{green}$\\blacksquare$}\n"
+                        "#+LATEX_HEADER: \\setbeamercolor{caption name}{fg=blue}\n"
                         "#+LATEX_HEADER: \\setbeamercolor{block title}{fg=white}\n")))))
 #+end_src
 
