@@ -1,0 +1,8 @@
+#+title: Exploratory data analysis
+#+roam_tags:
+
+- tags :: [[file:20210219102643-statistics.org][Statistics]], [[file:20210429084436-data_analysis.org][Data analysis]]
+
+#+call: init()
+
+* TODO Exploratory data analysis
