@@ -1,0 +1,11 @@
+#+title: Microservices
+#+roam_tags:
+
+#+call: init()
+
+* Microservices
+- Highly maintainable and testable
+- Loosely coupled
+- Independently deployable
+- Organized around business capabilities
+- Owned by a small team

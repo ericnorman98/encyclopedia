@@ -1,0 +1,8 @@
+#+title: Continuous Delivery
+#+roam_tags:
+
+- tags :: [[file:20210529195421-software_development.org][Software Development]]
+
+#+call: init()
+
+* TODO Continuous Delivery
