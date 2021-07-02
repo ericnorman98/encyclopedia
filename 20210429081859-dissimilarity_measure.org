@@ -1,0 +1,19 @@
+#+title: Dissimilarity measure
+#+roam_alias: "Distance measure"
+#+roam_tags: distance
+
+#+call: init()
+
+* Dissimilarity measure
+A dissimilarity measure (or distance measure) for features $x_1,x_2$ is a
+function such that
+\begin{equation}
+d(x_1,x_2)\ge 0 \;\text{ and }\; d(x_1,x_2)=d(x_2,x_1)
+\end{equation}
+
+The definition of dissimilarity across multiple features can look like this
+\begin{equation}
+D(\pmb{x_1},\pmb{x_2})=\sum_{j=1}^p d_j(x_1^{(j)},x_2^{(j)})
+\end{equation}
+
+Examples of dissimilarity measures include the l1 and [[file:20210429082944-euclidean_distance.org][l2 norm]],

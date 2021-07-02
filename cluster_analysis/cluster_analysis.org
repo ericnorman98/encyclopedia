@@ -1,0 +1,465 @@
+#+title: Cluster analysis
+#+roam_alias: clustering
+#+roam_tags:
+
+- tags :: [[file:20210429084243-exploratory_data_analysis.org][Exploratory data analysis]]
+
+#+call: init()
+
+#+RESULTS:
+
+* Cluster analysis
+/Cluster analysis/ or /clustering/ is a way of separating features by using a
+[[file:20210429081859-dissimilarity_measure.org][dissimilarity measure]] to determine which samples are close together.
+
+There are often two main challenges in clustering; "what are the number of
+clusters?" and "given some number of clusters, how do we find them?".
+
+
+* Code :noexport:
+** Imports
+#+begin_src jupyter-python :results silent
+import os
+import pandas as pd
+import joblib as jb
+from plotting import *
+#+end_src
+
+** Plotting
+#+begin_src jupyter-python :results silent
+from IPython.display import set_matplotlib_formats
+set_matplotlib_formats('svg')
+plt.rcParams['svg.fonttype'] = 'path'
+#+end_src
+
+** Tables
+#+begin_src jupyter-python :results silent :tangle no
+import IPython
+from tabulate import tabulate
+class OrgFormatter(IPython.core.formatters.BaseFormatter):
+    def __call__(self, obj):
+        try:
+            return tabulate(obj, headers='keys',
+                            tablefmt='orgtbl', showindex='always')
+        except:
+            return None
+
+ip = get_ipython()
+ip.display_formatter.formatters['text/org'] = OrgFormatter()
+#+end_src
+
+* Introduction
+This is an investigation into an unknown dataset, we will analyze this data by
+using clustering. Before we start with that, a good idea is to get familiar with
+the data and looking at some metrics and visualizations.
+
+As you can see in Table [[tab:dataset_metrics]], we have 560 samples with 974
+features which means that we have more features than samples. This indicates
+that we probably want to do some feature filtering and/or dimension reduction to
+get the clustering algorithms to work better.
+
+#+name: src:tab:dataset_metrics
+#+begin_src jupyter-python
+dataset_metrics = pd.read_pickle('data/dataset_metrics.pkl')
+dataset_metrics
+#+end_src
+
+#+name: tab:dataset_metrics
+#+caption: Some useful dataset metrics.
+#+attr_latex: :placement [H]
+#+RESULTS: src:tab:dataset_metrics
+|                 |   Value |
+|-----------------+---------|
+| Samples (n)     | 560     |
+| Features (p)    | 974     |
+| Missing values  |   0     |
+| Minimum feature | -58.489 |
+| Maximum feature | 208.283 |
+
+We have no missing values but we do have a lot of constant features as seen in
+Figure [[fig:constant_values]], which we will remove later using filtering since
+these will have no effect on the clustering result.
+
+#+name: src:fig:constant_values
+#+begin_src jupyter-python :results output :noweb-ref main
+dataset = pd.read_csv('Q1_X.csv')
+fig, ax = plt.subplots(figsize=(4, 3))
+plot_constant_values(dataset, ax)
+#+end_src
+
+#+name: fig:constant_values
+#+caption: Total unique occurrences of features showing the constant values in the dataset.
+#+attr_latex: :placement [H]
+#+RESULTS: src:fig:constant_values
+[[file:./.ob-jupyter/6cdd8ba11652c0a54cbbf2665179e9082e8cbf64.png]]
+
+Another thing we will have to consider is standardizing and centering the data,
+we can see a visualization of the means and variances of the dataset in Figure
+[[fig:feature_mean_var_kde]]. It shows that the features has a wide range of values
+and needs normalization.
+
+#+name: src:fig:feature_mean_var_kde
+#+begin_src jupyter-python :results output :noweb-ref main
+fig, axs = plt.subplots(1, 2, figsize=(8, 3))
+plot_feature_mean_vars(dataset, *axs)
+#+end_src
+
+#+name: fig:feature_mean_var_kde
+#+caption: Means and variances for the features over all samples.
+#+attr_latex: :placement [H]
+#+RESULTS: src:fig:feature_mean_var_kde
+[[file:./.ob-jupyter/fab4be5bf9326d649ace55a696b3ae3947fd2ff1.png]]
+
+* Method
+** Preprocessing
+We will need to do some preprocessing before doing the clustering. See Table
+[[tab:preprocessing_hparams]] for all of the preprocessing parameters used.
+
+#+name: tab:preprocessing_hparams
+#+attr_latex: :placement [ht]
+#+caption: Parameters used for preprocessing.
+#+RESULTS: src:tab:preprocessing_hparams
+| Name                        | Value     | Description                           |
+|-----------------------------+-----------+---------------------------------------|
+| =variance_threshold=        | =2.0=     | the threshold for the variance filter |
+| =scree_select_rule=         | =first_k= | PC selection rule                     |
+| =scree_select_gt_threshold= | =1.0=     | PC eigenvalue threshold               |
+| =scree_select_first_k=      | =10=      | PC first-k selection rule k           |
+
+*** Filtering
+We will start by filtering the low variance features with a variance threshold
+of $2$, mainly to get rid of the constant values but also some potentially low
+information features.
+
+#+begin_src jupyter-python :noweb-ref main :results output :exports none
+print(f"Applying variance filter with threshold: {args.variance_threshold}")
+variance_threshold = feature_selection.VarianceThreshold(threshold=args.variance_threshold)
+dataset_filtered = pd.DataFrame(variance_threshold.fit_transform(dataset.values))
+print(dataset_filtered.shape)
+
+#+end_src
+
+#+RESULTS:
+: Applying variance filter with threshold: 2.0
+: (560, 773)
+
+#+begin_src jupyter-python :results output :exports none :noweb-ref main :exports none
+dataset_filtered = pd.read_pickle('data/dataset_filtered.pkl')
+fig, axs = plt.subplots(1, 2, figsize=(8, 3))
+plot_feature_mean_vars(dataset_filtered, *axs)
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/c4d24727a8ddbb13c64d05e1924dc91c3f159ff9.png]]
+
+*** Centering and standardization
+If we look at the mean and standard deviation of every numerical feature we can
+see that the data has many different /scales/. It is usually good practice to
+/center/ and /standardize/ the data to get rid of /scaling/.
+
+*** Dimension reduction
+We will use /principal component analysis/ to reduce the dimensionality of the
+dataset to get $p$ from $p>>n$ to at least $p<n$. Most clustering algorithms
+works best when there are more samples than features. See Figure
+[[fig:pca_pair_plot]] for a pair plot over the first three principal components. We
+can see at least 4 clusters from inspection of this plot.
+
+#+name: src:fig:pca_pair_plot
+#+begin_src jupyter-python :results output :noweb-ref main
+dataset_pca = pd.read_pickle('data/dataset_pca.pkl')
+plot_pairs(dataset_pca.values[:, :3])
+#+end_src
+
+#+name: fig:pca_pair_plot
+#+caption: Pair plot of the first three principal components with densities on the diagonal.
+#+attr_latex: :placement [H]
+#+RESULTS: src:fig:pca_pair_plot
+[[file:./.ob-jupyter/30d7d847d28e9356098bad9d6a3ebca17469f553.png]]
+
+We will test two component /selection rules/ to test if we can remove most of
+the features, the first rule is to select the /first-k/ components and the other
+is to use an eigenvalue threshold. See Figure [[fig:scree_plot]] for a scree plot
+visualizing the two methods. The wasn't much of a difference between the two, so
+we will choose the /first-k/ rule with $k=10$ to get the least amount of features.
+
+#+name: src:fig:scree_plot
+#+begin_src jupyter-python :noweb yes :noweb-ref main :results output
+plt.figure(figsize=(4, 3))
+pca = jb.load('data/pca.pkl')
+gt_thresh = jb.load('data/gt_thresh.pkl')
+first_k = jb.load('data/first_k.pkl')
+plot_scree_plot(pca, gt_thresh, first_k)
+plt.legend()
+#+end_src
+
+#+name: fig:scree_plot
+#+caption: Log-scaled scree plot showing two selection rules, first-k components (blue line) and $\lambda$ -threshold (red line).
+#+attr_latex: :placement [H]
+#+RESULTS: src:fig:scree_plot
+[[file:./.ob-jupyter/a134e77182e1500622cd3764b20244e653c02d6b.png]]
+
+
+#+begin_src jupyter-python :exports none
+dataset_pca_reduced = pd.read_pickle('data/dataset_pca_reduced.pkl')
+plot_pairs(dataset_pca_reduced.values[:, :3])
+#+end_src
+
+#+RESULTS:
+[[file:./.ob-jupyter/30d7d847d28e9356098bad9d6a3ebca17469f553.png]]
+
+** Finding number of clusters
+We will now try and find the number of clusters in the dataset. We will start by
+employing a set of clustering algorithms that can take the number of clusters as
+parameter and running it on a range of $k$ clusters. We will measure the quality
+of the clustering for each value of $k$. See Table [[tab:clustering_hparams]] for
+the parameters used in the experiments.
+
+#+name: tab:clustering_hparams
+#+attr_latex: :float multicolumn :placement [ht]
+#+caption: Parameters used for calculating cluster scores.
+#+RESULTS: src:tab:clustering_hparams
+| Name                 | Value   | Description                                     |
+|----------------------+---------+-------------------------------------------------|
+| =cluster_score_runs= | =20=    | number of runs per cluster scoring              |
+| =n_neighbors=        | =10=    | number of neighbors used for k-means algorithms |
+| =n_clusters=         | =20=    | maximum number of clusters tested               |
+
+Four different algorithms were tested, all with similar results. We will only
+look two of the algorithms here (see Appendix [[app:clustering_scores]] the rest).
+
+As can be seen in Figure [[fig:mini_kmeans_scores]] and [[fig:gaussmix_scores]], all of
+the algorithms and metrics pointed towards $\{2,3,4,5\}$ being good choices with
+$2$ and $4$ being the best in terms of these metrics.
+
+#+name: src:fig:mini_kmeans_scores
+#+begin_src jupyter-python :noweb-ref main :results output
+fig, axs = plt.subplots(1, 3, figsize=(4*3, 3))
+Model = 'MiniBatchKMeans'
+clustering_algs = joblib.load(data_path / 'clustering_algs.pkl')
+clustering_scores = joblib.load(data_path / 'clustering_scores.pkl')
+selected_ks = joblib.load(data_path / 'selected_ks.pkl')
+plot_clustering_scores(fig,
+                       np.array(axs).T,
+                       clustering_algs[Model],
+                       clustering_scores[Model],
+                       ks,
+                       selected_ks[Model])
+#+end_src
+
+#+name: fig:mini_kmeans_scores
+#+caption: Three scores measured for a range of clusters using the mini batch k-means algorithm with the selected number of clusters (blue line).
+#+attr_latex: :placement [H]
+#+RESULTS: src:fig:mini_kmeans_scores
+[[file:./.ob-jupyter/b23c7461bd3e211a251edb166cd43eb04a637a80.svg]]
+
+#+name: src:fig:kmeans_scores
+#+begin_src jupyter-python :noweb-ref main :results output :exports none
+if show_plots:
+    fig, axs = plt.subplots(1, 3, figsize=(4*3, 3))
+    Model = cluster.KMeans
+    plot_clustering_scores(fig,
+                           np.array(axs).T,
+                           clustering_algs[Model],
+                           clustering_scores[Model],
+                           ks,
+                           selected_ks[Model])
+    plt.show()
+#+end_src
+
+#+name: fig:kmeans_scores
+#+RESULTS: src:fig:kmeans_scores
+[[file:./.ob-jupyter/acdfae8d74267d67f3a844965c63be787c0fcbd5.svg]]
+
+
+#+name: src:fig:agglom_scores
+#+begin_src jupyter-python :noweb-ref main :results output :exports none
+if show_plots:
+    fig, axs = plt.subplots(1, 3, figsize=(4*3, 3))
+    Model = cluster.AgglomerativeClustering
+    plot_clustering_scores(fig,
+                           np.array(axs).T,
+                           clustering_algs[Model],
+                           clustering_scores[Model],
+                           ks,
+                           selected_ks[Model])
+    plt.show()
+#+end_src
+
+#+name: fig:agglom_scores
+#+RESULTS: src:fig:agglom_scores
+[[file:./.ob-jupyter/8be9ac53bfbd66dc77a5b7670bcb25003d99cc0a.svg]]
+
+
+#+name: src:fig:gaussmix_scores
+#+begin_src jupyter-python :noweb-ref main :results output
+if show_plots:
+    fig, axs = plt.subplots(1, 3, figsize=(4*3, 3))
+    Model = mixture.GaussianMixture
+    plot_clustering_scores(fig,
+                           np.array(axs).T,
+                           clustering_algs[Model],
+                           clustering_scores[Model],
+                           ks,
+                           selected_ks[Model])
+    plt.show()
+#+end_src
+
+#+name: fig:gaussmix_scores
+#+caption: Three scores measured for a range of clusters using the Gaussian mixture algorithm with the selected number of clusters (blue line).
+#+attr_latex: :placement [H]
+#+RESULTS: src:fig:gaussmix_scores
+[[file:./.ob-jupyter/f9694741f88d8a686c871f96fe9cb5d1ff4abd3f.svg]]
+
+
+
+*** Density-based clustering (DBSCAN)
+We will now test a density-based algorithm called DBSCAN that can handle noisy,
+isolated clusters and non-convex data manifolds better so that we can choose
+between $2$ and $4$. To find the number of clusters using this algorithm, we
+need to find the parameters $\epsilon$ and $n_{min}$.
+
+We can find the parameters by first fixing $n_{min}=10$ and calculating the
+k-nearest neighbors for each data-point, taking the largest distance, then
+sorting them and finding the elbow. We can see in Figure [[fig:nn_dist_elbow]] that
+a good choice for $\epsilon$ is around $5.3$.
+
+Running the algorithm with these parameters we get 4 clusters, which is also
+closer to what we expected from the PC plot.
+
+#+begin_src jupyter-python :results silent :noweb-ref code
+def rolling_window(a, window):
+    shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
+    strides = a.strides + (a.strides[-1],)
+    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+#+end_src
+
+#+begin_src jupyter-python :noweb-ref main :results output :exports none
+print("Calculating nearest neighbors...")
+X = dataset_pca_reduced.values
+n_neighbors = 10
+nn = NearestNeighbors(n_neighbors=n_neighbors)
+neighbors = nn.fit(X)
+distances, indices = neighbors.kneighbors(X)
+distances = np.sort(distances, axis=0)[:,1]
+
+#+end_src
+
+#+begin_src jupyter-python :noweb-ref main :results output :exports none
+print("Calculating NN elbow for epsilon...")
+w = 50
+slope = np.diff(rolling_window(distances, w).mean(axis=-1))*w
+mask = (slope > 1.0) & (np.arange(len(slope)) > len(slope)//2)
+elbow = np.nonzero(mask)[0][0]
+best_eps = distances[elbow]
+print(f"{n_neighbors}-NN elbow: {elbow} -> eps={best_eps:.4f}")
+
+#+end_src
+
+#+RESULTS:
+: Calculating nearest neighbors...
+: 10-NN elbow: 503 -> eps=5.3123
+
+#+name: src:fig:nn_dist_elbow
+#+begin_src jupyter-python :results output :noweb-ref main :noweb yes
+if show_plots:
+    plt.figure(figsize=(4, 3))
+    plt.plot(distances, label="distance")
+    plt.axvline(elbow, color=<<color("red")>>, label="elbow")
+    plt.axhline(distances[elbow], ls='--', color=<<color("brightblack3")>>)
+    plt.xlabel("Samples sorted by distance")
+    plt.ylabel(f"{n_neighbors}-NN distance")
+    plt.legend()
+    plt.show()
+#+end_src
+
+#+name: fig:nn_dist_elbow
+#+caption: The sorted 10-NN distance plotted for each sample in the dataset showing the elbow for selecting $\epsilon$ (red line).
+#+attr_latex: :placement [H]
+#+RESULTS: src:fig:nn_dist_elbow
+[[file:./.ob-jupyter/a8ec1945a5d9d532ac0756f70c6144a7b740417a.svg]]
+
+#+begin_src jupyter-python :noweb-ref main :exports none
+model = cluster.DBSCAN(eps=best_eps, min_samples=n_neighbors)
+model.fit(X)
+save_model(model, data_path, "10NN")
+y_pred = cluster_y_pred(model, X)
+n_clusters = len(set(y_pred)) - (1 if -1 in y_pred else 0)
+selected_k_clusters = n_clusters
+print(f"DBSCAN clusters: {n_clusters}")
+#+end_src
+
+#+RESULTS:
+: DBSCAN clusters: 4
+
+* Results
+We can now run the algorithms with the number of clusters we found in the
+previous section ($K=4$) to get the final results. Starting with mini-batch
+k-means shown in Figure [[fig:mini_kmeans_pairs]] shows a clear separation of
+clusters, the gaussian mixture in Figure [[fig:gaussmix_pairs]] shows similar
+results and finally DBSCAN in Figure [[fig:dbscan_pairs]] is also agreeing with the
+other algorithms but with some datapoints labeled as noise.
+
+#+name: src:fig:mini_kmeans_pairs
+#+begin_src jupyter-python :results output
+alg = clustering_algs[0]
+model = alg['model'](selected_k_clusters)
+model.fit(dataset_pca_reduced.values)
+y_pred = cluster_y_pred(model, dataset_pca_reduced.values)
+plot_pairs(dataset_pca_reduced.values[:, :3], y_pred)
+plt.suptitle(alg['name'])
+#+end_src
+
+#+name: fig:mini_kmeans_pairs
+#+caption: Pair plot of mini batch k-means algorithm run with 4 clusters.
+#+attr_latex: :placement [H]
+#+RESULTS: src:fig:mini_kmeans_pairs
+[[file:./.ob-jupyter/eea592b6e870281a210baa4aa4e8bf0232c110d5.svg]]
+
+#+name: src:fig:gaussmix_pairs
+#+begin_src jupyter-python :results output
+alg = clustering_algs[3]
+model = alg['model'](selected_k_clusters)
+model.fit(dataset_pca_reduced.values)
+y_pred = cluster_y_pred(model, dataset_pca_reduced.values)
+plot_pairs(dataset_pca_reduced.values[:, :3], y_pred)
+plt.suptitle(alg['name'])
+#+end_src
+
+#+name: fig:gaussmix_pairs
+#+caption: Pair plot of Gaussian mixture algorithm run with 4 clusters.
+#+attr_latex: :placement [H]
+#+RESULTS: src:fig:gaussmix_pairs
+[[file:./.ob-jupyter/69e9fda2904fd5b8a8a36830a813cec3e6caf5c7.svg]]
+
+#+name: src:fig:dbscan_pairs
+#+begin_src jupyter-python :noweb-ref main
+if show_plots:
+    models = load_models(cluster.DBSCAN, data_path)
+    model = models[0]
+    y_pred = cluster_y_pred(model, X)
+    n_clusters = len(set(y_pred)) - (1 if -1 in y_pred else 0)
+    plot_pairs(X[:, :3], y_pred)
+    plt.suptitle("DBSCAN")
+    plt.show()
+#+end_src
+
+#+name: fig:dbscan_pairs
+#+caption: Pair plot of DBSCAN algorithm run with $\epsilon\approx 5.3$ and $n_{min}=10$. Points labeled as noise is shown in gray.
+#+attr_latex: :placement [H]
+#+RESULTS: src:fig:dbscan_pairs
+[[file:./.ob-jupyter/bfa865130563ff09bcb58932022ffbd7f368770c.svg]]
+
+* Discussion
+Choosing the number of clusters for an unlabeled dataset can be a difficult and
+sometimes subjective choice guided by the algorithms and metrics. The choice of
+clusters is also highly dependent on the domain the collected data is from. For
+example if you had collected the data from a domain where a maximum of three
+clusters only makes sense, this would give us a different answer.
+
+#+latex: \end{multicols}
+#+latex: \pagebreak
+#+latex: \appendix
+* Clustering scores
+<<app:clustering_scores>>
+#+include: report.org::fig:kmeans_scores
+#+include: report.org::fig:agglom_scores

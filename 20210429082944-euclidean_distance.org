@@ -1,0 +1,10 @@
+#+title: Euclidean distance
+#+roam_alias "L2 norm"
+#+roam_tags: l2 norm
+
+#+call: init()
+
+* TODO Euclidean distance
+\begin{equation}
+d(x_1,x_2)=\sqrt{(x_1-x_2)^2}
+\end{equation}

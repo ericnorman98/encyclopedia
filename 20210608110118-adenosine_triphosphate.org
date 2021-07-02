@@ -1,0 +1,9 @@
+#+title: Adenosine triphosphate
+#+roam_tags: ATP
+
+#+call: init()
+
+* Adenosine triphosphate
+Adenosine triphosphate (ATP) is an organic compound that provides energy to
+drive a lot of different processes in cells. It is mainly used for chemical
+synthesis, muscle contraction and nerve impulse propagation.

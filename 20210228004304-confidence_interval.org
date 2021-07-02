@@ -150,7 +150,7 @@ with open('confidence_z_alpha.html', 'w') as f:
 #+end_src
 
 #+RESULTS:
-[[file:./.ob-jupyter/c9ffa18dab5e405bb472bf136993c09f4ca13aa3.png]]
+[[file:./.ob-jupyter/2cc817f9e37b96ae81de0d8f9670e54357e976d7.png]]
 
 #+include: confidence_z_alpha.html export html
 
